@@ -112,9 +112,9 @@ export class MidiManager {
    * Connect to specified input and output MIDI ports.
    * @param {string} inputId
    * @param {string} outputId
-   * @returns {boolean} True if successfully connected
+   * @returns {Promise<boolean>} True if successfully connected
    */
-  connect(inputId, outputId) {
+  async connect(inputId, outputId) {
     if (!this._midiAccess) return false;
 
     this.disconnect();
@@ -127,6 +127,17 @@ export class MidiManager {
       return false;
     }
 
+    try {
+      if (input.open && input.connection !== 'open') {
+        await input.open();
+      }
+      if (output.open && output.connection !== 'open') {
+        await output.open();
+      }
+    } catch (err) {
+      console.warn('Port open warning:', err);
+    }
+
     this._input = input;
     this._output = output;
 
@@ -137,7 +148,7 @@ export class MidiManager {
     }
 
     this._connected = true;
-    console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}"`);
+    console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}" (In: ${this._input.connection}, Out: ${this._output.connection})`);
 
     return true;
   }

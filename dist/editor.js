@@ -189,9 +189,9 @@
      * Connect to specified input and output MIDI ports.
      * @param {string} inputId
      * @param {string} outputId
-     * @returns {boolean} True if successfully connected
+     * @returns {Promise<boolean>} True if successfully connected
      */
-    connect(inputId, outputId) {
+    async connect(inputId, outputId) {
       if (!this._midiAccess) return false;
       this.disconnect();
       const input = this._midiAccess.inputs.get(inputId);
@@ -200,6 +200,16 @@
         console.error("Specified MIDI input or output device not found");
         return false;
       }
+      try {
+        if (input.open && input.connection !== "open") {
+          await input.open();
+        }
+        if (output.open && output.connection !== "open") {
+          await output.open();
+        }
+      } catch (err) {
+        console.warn("Port open warning:", err);
+      }
       this._input = input;
       this._output = output;
       this._input.onmidimessage = this._handleMidiMessage;
@@ -207,7 +217,7 @@
         this._input.addEventListener("midimessage", this._handleMidiMessage);
       }
       this._connected = true;
-      console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}"`);
+      console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}" (In: ${this._input.connection}, Out: ${this._output.connection})`);
       return true;
     }
     /**
@@ -4012,7 +4022,7 @@
     }
     setStatus(`Found ${inputs.length} input(s), ${outputs.length} output(s)`);
   }
-  function connectMidi() {
+  async function connectMidi() {
     const inputId = $("midiInput").value;
     const outputId = $("midiOutput").value;
     if (!inputId || !outputId) {
@@ -4028,7 +4038,7 @@
       return;
     }
     setStatus("Connecting to MIDI ports...");
-    const success = midi.connect(inputId, outputId);
+    const success = await midi.connect(inputId, outputId);
     if (success) {
       setConnectionStatus(true, `${midi.inputName}`);
       $("connectBtn").textContent = "Disconnect";
@@ -5394,7 +5404,7 @@
       const outputId = $("midiOutput")?.value;
       if (inputId && outputId) {
         setStatus("Auto-connecting to selected XV-5050 MIDI ports...");
-        const success = midi.connect(inputId, outputId);
+        const success = await midi.connect(inputId, outputId);
         if (success) {
           setConnectionStatus(true, `${midi.inputName}`);
           $("connectBtn").textContent = "Disconnect";

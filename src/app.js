@@ -176,7 +176,7 @@ function refreshDeviceList() {
   setStatus(`Found ${inputs.length} input(s), ${outputs.length} output(s)`);
 }
 
-function connectMidi() {
+async function connectMidi() {
   const inputId = $('midiInput').value;
   const outputId = $('midiOutput').value;
 
@@ -195,7 +195,7 @@ function connectMidi() {
   }
 
   setStatus('Connecting to MIDI ports...');
-  const success = midi.connect(inputId, outputId);
+  const success = await midi.connect(inputId, outputId);
   if (success) {
     setConnectionStatus(true, `${midi.inputName}`);
     $('connectBtn').textContent = 'Disconnect';
@@ -1808,7 +1808,7 @@ async function handleSyncWithUnit() {
     const outputId = $('midiOutput')?.value;
     if (inputId && outputId) {
       setStatus('Auto-connecting to selected XV-5050 MIDI ports...');
-      const success = midi.connect(inputId, outputId);
+      const success = await midi.connect(inputId, outputId);
       if (success) {
         setConnectionStatus(true, `${midi.inputName}`);
         $('connectBtn').textContent = 'Disconnect';
