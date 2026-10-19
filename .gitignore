@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+dist
+dist-ssr
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Manual & large reference files
+*.pdf
+*.html.bak
+XV-5050_OM.html
+XV-5050_OM.pdf
+midi_implementation_extracted.txt
+
+# Editor and OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

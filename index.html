@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Client-side Web MIDI editor for the XV-5050 synthesizer module. Edit performances, patches, and tones directly from your browser.">
+  <title>XV-5050 Web Synthesizer Editor</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-title">
+        <h1>XV-5050 Editor</h1>
+        <span class="subtitle">Web MIDI Client</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-panic" id="panicBtn" title="Send All Sound Off & All Notes Off to all 16 MIDI channels">⚠ All Notes Off</button>
+        <button class="btn btn-sm btn-audition" id="auditionBtn" title="Play test Middle C note on active part">▶ Audition Note</button>
+        <div class="connection-status">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Disconnected</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MIDI Connection Card -->
+    <div class="card" id="midiCard">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">⇌</span> MIDI Connection</span>
+        <div class="device-id-group">
+          <label for="deviceId">Device ID</label>
+          <select id="deviceId">
+            <option value="16" selected>17 (0x10 default)</option>
+            <option value="17">18 (0x11)</option>
+            <option value="18">19 (0x12)</option>
+            <option value="19">20 (0x13)</option>
+            <option value="20">21 (0x14)</option>
+            <option value="21">22 (0x15)</option>
+            <option value="22">23 (0x16)</option>
+            <option value="23">24 (0x17)</option>
+            <option value="24">25 (0x18)</option>
+            <option value="25">26 (0x19)</option>
+            <option value="26">27 (0x1A)</option>
+            <option value="27">28 (0x1B)</option>
+            <option value="28">29 (0x1C)</option>
+            <option value="29">30 (0x1D)</option>
+            <option value="30">31 (0x1E)</option>
+            <option value="31">32 (0x1F)</option>
+          </select>
+        </div>
+      </div>
+      <div class="midi-row">
+        <label for="midiInput">Input</label>
+        <select id="midiInput"><option value="">— Select MIDI Input —</option></select>
+        <label for="midiOutput">Output</label>
+        <select id="midiOutput"><option value="">— Select MIDI Output —</option></select>
+        <button class="btn btn-primary" id="connectBtn">Connect</button>
+        <button class="btn" id="refreshBtn">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="performance" id="tabPerformance">⬡ Performance</button>
+      <button class="tab-btn" data-tab="patch" id="tabPatch">♦ Patch & Tones</button>
+      <button class="tab-btn" data-tab="monitor" id="tabMonitor">☷ SysEx Monitor</button>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- Performance Tab                                                         -->
+    <!-- ======================================================================= -->
+    <div class="tab-content active" id="performanceTab">
+      
+      <!-- Performance Common & Effects -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">⬡</span> Performance Common & Routing</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm" id="loadPerfBtn">↓ Load Common</button>
+            <button class="btn btn-secondary btn-sm" id="loadPerfFxBtn">↓ Load Chorus/Reverb</button>
+          </div>
+        </div>
+
+        <div class="param-grid">
+          <div class="param-group">
+            <label class="param-label" for="perfName">Performance Name</label>
+            <input type="text" class="name-input" id="perfName" maxlength="12" placeholder="PERFORMANCE" value="">
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="perfSoloPart">Solo Part Select</label>
+            <select id="perfSoloPart">
+              <option value="0">OFF</option>
+              <option value="1">Part 1</option><option value="2">Part 2</option>
+              <option value="3">Part 3</option><option value="4">Part 4</option>
+              <option value="5">Part 5</option><option value="6">Part 6</option>
+              <option value="7">Part 7</option><option value="8">Part 8</option>
+              <option value="9">Part 9</option><option value="10">Part 10</option>
+              <option value="11">Part 11</option><option value="12">Part 12</option>
+              <option value="13">Part 13</option><option value="14">Part 14</option>
+              <option value="15">Part 15</option><option value="16">Part 16</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="perfMfxCtrlCh">MFX Ctrl Channel</label>
+            <select id="perfMfxCtrlCh">
+              <option value="0">Ch 1</option><option value="1">Ch 2</option>
+              <option value="2">Ch 3</option><option value="3">Ch 4</option>
+              <option value="4">Ch 5</option><option value="5">Ch 6</option>
+              <option value="6">Ch 7</option><option value="7">Ch 8</option>
+              <option value="8">Ch 9</option><option value="9">Ch 10</option>
+              <option value="10">Ch 11</option><option value="11">Ch 12</option>
+              <option value="12">Ch 13</option><option value="13">Ch 14</option>
+              <option value="14">Ch 15</option><option value="15">Ch 16</option>
+              <option value="16">OFF</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="perfMfxASource">MFX-A Source</label>
+            <select id="perfMfxASource">
+              <option value="0">PERFORM</option>
+              <option value="1">Part 1</option><option value="2">Part 2</option>
+              <option value="3">Part 3</option><option value="4">Part 4</option>
+              <option value="5">Part 5</option><option value="6">Part 6</option>
+              <option value="7">Part 7</option><option value="8">Part 8</option>
+              <option value="9">Part 9</option><option value="10">Part 10</option>
+              <option value="11">Part 11</option><option value="12">Part 12</option>
+              <option value="13">Part 13</option><option value="14">Part 14</option>
+              <option value="15">Part 15</option><option value="16">Part 16</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="perfChorusSource">Chorus Source</label>
+            <select id="perfChorusSource">
+              <option value="0">PERFORM</option>
+              <option value="1">Part 1</option><option value="2">Part 2</option>
+              <option value="3">Part 3</option><option value="4">Part 4</option>
+              <option value="5">Part 5</option><option value="6">Part 6</option>
+              <option value="7">Part 7</option><option value="8">Part 8</option>
+              <option value="9">Part 9</option><option value="10">Part 10</option>
+              <option value="11">Part 11</option><option value="12">Part 12</option>
+              <option value="13">Part 13</option><option value="14">Part 14</option>
+              <option value="15">Part 15</option><option value="16">Part 16</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="perfReverbSource">Reverb Source</label>
+            <select id="perfReverbSource">
+              <option value="0">PERFORM</option>
+              <option value="1">Part 1</option><option value="2">Part 2</option>
+              <option value="3">Part 3</option><option value="4">Part 4</option>
+              <option value="5">Part 5</option><option value="6">Part 6</option>
+              <option value="7">Part 7</option><option value="8">Part 8</option>
+              <option value="9">Part 9</option><option value="10">Part 10</option>
+              <option value="11">Part 11</option><option value="12">Part 12</option>
+              <option value="13">Part 13</option><option value="14">Part 14</option>
+              <option value="15">Part 15</option><option value="16">Part 16</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Performance Effects Sub-section -->
+        <div class="effects-grid" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--border);">
+          <!-- Chorus Block -->
+          <div class="fx-panel">
+            <div class="fx-panel-title">Chorus Processor</div>
+            <div class="param-grid">
+              <div class="param-group">
+                <label class="param-label" for="perfChorusType">Type</label>
+                <select id="perfChorusType">
+                  <option value="0">OFF</option>
+                  <option value="1">CHORUS</option>
+                  <option value="2">DELAY</option>
+                  <option value="3">GM2 CHORUS</option>
+                </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfChorusLevel">Level</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfChorusLevel" min="0" max="127" value="64">
+                  <span class="param-value" id="perfChorusLevelVal">64</span>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfChorusOutputAssign">Output Assign</label>
+                <select id="perfChorusOutputAssign">
+                  <option value="0">A</option><option value="1">B</option>
+                  <option value="2">C</option><option value="3">D</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reverb Block -->
+          <div class="fx-panel">
+            <div class="fx-panel-title">Reverb Processor</div>
+            <div class="param-grid">
+              <div class="param-group">
+                <label class="param-label" for="perfReverbType">Type</label>
+                <select id="perfReverbType">
+                  <option value="0">OFF</option>
+                  <option value="1">REVERB</option>
+                  <option value="2">SRV ROOM</option>
+                  <option value="3">SRV HALL</option>
+                  <option value="4">SRV PLATE</option>
+                  <option value="5">GM2 REVERB</option>
+                </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfReverbLevel">Level</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfReverbLevel" min="0" max="127" value="64">
+                  <span class="param-value" id="perfReverbLevelVal">64</span>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfReverbOutputAssign">Output Assign</label>
+                <select id="perfReverbOutputAssign">
+                  <option value="0">A</option><option value="1">B</option>
+                  <option value="2">C</option><option value="3">D</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Parts Table (1-16) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">≡</span> 16 Performance Parts</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span id="loadProgress" style="font-size:0.8rem; color:var(--text-muted);"></span>
+            <button class="btn btn-sm" id="loadAllPartsBtn">↓ Load All 16 Parts</button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="parts-table" id="partsTable">
+            <thead>
+              <tr>
+                <th>Part</th>
+                <th>Active</th>
+                <th>MIDI Ch</th>
+                <th>Bank MSB</th>
+                <th>Bank LSB</th>
+                <th>PC</th>
+                <th>Level</th>
+                <th>Pan</th>
+                <th>Coarse</th>
+                <th>Fine</th>
+                <th>Cho Send</th>
+                <th>Rev Send</th>
+                <th>Assign</th>
+                <th>Mute</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="partsTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- Patch & Tones Tab                                                       -->
+    <!-- ======================================================================= -->
+    <div class="tab-content" id="patchTab">
+      
+      <!-- Part Selector Toolbar -->
+      <div class="card" style="margin-bottom: var(--space-md);">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <label for="patchPartSelect" style="font-weight:600; color:var(--text-accent);">Target Patch Area:</label>
+            <select id="patchPartSelect" style="font-size:0.95rem; font-weight:600; padding:6px 12px;">
+              <option value="1">Part 1 (Base: 11 00 00 00)</option>
+              <option value="2">Part 2 (Base: 11 20 00 00)</option>
+              <option value="3">Part 3 (Base: 11 40 00 00)</option>
+              <option value="4">Part 4 (Base: 11 60 00 00)</option>
+              <option value="5">Part 5 (Base: 12 00 00 00)</option>
+              <option value="6">Part 6 (Base: 12 20 00 00)</option>
+              <option value="7">Part 7 (Base: 12 40 00 00)</option>
+              <option value="8">Part 8 (Base: 12 60 00 00)</option>
+              <option value="9">Part 9 (Base: 13 00 00 00)</option>
+              <option value="10">Part 10 (Base: 13 20 00 00)</option>
+              <option value="11">Part 11 (Base: 13 40 00 00)</option>
+              <option value="12">Part 12 (Base: 13 60 00 00)</option>
+              <option value="13">Part 13 (Base: 14 00 00 00)</option>
+              <option value="14">Part 14 (Base: 14 20 00 00)</option>
+              <option value="15">Part 15 (Base: 14 40 00 00)</option>
+              <option value="16">Part 16 (Base: 14 60 00 00)</option>
+              <option value="0">Single Patch Mode (Base: 1F 00 00 00)</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm" id="loadPatchBtn">↓ Load Patch Common & TMT</button>
+            <button class="btn btn-secondary btn-sm" id="loadTonesBtn">↓ Load 4 Tones</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Patch Common Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">♦</span> Patch Common Parameters</span>
+        </div>
+
+        <div class="param-grid">
+          <div class="param-group">
+            <label class="param-label" for="patchName">Patch Name</label>
+            <input type="text" class="name-input" id="patchName" maxlength="12" placeholder="PATCH" value="">
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchLevel">Patch Level</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="patchLevel" min="0" max="127" value="127">
+              <span class="param-value" id="patchLevelVal">127</span>
+            </div>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchPan">Patch Pan</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="patchPan" min="0" max="127" value="64">
+              <span class="param-value" id="patchPanVal">C</span>
+            </div>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchCoarseTune">Coarse Tune</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="patchCoarseTune" min="16" max="112" value="64">
+              <span class="param-value" id="patchCoarseTuneVal">0</span>
+            </div>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchFineTune">Fine Tune</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="patchFineTune" min="14" max="114" value="64">
+              <span class="param-value" id="patchFineTuneVal">0</span>
+            </div>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchOctaveShift">Octave Shift</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="patchOctaveShift" min="61" max="67" value="64">
+              <span class="param-value" id="patchOctaveShiftVal">0</span>
+            </div>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchMonoPoly">Mono/Poly</label>
+            <select id="patchMonoPoly">
+              <option value="0">MONO</option>
+              <option value="1" selected>POLY</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label class="param-label">Legato</label>
+            <label class="toggle">
+              <input type="checkbox" id="patchLegato">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="param-group">
+            <label class="param-label">Portamento</label>
+            <label class="toggle">
+              <input type="checkbox" id="patchPortamento">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchPortaTime">Porta Time</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="patchPortaTime" min="0" max="127" value="0">
+              <span class="param-value" id="patchPortaTimeVal">0</span>
+            </div>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchBendUp">Bend Up</label>
+            <input type="number" id="patchBendUp" min="0" max="48" value="2">
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchBendDown">Bend Down</label>
+            <input type="number" id="patchBendDown" min="0" max="48" value="2">
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="patchOutputAssign">Output Assign</label>
+            <select id="patchOutputAssign">
+              <option value="0">MFX</option><option value="1">A</option>
+              <option value="2">B</option><option value="3">C</option>
+              <option value="4">D</option><option value="5">1</option>
+              <option value="6">2</option><option value="7">3</option>
+              <option value="8">4</option><option value="9">5</option>
+              <option value="10">6</option><option value="11">7</option>
+              <option value="12">8</option><option value="13">TONE</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Structure & Booster (Patch TMT) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">☊</span> Structure & Tone Switches (TMT)</span>
+        </div>
+
+        <div class="tmt-grid">
+          <div class="tmt-card">
+            <div class="tmt-header">Structure Tones 1 & 2</div>
+            <div class="param-group">
+              <label class="param-label" for="struct12">Type (1-10)</label>
+              <select id="struct12">
+                <option value="0">Type 1 (1 ∥ 2)</option>
+                <option value="1">Type 2 (1 → 2)</option>
+                <option value="2">Type 3 (Ring 1+2)</option>
+                <option value="3">Type 4 (Ring 1→2)</option>
+                <option value="4">Type 5 (Ring 1∥2)</option>
+                <option value="5">Type 6 (1 ∥ 2 Boost)</option>
+                <option value="6">Type 7 (1 → 2 Boost)</option>
+                <option value="7">Type 8 (Ring 1+2 Boost)</option>
+                <option value="8">Type 9 (Ring 1→2 Boost)</option>
+                <option value="9">Type 10 (Ring 1∥2 Boost)</option>
+              </select>
+            </div>
+            <div class="param-group" style="margin-top:8px;">
+              <label class="param-label" for="booster12">Booster Level</label>
+              <select id="booster12">
+                <option value="0">0 dB</option>
+                <option value="1">+6 dB</option>
+                <option value="2">+12 dB</option>
+                <option value="3">+18 dB</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="tmt-card">
+            <div class="tmt-header">Structure Tones 3 & 4</div>
+            <div class="param-group">
+              <label class="param-label" for="struct34">Type (1-10)</label>
+              <select id="struct34">
+                <option value="0">Type 1 (3 ∥ 4)</option>
+                <option value="1">Type 2 (3 → 4)</option>
+                <option value="2">Type 3 (Ring 3+4)</option>
+                <option value="3">Type 4 (Ring 3→4)</option>
+                <option value="4">Type 5 (Ring 3∥4)</option>
+                <option value="5">Type 6 (3 ∥ 4 Boost)</option>
+                <option value="6">Type 7 (3 → 4 Boost)</option>
+                <option value="7">Type 8 (Ring 3+4 Boost)</option>
+                <option value="8">Type 9 (Ring 3→4 Boost)</option>
+                <option value="9">Type 10 (Ring 3∥4 Boost)</option>
+              </select>
+            </div>
+            <div class="param-group" style="margin-top:8px;">
+              <label class="param-label" for="booster34">Booster Level</label>
+              <select id="booster34">
+                <option value="0">0 dB</option>
+                <option value="1">+6 dB</option>
+                <option value="2">+12 dB</option>
+                <option value="3">+18 dB</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tone On/Off Switches -->
+        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--border);">
+          <div class="param-label" style="margin-bottom: var(--space-sm);">Active Tone Generators</div>
+          <div class="tone-switches" id="toneSwitches">
+            <div class="tone-switch active" data-tone="1">
+              <span class="tone-label">TONE 1</span>
+              <label class="toggle">
+                <input type="checkbox" id="tone1Switch" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="tone-switch active" data-tone="2">
+              <span class="tone-label">TONE 2</span>
+              <label class="toggle">
+                <input type="checkbox" id="tone2Switch" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="tone-switch" data-tone="3">
+              <span class="tone-label">TONE 3</span>
+              <label class="toggle">
+                <input type="checkbox" id="tone3Switch">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="tone-switch" data-tone="4">
+              <span class="tone-label">TONE 4</span>
+              <label class="toggle">
+                <input type="checkbox" id="tone4Switch">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tone Generator Blocks (Tones 1-4) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">♫</span> 4 Tone Generators</span>
+          <div class="tone-tab-selector">
+            <button class="btn btn-sm active" id="btnSelectTone1">Tone 1</button>
+            <button class="btn btn-sm" id="btnSelectTone2">Tone 2</button>
+            <button class="btn btn-sm" id="btnSelectTone3">Tone 3</button>
+            <button class="btn btn-sm" id="btnSelectTone4">Tone 4</button>
+          </div>
+        </div>
+
+        <div id="toneEditorContainer">
+          <div class="param-grid">
+            <div class="param-group">
+              <label class="param-label" for="toneLevel">Tone Level</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="toneLevel" min="0" max="127" value="127">
+                <span class="param-value" id="toneLevelVal">127</span>
+              </div>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="tonePan">Tone Pan</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="tonePan" min="0" max="127" value="64">
+                <span class="param-value" id="tonePanVal">C</span>
+              </div>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="toneCoarseTune">Coarse Tune</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="toneCoarseTune" min="16" max="112" value="64">
+                <span class="param-value" id="toneCoarseTuneVal">0</span>
+              </div>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="toneFineTune">Fine Tune</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="toneFineTune" min="14" max="114" value="64">
+                <span class="param-value" id="toneFineTuneVal">0</span>
+              </div>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="toneFilterType">TVF Filter Type</label>
+              <select id="toneFilterType">
+                <option value="0">OFF</option>
+                <option value="1">LPF (Low Pass)</option>
+                <option value="2">BPF (Band Pass)</option>
+                <option value="3">HPF (High Pass)</option>
+                <option value="4">PKG (Peaking)</option>
+                <option value="5">LPF2</option>
+                <option value="6">LPF3</option>
+              </select>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="toneCutoff">TVF Cutoff</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="toneCutoff" min="0" max="127" value="127">
+                <span class="param-value" id="toneCutoffVal">127</span>
+              </div>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="toneResonance">TVF Resonance</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="toneResonance" min="0" max="127" value="0">
+                <span class="param-value" id="toneResonanceVal">0</span>
+              </div>
+            </div>
+            <div class="param-group">
+              <label class="param-label" for="toneTvaLevel">TVA Level</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="toneTvaLevel" min="0" max="127" value="127">
+                <span class="param-value" id="toneTvaLevelVal">127</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- SysEx Monitor Tab                                                       -->
+    <!-- ======================================================================= -->
+    <div class="tab-content" id="monitorTab">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">☷</span> Real-Time SysEx & MIDI Traffic</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-sm" id="clearLogBtn">Clear Log</button>
+          </div>
+        </div>
+
+        <div class="log-table-wrapper">
+          <table class="log-table" id="trafficLogTable">
+            <thead>
+              <tr>
+                <th style="width:80px;">Time</th>
+                <th style="width:60px;">Dir</th>
+                <th style="width:90px;">Cmd</th>
+                <th style="width:110px;">Address</th>
+                <th style="width:60px;">Size</th>
+                <th>Raw Hex Payload</th>
+              </tr>
+            </thead>
+            <tbody id="trafficLogBody">
+              <!-- Traffic log items added here dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <span class="status-message" id="statusMessage">Ready — select MIDI ports and click Connect</span>
+      <span id="statusDeviceInfo"></span>
+    </footer>
+
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

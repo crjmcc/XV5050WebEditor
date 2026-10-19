@@ -1,0 +1,17 @@
+{
+  "name": "xv5050-web-editor",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Client-side Web MIDI editor for XV-5050 synthesizer module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "web-midi",
+    "sysex",
+    "synthesizer",
+    "editor"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,804 @@
+/* =============================================================================
+   XV-5050 Web Editor — Design System
+   ============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* -- Design Tokens -------------------------------------------------------- */
+:root {
+  /* Color palette — deep synth-inspired dark theme */
+  --bg-primary:      #0a0e17;
+  --bg-secondary:    #111827;
+  --bg-card:         #1a2035;
+  --bg-card-hover:   #1f2847;
+  --bg-input:        #0d1220;
+  --bg-elevated:     #232d45;
+
+  /* Accent — electric blue / cyan */
+  --accent:          #00d4ff;
+  --accent-dim:      #0099bb;
+  --accent-glow:     rgba(0, 212, 255, 0.15);
+  --accent-glow-strong: rgba(0, 212, 255, 0.3);
+
+  /* Secondary accent — warm amber for active/highlight */
+  --accent-warm:     #ff9f1c;
+  --accent-warm-dim: #cc7a00;
+  --accent-warm-glow: rgba(255, 159, 28, 0.15);
+
+  /* Status colors */
+  --success:         #10b981;
+  --warning:         #f59e0b;
+  --danger:          #ef4444;
+  --info:            #3b82f6;
+
+  /* Text */
+  --text-primary:    #e2e8f0;
+  --text-secondary:  #94a3b8;
+  --text-muted:      #64748b;
+  --text-accent:     var(--accent);
+
+  /* Borders */
+  --border:          #1e293b;
+  --border-hover:    #334155;
+  --border-active:   var(--accent-dim);
+
+  /* Spacing */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px var(--accent-glow);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* -- Reset & Base --------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle animated background gradient */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 159, 28, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(99, 102, 241, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* -- Layout --------------------------------------------------------------- */
+#app {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-md);
+}
+
+/* -- Header --------------------------------------------------------------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.app-title h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent-warm));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.app-title .subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* -- Connection Panel ----------------------------------------------------- */
+.connection-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  transition: background var(--transition-normal);
+}
+
+.status-dot.connected {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* -- Buttons -------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  box-shadow: var(--shadow-glow);
+  background: linear-gradient(135deg, var(--accent), #33ddff);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-sm {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+}
+
+/* -- Selects & Inputs ----------------------------------------------------- */
+select, input[type="text"], input[type="number"] {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+select:hover, input:hover {
+  border-color: var(--border-hover);
+}
+
+select:focus, input:focus {
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+select {
+  cursor: pointer;
+  min-width: 180px;
+}
+
+/* -- Tabs ----------------------------------------------------------------- */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+  border: 1px solid var(--border);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 200ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* -- Cards ---------------------------------------------------------------- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.card-title .icon {
+  color: var(--accent);
+}
+
+/* -- Parameter Grid ------------------------------------------------------- */
+.param-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-md);
+}
+
+.param-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.param-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.param-value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+/* -- Slider (range input) ------------------------------------------------- */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--bg-input);
+  border-radius: 3px;
+  outline: none;
+  border: 1px solid var(--border);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 6px var(--accent-glow);
+  transition: transform var(--transition-fast);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-card);
+}
+
+/* -- Toggle Switch -------------------------------------------------------- */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  transition: all var(--transition-fast);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* -- Parts Table ---------------------------------------------------------- */
+.parts-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8rem;
+}
+
+.parts-table thead th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+.parts-table tbody tr {
+  transition: background var(--transition-fast);
+}
+
+.parts-table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+
+.parts-table tbody tr.selected {
+  background: var(--accent-glow);
+  outline: 1px solid var(--accent-dim);
+  border-radius: var(--radius-sm);
+}
+
+.parts-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  vertical-align: middle;
+}
+
+.parts-table td:first-child {
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  width: 40px;
+}
+
+.parts-table .part-muted {
+  opacity: 0.4;
+}
+
+.parts-table input[type="range"] {
+  min-width: 80px;
+}
+
+.parts-table select {
+  min-width: 70px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+}
+
+.parts-table input[type="number"] {
+  width: 60px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+/* -- Patch Panel ---------------------------------------------------------- */
+.patch-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.tone-switches {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.tone-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  min-width: 80px;
+  transition: all var(--transition-fast);
+}
+
+.tone-switch.active {
+  border-color: var(--accent-dim);
+  background: var(--accent-glow);
+}
+
+.tone-switch .tone-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.tone-switch.active .tone-label {
+  color: var(--accent);
+}
+
+/* -- Name Input ----------------------------------------------------------- */
+.name-input {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  width: 200px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--accent);
+}
+
+.name-input:focus {
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 2px var(--accent-glow), var(--shadow-glow);
+}
+
+/* -- Status Bar ----------------------------------------------------------- */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-lg);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.status-bar .status-message {
+  font-family: var(--font-mono);
+}
+
+/* -- Device ID Selector --------------------------------------------------- */
+.device-id-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.device-id-group label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.device-id-group select {
+  min-width: 60px;
+  font-family: var(--font-mono);
+}
+
+/* -- MIDI Connect Row ----------------------------------------------------- */
+.midi-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.midi-row label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+/* -- Header Actions & Utilities ------------------------------------------- */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.btn-panic {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.btn-panic:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.btn-audition {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+}
+
+.btn-audition:hover {
+  background: rgba(0, 212, 255, 0.25);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* -- Effects & TMT Panels ------------------------------------------------- */
+.effects-grid, .tmt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.fx-panel, .tmt-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.fx-panel-title, .tmt-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-warm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-sm);
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* -- Tone Tab Selector ---------------------------------------------------- */
+.tone-tab-selector {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.tone-tab-selector .btn.active {
+  background: var(--accent);
+  color: var(--bg-primary);
+  font-weight: 600;
+}
+
+/* -- SysEx Log Monitor --------------------------------------------------- */
+.log-table-wrapper {
+  max-height: 480px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.log-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 500;
+  z-index: 2;
+}
+
+.log-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.log-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.log-badge.tx {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--accent);
+  border: 1px solid var(--accent-dim);
+}
+
+.log-badge.rx {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+  border: 1px solid #059669;
+}
+
+.log-raw {
+  word-break: break-all;
+  color: var(--text-secondary);
+}
+
+/* -- Responsive ----------------------------------------------------------- */
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: var(--space-md);
+    text-align: center;
+  }
+
+  .connection-panel {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .param-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .patch-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .parts-table {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .param-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .midi-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
