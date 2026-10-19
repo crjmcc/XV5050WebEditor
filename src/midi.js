@@ -68,6 +68,13 @@ export class MidiManager {
   }
 
   /**
+   * @returns {boolean} True if SysEx permission is enabled
+   */
+  get sysexEnabled() {
+    return this._midiAccess ? !!this._midiAccess.sysexEnabled : false;
+  }
+
+  /**
    * Get list of available MIDI input devices.
    * @returns {MidiDevice[]}
    */
@@ -123,7 +130,15 @@ export class MidiManager {
     this._input = input;
     this._output = output;
     this._input.onmidimessage = this._handleMidiMessage;
+    if (this._input.addEventListener) {
+      this._input.addEventListener('midimessage', this._handleMidiMessage);
+    }
     this._connected = true;
+
+    // Send warm-up identity request ping to wake USB MIDI stream endpoint
+    try {
+      this.sendRaw([0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]);
+    } catch (_) {}
 
     return true;
   }
@@ -134,6 +149,9 @@ export class MidiManager {
   disconnect() {
     if (this._input) {
       this._input.onmidimessage = null;
+      if (this._input.removeEventListener) {
+        this._input.removeEventListener('midimessage', this._handleMidiMessage);
+      }
       this._input = null;
     }
     this._output = null;
@@ -151,18 +169,24 @@ export class MidiManager {
   /**
    * Send a SysEx message to the connected output device.
    * 
-   * @param {Uint8Array} message - Complete SysEx message bytes
+   * @param {Uint8Array|number[]} message - Complete SysEx message bytes
    */
   send(message) {
     if (!this._output) {
       console.error('No MIDI output connected');
       return;
     }
-    const arr = Array.from(message);
+    const uint8 = (message instanceof Uint8Array) ? message : new Uint8Array(message);
+    const arr = Array.from(uint8);
     if (this._onTraffic) {
       this._onTraffic('TX', arr, Date.now());
     }
-    this._output.send(arr);
+    try {
+      this._output.send(uint8);
+    } catch (err) {
+      console.warn('Output send failed with Uint8Array, falling back to array:', err);
+      this._output.send(arr);
+    }
   }
 
   /**
@@ -336,14 +360,44 @@ export class MidiManager {
 
   _handleMidiMessage(event) {
     const data = event.data;
+    if (!data || data.length === 0) return;
 
     if (this._onTraffic) {
       this._onTraffic('RX', Array.from(data), Date.now());
     }
 
-    // Only process SysEx messages (starting with 0xF0)
-    if (data[0] !== 0xF0) return;
+    // Reassemble fragmented SysEx chunks if delivered in pieces
+    if (!this._sysexBuffer && data[0] === 0xF0) {
+      if (data[data.length - 1] === 0xF7) {
+        // Complete SysEx in single event
+        this._dispatchSysEx(data);
+        return;
+      }
+      // Start of multi-chunk SysEx
+      this._sysexBuffer = Array.from(data);
+      return;
+    }
 
+    if (this._sysexBuffer) {
+      for (let i = 0; i < data.length; i++) {
+        this._sysexBuffer.push(data[i]);
+        if (data[i] === 0xF7) {
+          const complete = new Uint8Array(this._sysexBuffer);
+          this._sysexBuffer = null;
+          this._dispatchSysEx(complete);
+          return;
+        }
+      }
+      return;
+    }
+
+    // Single message complete check
+    if (data[0] === 0xF0) {
+      this._dispatchSysEx(data);
+    }
+  }
+
+  _dispatchSysEx(data) {
     const parsed = parseSysEx(data);
     if (this._onMessage) {
       this._onMessage(parsed);

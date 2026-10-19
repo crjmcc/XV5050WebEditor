@@ -134,7 +134,13 @@ async function initMidi() {
     return;
   }
   refreshDeviceList();
-  setStatus('MIDI access granted — select device and connect');
+
+  if (!midi.sysexEnabled) {
+    console.warn('Web MIDI SysEx is not enabled in this browser session');
+    setStatus('⚠️ SysEx permission is not granted! Click the site settings icon in the browser address bar and enable "System exclusive messages" for this page.');
+  } else {
+    setStatus('MIDI access granted with SysEx enabled — select device and connect');
+  }
 
   // Traffic listener for real-time monitor
   midi.onTraffic(handleTraffic);
@@ -155,6 +161,7 @@ function refreshDeviceList() {
     const opt = document.createElement('option');
     opt.value = dev.id;
     opt.textContent = dev.name;
+    if (dev.name.includes('XV-5050')) opt.selected = true;
     inputSelect.appendChild(opt);
   }
 
@@ -162,6 +169,7 @@ function refreshDeviceList() {
     const opt = document.createElement('option');
     opt.value = dev.id;
     opt.textContent = dev.name;
+    if (dev.name.includes('XV-5050')) opt.selected = true;
     outputSelect.appendChild(opt);
   }
 

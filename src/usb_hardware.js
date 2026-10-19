@@ -45,7 +45,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function sendAndReceiveWithRetry(
   midiManager,
   requestBytes,
-  { maxRetries = 3, timeoutMs = 600, throttleMs = 15 } = {}
+  { maxRetries = 3, timeoutMs = 1500, throttleMs = 30 } = {}
 ) {
   let lastError = null;
 

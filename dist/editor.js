@@ -148,6 +148,12 @@
       }
     }
     /**
+     * @returns {boolean} True if SysEx permission is enabled
+     */
+    get sysexEnabled() {
+      return this._midiAccess ? !!this._midiAccess.sysexEnabled : false;
+    }
+    /**
      * Get list of available MIDI input devices.
      * @returns {MidiDevice[]}
      */
@@ -197,7 +203,14 @@
       this._input = input;
       this._output = output;
       this._input.onmidimessage = this._handleMidiMessage;
+      if (this._input.addEventListener) {
+        this._input.addEventListener("midimessage", this._handleMidiMessage);
+      }
       this._connected = true;
+      try {
+        this.sendRaw([240, 126, 127, 6, 1, 247]);
+      } catch (_) {
+      }
       return true;
     }
     /**
@@ -206,6 +219,9 @@
     disconnect() {
       if (this._input) {
         this._input.onmidimessage = null;
+        if (this._input.removeEventListener) {
+          this._input.removeEventListener("midimessage", this._handleMidiMessage);
+        }
         this._input = null;
       }
       this._output = null;
@@ -221,18 +237,24 @@
     /**
      * Send a SysEx message to the connected output device.
      * 
-     * @param {Uint8Array} message - Complete SysEx message bytes
+     * @param {Uint8Array|number[]} message - Complete SysEx message bytes
      */
     send(message) {
       if (!this._output) {
         console.error("No MIDI output connected");
         return;
       }
-      const arr = Array.from(message);
+      const uint8 = message instanceof Uint8Array ? message : new Uint8Array(message);
+      const arr = Array.from(uint8);
       if (this._onTraffic) {
         this._onTraffic("TX", arr, Date.now());
       }
-      this._output.send(arr);
+      try {
+        this._output.send(uint8);
+      } catch (err) {
+        console.warn("Output send failed with Uint8Array, falling back to array:", err);
+        this._output.send(arr);
+      }
     }
     /**
      * Send raw MIDI bytes (e.g. Channel Voice messages).
@@ -375,10 +397,35 @@
     // -- Internal handlers --
     _handleMidiMessage(event) {
       const data = event.data;
+      if (!data || data.length === 0) return;
       if (this._onTraffic) {
         this._onTraffic("RX", Array.from(data), Date.now());
       }
-      if (data[0] !== 240) return;
+      if (!this._sysexBuffer && data[0] === 240) {
+        if (data[data.length - 1] === 247) {
+          this._dispatchSysEx(data);
+          return;
+        }
+        this._sysexBuffer = Array.from(data);
+        return;
+      }
+      if (this._sysexBuffer) {
+        for (let i = 0; i < data.length; i++) {
+          this._sysexBuffer.push(data[i]);
+          if (data[i] === 247) {
+            const complete = new Uint8Array(this._sysexBuffer);
+            this._sysexBuffer = null;
+            this._dispatchSysEx(complete);
+            return;
+          }
+        }
+        return;
+      }
+      if (data[0] === 240) {
+        this._dispatchSysEx(data);
+      }
+    }
+    _dispatchSysEx(data) {
       const parsed = parseSysEx(data);
       if (this._onMessage) {
         this._onMessage(parsed);
@@ -3352,7 +3399,7 @@
     return parsed?.data || null;
   }
   var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  async function sendAndReceiveWithRetry(midiManager, requestBytes, { maxRetries = 3, timeoutMs = 600, throttleMs = 15 } = {}) {
+  async function sendAndReceiveWithRetry(midiManager, requestBytes, { maxRetries = 3, timeoutMs = 1500, throttleMs = 30 } = {}) {
     let lastError = null;
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
@@ -3923,7 +3970,12 @@
       return;
     }
     refreshDeviceList();
-    setStatus("MIDI access granted \u2014 select device and connect");
+    if (!midi.sysexEnabled) {
+      console.warn("Web MIDI SysEx is not enabled in this browser session");
+      setStatus('\u26A0\uFE0F SysEx permission is not granted! Click the site settings icon in the browser address bar and enable "System exclusive messages" for this page.');
+    } else {
+      setStatus("MIDI access granted with SysEx enabled \u2014 select device and connect");
+    }
     midi.onTraffic(handleTraffic);
   }
   function refreshDeviceList() {
@@ -3938,12 +3990,14 @@
       const opt = document.createElement("option");
       opt.value = dev.id;
       opt.textContent = dev.name;
+      if (dev.name.includes("XV-5050")) opt.selected = true;
       inputSelect.appendChild(opt);
     }
     for (const dev of outputs) {
       const opt = document.createElement("option");
       opt.value = dev.id;
       opt.textContent = dev.name;
+      if (dev.name.includes("XV-5050")) opt.selected = true;
       outputSelect.appendChild(opt);
     }
     setStatus(`Found ${inputs.length} input(s), ${outputs.length} output(s)`);
