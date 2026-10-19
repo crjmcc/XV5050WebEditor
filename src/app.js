@@ -15,6 +15,9 @@ import {
   MATRIX_DESTINATIONS,
   LFO_WAVEFORMS,
   FILTER_TYPES,
+  INTERNAL_WAVEFORMS,
+  WAVE_GROUP_TYPES,
+  getWaveName,
 } from './parameters.js';
 import {
   requestPerformanceCommon,
@@ -721,8 +724,18 @@ function updateToneUI(data) {
   $('waveGroup').value = data.waveGroupType ?? 0;
   $('waveGain').value = data.waveGain ?? 1;
   $('waveFxmSwitch').checked = !!data.fxmSwitch;
+  $('waveFxmColor').value = data.fxmColor ?? 0;
   $('waveFxmDepth').value = data.fxmDepth ?? 0;
   $('waveFxmDepthVal').textContent = data.fxmDepth ?? 0;
+  $('waveTempoSync').checked = !!data.waveTempoSync;
+
+  const wNumL = data.waveNumberL ?? 1;
+  const wNumR = data.waveNumberR ?? 0;
+  $('waveNumberL').value = wNumL;
+  $('waveNumberR').value = wNumR;
+  const grp = data.waveGroupType ?? 0;
+  $('waveNameL').textContent = `${wNumL}: ${getWaveName(grp, wNumL)}`;
+  $('waveNameR').textContent = wNumR === 0 ? 'OFF' : `${wNumR}: ${getWaveName(grp, wNumR)}`;
 
   // Pitch Env
   const pDepth = data.pitchEnvDepth ?? 64;
@@ -880,9 +893,33 @@ function populateMatrixDropdowns() {
   }
 }
 
+function populateWaveDropdowns() {
+  const waveLSelect = $('waveNumberL');
+  const waveRSelect = $('waveNumberR');
+
+  if (waveLSelect && waveLSelect.children.length === 0) {
+    INTERNAL_WAVEFORMS.forEach((name, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx + 1;
+      opt.textContent = `${idx + 1}: ${name}`;
+      waveLSelect.appendChild(opt);
+    });
+  }
+
+  if (waveRSelect && waveRSelect.children.length <= 1) {
+    INTERNAL_WAVEFORMS.forEach((name, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx + 1;
+      opt.textContent = `${idx + 1}: ${name}`;
+      waveRSelect.appendChild(opt);
+    });
+  }
+}
+
 function bindPatchControls() {
   const currentPart = () => getSelectedPart();
   populateMatrixDropdowns();
+  populateWaveDropdowns();
 
   $('patchName').addEventListener('change', () => {
     if (!midi.isConnected) return;
@@ -1078,8 +1115,29 @@ function bindPatchControls() {
   }
 
   $('waveGroup').addEventListener('change', () => {
+    const grp = parseInt($('waveGroup').value, 10);
+    const numL = parseInt($('waveNumberL').value, 10) || 1;
+    const numR = parseInt($('waveNumberR').value, 10) || 0;
+    $('waveNameL').textContent = `${numL}: ${getWaveName(grp, numL)}`;
+    $('waveNameR').textContent = numR === 0 ? 'OFF' : `${numR}: ${getWaveName(grp, numR)}`;
     if (!midi.isConnected) return;
-    sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_GROUP_TYPE', parseInt($('waveGroup').value, 10), getDeviceId());
+    sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_GROUP_TYPE', grp, getDeviceId());
+  });
+
+  $('waveNumberL').addEventListener('change', () => {
+    const val = parseInt($('waveNumberL').value, 10);
+    const grp = parseInt($('waveGroup').value, 10);
+    $('waveNameL').textContent = `${val}: ${getWaveName(grp, val)}`;
+    if (!midi.isConnected) return;
+    sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_NUMBER_L', val, getDeviceId());
+  });
+
+  $('waveNumberR').addEventListener('change', () => {
+    const val = parseInt($('waveNumberR').value, 10);
+    const grp = parseInt($('waveGroup').value, 10);
+    $('waveNameR').textContent = val === 0 ? 'OFF' : `${val}: ${getWaveName(grp, val)}`;
+    if (!midi.isConnected) return;
+    sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_NUMBER_R', val, getDeviceId());
   });
 
   $('waveGain').addEventListener('change', () => {
@@ -1090,6 +1148,16 @@ function bindPatchControls() {
   $('waveFxmSwitch').addEventListener('change', () => {
     if (!midi.isConnected) return;
     sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_FXM_SWITCH', $('waveFxmSwitch').checked ? 1 : 0, getDeviceId());
+  });
+
+  $('waveFxmColor').addEventListener('change', () => {
+    if (!midi.isConnected) return;
+    sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_FXM_COLOR', parseInt($('waveFxmColor').value, 10), getDeviceId());
+  });
+
+  $('waveTempoSync').addEventListener('change', () => {
+    if (!midi.isConnected) return;
+    sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_TEMPO_SYNC', $('waveTempoSync').checked ? 1 : 0, getDeviceId());
   });
 
   // Pitch Env Sliders & Curves
@@ -1278,11 +1346,59 @@ function initLibrarianControls() {
     commonBytes[0x11] = parseInt($('patchCoarseTune').value, 10);
     commonBytes[0x12] = parseInt($('patchFineTune').value, 10);
 
+    // Build 4 tones data arrays (0x0109 = 265 bytes each)
+    const tonesData = [];
     for (let t = 1; t <= 4; t++) {
-      tmtBytes[0x05 + (t - 1) * 9] = $(`tone${t}Switch`).checked ? 1 : 0;
+      const toneBytes = new Array(0x0109).fill(0);
+      const cached = currentToneCache[t - 1] || store.get(`patch.tones.${t - 1}`) || {};
+      
+      toneBytes[0x00] = cached.toneLevel ?? 127;
+      toneBytes[0x01] = cached.coarseTune ?? 64;
+      toneBytes[0x02] = cached.fineTune ?? 64;
+      toneBytes[0x04] = cached.tonePan ?? 64;
+      
+      // Wave parameters
+      const grp = cached.waveGroupType ?? 0;
+      toneBytes[0x27] = grp;
+      
+      const wNumL = cached.waveNumberL ?? (t === 1 ? 1 : 0);
+      toneBytes[0x2C] = (wNumL >> 12) & 0x0F;
+      toneBytes[0x2D] = (wNumL >> 8) & 0x0F;
+      toneBytes[0x2E] = (wNumL >> 4) & 0x0F;
+      toneBytes[0x2F] = wNumL & 0x0F;
+
+      const wNumR = cached.waveNumberR ?? 0;
+      toneBytes[0x30] = (wNumR >> 12) & 0x0F;
+      toneBytes[0x31] = (wNumR >> 8) & 0x0F;
+      toneBytes[0x32] = (wNumR >> 4) & 0x0F;
+      toneBytes[0x33] = wNumR & 0x0F;
+
+      toneBytes[0x34] = cached.waveGain ?? 1;
+      toneBytes[0x35] = cached.fxmSwitch ?? 0;
+      toneBytes[0x36] = cached.fxmColor ?? 0;
+      toneBytes[0x37] = cached.fxmDepth ?? 0;
+      toneBytes[0x38] = cached.waveTempoSync ?? 0;
+
+      // Pitch Env
+      toneBytes[0x3A] = cached.pitchEnvDepth ?? 64;
+      toneBytes[0x3F] = cached.pitchEnvT1 ?? 0;
+      toneBytes[0x40] = cached.pitchEnvT2 ?? 0;
+      toneBytes[0x41] = cached.pitchEnvT3 ?? 0;
+      toneBytes[0x42] = cached.pitchEnvT4 ?? 0;
+      toneBytes[0x44] = cached.pitchEnvL1 ?? 64;
+
+      // TVF
+      toneBytes[0x48] = cached.tvfFilterType ?? 1;
+      toneBytes[0x49] = cached.tvfCutoff ?? 127;
+      toneBytes[0x4D] = cached.tvfResonance ?? 0;
+
+      // TVA
+      toneBytes[0x62] = cached.tvaLevel ?? 127;
+
+      tonesData.push(toneBytes);
     }
 
-    const packets = createPatchSyxDump(getSelectedPart(), commonBytes, tmtBytes, getDeviceId());
+    const packets = createPatchSyxDump(getSelectedPart(), commonBytes, tmtBytes, tonesData, getDeviceId());
     const syxFile = exportToSyx(packets);
     const safeName = patchName.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'patch';
     downloadBinaryBlob(syxFile, `${safeName}.syx`);
@@ -1336,6 +1452,24 @@ function initLibrarianControls() {
   // Save current patch to memory slot
   $('btnSaveCurrentPatchSlot').addEventListener('click', () => {
     const name = $('patchName').value.trim() || `Patch ${new Date().toLocaleTimeString()}`;
+    const tonesSnapshot = [1, 2, 3, 4].map(t => {
+      const cached = currentToneCache[t - 1] || store.get(`patch.tones.${t - 1}`) || {};
+      return {
+        toneLevel: cached.toneLevel ?? 127,
+        coarseTune: cached.coarseTune ?? 64,
+        fineTune: cached.fineTune ?? 64,
+        tonePan: cached.tonePan ?? 64,
+        waveGroupType: cached.waveGroupType ?? 0,
+        waveNumberL: cached.waveNumberL ?? (t === 1 ? 1 : 0),
+        waveNumberR: cached.waveNumberR ?? 0,
+        waveGain: cached.waveGain ?? 1,
+        fxmSwitch: cached.fxmSwitch ?? 0,
+        fxmColor: cached.fxmColor ?? 0,
+        fxmDepth: cached.fxmDepth ?? 0,
+        waveTempoSync: cached.waveTempoSync ?? 0,
+      };
+    });
+
     const slotData = {
       name,
       timestamp: Date.now(),
@@ -1344,6 +1478,7 @@ function initLibrarianControls() {
       coarse: parseInt($('patchCoarseTune').value, 10),
       fine: parseInt($('patchFineTune').value, 10),
       monoPoly: parseInt($('patchMonoPoly').value, 10),
+      tones: tonesSnapshot,
     };
 
     const slots = getStoredSlots();
@@ -1403,7 +1538,18 @@ function renderMemoryBank() {
       $('patchFineTune').value = s.fine;
       $('patchFineTuneVal').textContent = s.fine - 64;
       $('patchMonoPoly').value = s.monoPoly;
-      setStatus(`Recalled patch '${s.name}' from slot ${idx + 1}`);
+
+      if (Array.isArray(s.tones)) {
+        s.tones.forEach((toneData, tIdx) => {
+          store.set(`patch.tones.${tIdx}`, toneData);
+          currentToneCache[tIdx] = toneData;
+        });
+        if (currentToneCache[currentToneIndex - 1]) {
+          updateToneUI(currentToneCache[currentToneIndex - 1]);
+        }
+      }
+
+      setStatus(`Recalled patch '${s.name}' with wave parameters from slot ${idx + 1}`);
     });
 
     card.querySelector(`#btnDeleteSlot${idx}`).addEventListener('click', () => {

@@ -124,6 +124,26 @@ export const MATRIX_DESTINATIONS = [
   'MFX-CTRL1', 'MFX-CTRL2', 'MFX-CTRL3', 'MFX-CTRL4'
 ];
 
+import { INTERNAL_WAVEFORMS } from './waveforms.js';
+export { INTERNAL_WAVEFORMS };
+
+export const WAVE_GROUP_TYPES = ['INT', 'SR-JV80', 'SRX', 'SAMPLE'];
+
+/**
+ * Get waveform name for a given wave group type and wave number (1-based).
+ * @param {number} groupType - 0: INT, 1: SR-JV80, 2: SRX, 3: SAMPLE
+ * @param {number} waveNumber - 1-16384 (or 0 for OFF)
+ * @returns {string} Waveform name
+ */
+export function getWaveName(groupType, waveNumber) {
+  if (!waveNumber || waveNumber === 0) return 'OFF';
+  if (groupType === 0) {
+    return INTERNAL_WAVEFORMS[waveNumber - 1] || `Wave ${waveNumber}`;
+  }
+  const groupLabel = WAVE_GROUP_TYPES[groupType] || 'EXP';
+  return `${groupLabel}:${String(waveNumber).padStart(4, '0')}`;
+}
+
 export const LFO_WAVEFORMS = [
   'TRI', 'SIN', 'SAW-UP', 'SAW-DN', 'SQR',
   'TRP', 'S&H', 'RND', 'STEP1', 'STEP2'
@@ -220,11 +240,14 @@ export const PATCH_TONE_PARAMS = {
   FINE_TUNE:            { name: 'Fine Tune', min: 14, max: 114, type: 'signed', displayOffset: -64 },
   TONE_PAN:             { name: 'Tone Pan', min: 0, max: 127, type: 'pan' },
   WAVE_GROUP_TYPE:      { name: 'Wave Group', min: 0, max: 3, type: 'enum', enumValues: ['INT', 'SR-JV80', 'SRX', 'SAMPLE'] },
+  WAVE_NUMBER_L:        { name: 'Wave Number L (Mono)', min: 0, max: 16384, type: 'number' },
+  WAVE_NUMBER_R:        { name: 'Wave Number R', min: 0, max: 16384, type: 'number' },
   WAVE_GAIN:            { name: 'Wave Gain', min: 0, max: 3, type: 'enum', enumValues: ['-6 dB', '0 dB', '+6 dB', '+12 dB'] },
   WAVE_FXM_SWITCH:      { name: 'FXM Switch', min: 0, max: 1, type: 'switch' },
   WAVE_FXM_COLOR:       { name: 'FXM Color', min: 0, max: 3, type: 'enum', enumValues: ['1', '2', '3', '4'] },
   WAVE_FXM_DEPTH:       { name: 'FXM Depth', min: 0, max: 16, type: 'number' },
   WAVE_TEMPO_SYNC:      { name: 'Wave Tempo Sync', min: 0, max: 1, type: 'switch' },
+  WAVE_PITCH_KEYFOLLOW: { name: 'Wave Pitch Keyfollow', min: 44, max: 84, type: 'signed', displayOffset: -64 },
   // Pitch Envelope
   PITCH_ENV_DEPTH:      { name: 'Pitch Env Depth', min: 52, max: 76, type: 'signed', displayOffset: -64 },
   PITCH_ENV_VEL_SENS:   { name: 'Pitch Env Vel Sens', min: 1, max: 127, type: 'signed', displayOffset: -64 },

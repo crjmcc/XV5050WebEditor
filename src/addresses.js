@@ -461,24 +461,29 @@ export const PATCH_TONE = {
     ALT_PAN_DEPTH:        { offset: 0x07, size: 1 }, // 1-127 (-63 to +63)
     // Wave
     WAVE_GROUP_TYPE:      { offset: 0x27, size: 1 }, // 0-3 (INT, SR-JV80, SRX, SAMPLE)
+    WAVE_GROUP_ID:        { offset: 0x28, size: 4 }, // 4 nibbles
     WAVE_GROUP_ID_1:      { offset: 0x28, size: 1 }, // 4 nibbles
     WAVE_GROUP_ID_2:      { offset: 0x29, size: 1 },
     WAVE_GROUP_ID_3:      { offset: 0x2A, size: 1 },
     WAVE_GROUP_ID_4:      { offset: 0x2B, size: 1 },
+    WAVE_NUMBER_L:        { offset: 0x2C, size: 4 }, // 4 nibbles (0 - 16384)
     WAVE_NUMBER_L_1:      { offset: 0x2C, size: 1 }, // 4 nibbles
     WAVE_NUMBER_L_2:      { offset: 0x2D, size: 1 },
     WAVE_NUMBER_L_3:      { offset: 0x2E, size: 1 },
     WAVE_NUMBER_L_4:      { offset: 0x2F, size: 1 },
+    WAVE_NUMBER_R:        { offset: 0x30, size: 4 }, // 4 nibbles (0 - 16384)
     WAVE_NUMBER_R_1:      { offset: 0x30, size: 1 }, // 4 nibbles
     WAVE_NUMBER_R_2:      { offset: 0x31, size: 1 },
     WAVE_NUMBER_R_3:      { offset: 0x32, size: 1 },
     WAVE_NUMBER_R_4:      { offset: 0x33, size: 1 },
     WAVE_GAIN:            { offset: 0x34, size: 1 }, // 0-3 (-6, 0, +6, +12 dB)
     WAVE_FXM_SWITCH:      { offset: 0x35, size: 1 }, // 0-1 (OFF, ON)
+    WAVE_FXM_SW:          { offset: 0x35, size: 1 }, // alias
     WAVE_FXM_COLOR:       { offset: 0x36, size: 1 }, // 0-3 (1-4)
     WAVE_FXM_DEPTH:       { offset: 0x37, size: 1 }, // 0-16
     WAVE_TEMPO_SYNC:      { offset: 0x38, size: 1 }, // 0-1 (OFF, ON)
     WAVE_PITCH_KEYFOLLOW: { offset: 0x39, size: 1 }, // 44-84 (-200% to +200%)
+    PITCH_KEYFOLLOW:      { offset: 0x39, size: 1 }, // alias
     // Pitch Envelope
     PITCH_ENV_DEPTH:      { offset: 0x3A, size: 1 }, // 52-76 (-12 to +12)
     PITCH_ENV_VEL_SENS:   { offset: 0x3B, size: 1 }, // 1-127 (-63 to +63)

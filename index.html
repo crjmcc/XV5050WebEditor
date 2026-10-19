@@ -659,6 +659,29 @@
                 </select>
               </div>
               <div class="param-group">
+                <label class="param-label" for="waveNumberL">Wave Number L (Mono)</label>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <select id="waveNumberL" style="font-family:var(--font-mono); font-size:0.82rem; width:100%;">
+                      <!-- Populated dynamically with all 1083 internal waveforms -->
+                    </select>
+                  </div>
+                  <div class="param-value" id="waveNameL" style="font-size:0.75rem; color:var(--text-accent); text-align:left;">1: StGrand pA L</div>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="waveNumberR">Wave Number R</label>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <select id="waveNumberR" style="font-family:var(--font-mono); font-size:0.82rem; width:100%;">
+                      <option value="0">OFF</option>
+                      <!-- Populated dynamically -->
+                    </select>
+                  </div>
+                  <div class="param-value" id="waveNameR" style="font-size:0.75rem; color:var(--text-secondary); text-align:left;">OFF</div>
+                </div>
+              </div>
+              <div class="param-group">
                 <label class="param-label" for="waveGain">Wave Gain</label>
                 <select id="waveGain">
                   <option value="0">-6 dB</option>
@@ -675,11 +698,27 @@
                 </label>
               </div>
               <div class="param-group">
+                <label class="param-label" for="waveFxmColor">FXM Color</label>
+                <select id="waveFxmColor">
+                  <option value="0">1</option>
+                  <option value="1">2</option>
+                  <option value="2">3</option>
+                  <option value="3">4</option>
+                </select>
+              </div>
+              <div class="param-group">
                 <label class="param-label" for="waveFxmDepth">FXM Depth</label>
                 <div style="display:flex; align-items:center; gap:8px;">
                   <input type="range" id="waveFxmDepth" min="0" max="16" value="0">
                   <span class="param-value" id="waveFxmDepthVal">0</span>
                 </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label">Tempo Sync</label>
+                <label class="toggle">
+                  <input type="checkbox" id="waveTempoSync">
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
             </div>
           </div>

@@ -117,14 +117,28 @@ export function sendPatchTMTParam(midi, part, paramKey, value, deviceId) {
  * @param {number} [deviceId] - Device ID
  */
 export function sendPatchToneParam(midi, part, tone, paramKey, value, deviceId) {
-  const param = PATCH_TONE.params[paramKey];
+  const param = (typeof paramKey === 'string') ? PATCH_TONE.params[paramKey] : paramKey;
   if (!param) {
     throw new Error(`Unknown tone parameter: ${paramKey}`);
   }
   const patchBase = getPatchTempAddress(part);
   const toneBase = getToneAddress(patchBase, tone);
   const address = addOffset(toneBase, param.offset);
-  const msg = buildDT1(address, [value & 0x7F], deviceId);
+
+  let dataBytes;
+  if (param.size === 4) {
+    // 4-nibble word: split value into 4 nibbles [aaaa, bbbb, cccc, dddd]
+    dataBytes = [
+      (value >> 12) & 0x0F,
+      (value >> 8) & 0x0F,
+      (value >> 4) & 0x0F,
+      value & 0x0F,
+    ];
+  } else {
+    dataBytes = [value & 0x7F];
+  }
+
+  const msg = buildDT1(address, dataBytes, deviceId);
   midi.send(msg);
 }
 
@@ -238,6 +252,20 @@ export function sendToneEnvelopeParam(midi, part, tone, envType, param, value, d
 export function sendToneLFOParam(midi, part, tone, lfoNum, param, value, deviceId) {
   const key = param.startsWith('LFO') ? param : `LFO${lfoNum}_${param}`;
   sendPatchToneParam(midi, part, tone, key, value, deviceId);
+}
+
+/**
+ * Send a Tone Wave parameter (Wave Number L/R, Wave Group, FXM, etc.).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single)
+ * @param {number} tone - Tone number (1-4)
+ * @param {string} waveParam - 'WAVE_NUMBER_L', 'WAVE_NUMBER_R', 'WAVE_GROUP_TYPE', 'WAVE_GAIN', etc.
+ * @param {number} value - Parameter value (e.g. 1-1083 for wave number)
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendToneWaveParam(midi, part, tone, waveParam, value, deviceId) {
+  sendPatchToneParam(midi, part, tone, waveParam, value, deviceId);
 }
 
 /**
@@ -406,10 +434,25 @@ export function parsePatchTone(data) {
     altPanDepth: data[0x07] ?? 64,
     // Wave
     waveGroupType: data[0x27] ?? 0,
+    waveGroupId: (((data[0x28] ?? 0) & 0x0F) << 12) |
+                 (((data[0x29] ?? 0) & 0x0F) << 8) |
+                 (((data[0x2A] ?? 0) & 0x0F) << 4) |
+                 ((data[0x2B] ?? 0) & 0x0F),
+    waveNumberL: (((data[0x2C] ?? 0) & 0x0F) << 12) |
+                 (((data[0x2D] ?? 0) & 0x0F) << 8) |
+                 (((data[0x2E] ?? 0) & 0x0F) << 4) |
+                 ((data[0x2F] ?? 0) & 0x0F),
+    waveNumberR: (((data[0x30] ?? 0) & 0x0F) << 12) |
+                 (((data[0x31] ?? 0) & 0x0F) << 8) |
+                 (((data[0x32] ?? 0) & 0x0F) << 4) |
+                 ((data[0x33] ?? 0) & 0x0F),
     waveGain: data[0x34] ?? 1,
     fxmSwitch: data[0x35] ?? 0,
+    waveFxmSwitch: data[0x35] ?? 0,
     fxmColor: data[0x36] ?? 0,
+    waveFxmColor: data[0x36] ?? 0,
     fxmDepth: data[0x37] ?? 0,
+    waveFxmDepth: data[0x37] ?? 0,
     waveTempoSync: data[0x38] ?? 0,
     wavePitchKeyfollow: data[0x39] ?? 64,
     // Pitch Envelope

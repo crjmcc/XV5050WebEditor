@@ -6,7 +6,7 @@
  */
 
 import { parseSysEx, buildDT1, SYSEX_START, SYSEX_END } from './sysex.js';
-import { getPatchTempAddress, getPatchTMTAddress } from './addresses.js';
+import { getPatchTempAddress, getPatchTMTAddress, getToneAddress } from './addresses.js';
 
 /**
  * Serialize an array of SysEx packets into a single binary Uint8Array suitable for .syx download.
@@ -58,22 +58,40 @@ export function parseSyxFile(fileData) {
 }
 
 /**
- * Create a multi-packet DT1 SysEx dump for a patch (Common + TMT).
+ * Create a multi-packet DT1 SysEx dump for a patch (Common + TMT + optional 4 Tones).
  * 
  * @param {number} part - Part number (0 for Single mode, 1-16 for performance part)
  * @param {number[]} commonData - 79-byte Patch Common data
  * @param {number[]} tmtData - 41-byte Patch TMT data
+ * @param {Array<number[]>} [tonesData] - Optional array of up to 4 tone data arrays (265 bytes each)
  * @param {number} [deviceId=0x10] - Device ID
- * @returns {Uint8Array[]} Array of 2 SysEx packets (Common, TMT)
+ * @returns {Uint8Array[]} Array of SysEx packets (Common, TMT, and Tones 1-4)
  */
-export function createPatchSyxDump(part, commonData, tmtData, deviceId = 0x10) {
+export function createPatchSyxDump(part, commonData, tmtData, tonesData = null, deviceId = 0x10) {
+  // Support legacy signature createPatchSyxDump(part, commonData, tmtData, deviceId)
+  if (typeof tonesData === 'number') {
+    deviceId = tonesData;
+    tonesData = null;
+  }
+
   const patchBase = getPatchTempAddress(part);
   const tmtBase = getPatchTMTAddress(patchBase);
 
-  const packet1 = buildDT1(patchBase, commonData, deviceId);
-  const packet2 = buildDT1(tmtBase, tmtData, deviceId);
+  const packets = [
+    buildDT1(patchBase, commonData, deviceId),
+    buildDT1(tmtBase, tmtData, deviceId)
+  ];
 
-  return [packet1, packet2];
+  if (Array.isArray(tonesData)) {
+    for (let t = 1; t <= tonesData.length; t++) {
+      if (tonesData[t - 1]) {
+        const toneBase = getToneAddress(patchBase, t);
+        packets.push(buildDT1(toneBase, tonesData[t - 1], deviceId));
+      }
+    }
+  }
+
+  return packets;
 }
 
 /**
