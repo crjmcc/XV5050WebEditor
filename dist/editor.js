@@ -275,25 +275,69 @@
       }
     }
     /**
-     * Send a SysEx message and wait for a reply within a timeout.
-     * Returns the first valid parsed SysEx response.
+     * Send a SysEx message and wait for the complete response within a timeout.
+     * Handles multi-packet SysEx responses (e.g. Tone 265 bytes, MFX 273 bytes)
+     * where the hardware sends successive DT1 packets up to 256 bytes each.
      * 
-     * @param {Uint8Array} message - SysEx message to send
-     * @param {number} [timeout=2000] - Timeout in milliseconds
-     * @returns {Promise<object>} Parsed SysEx response
+     * @param {Uint8Array|number[]} message - SysEx message to send
+     * @param {number} [timeout=3000] - Timeout in milliseconds
+     * @returns {Promise<object>} Complete parsed SysEx response
      */
-    sendAndReceive(message, timeout = 2e3) {
+    sendAndReceive(message, timeout = 3e3) {
       return new Promise((resolve, reject) => {
+        const isRq1 = message && message[0] === 240 && message[5] === 17 && message.length >= 14;
+        let reqAddr = null;
+        let expectedSize = 0;
+        let accumulatedData = [];
+        let bytesReceived = 0;
+        if (isRq1) {
+          reqAddr = [message[6], message[7], message[8], message[9]];
+          expectedSize = message[10] * 2097152 + message[11] * 16384 + message[12] * 128 + message[13];
+          accumulatedData = new Array(expectedSize).fill(0);
+        }
+        const reqAddrInt = reqAddr ? reqAddr[0] * 2097152 + reqAddr[1] * 16384 + reqAddr[2] * 128 + reqAddr[3] : 0;
         const previousHandler = this._onMessage;
-        const timer = setTimeout(() => {
+        let timer = null;
+        const cleanup = () => {
+          if (timer) clearTimeout(timer);
           this._onMessage = previousHandler;
-          reject(new Error("SysEx response timeout"));
+        };
+        timer = setTimeout(() => {
+          cleanup();
+          reject(new Error(`SysEx response timeout (received ${bytesReceived}/${expectedSize || "?"} bytes)`));
         }, timeout);
         this._onMessage = (parsed) => {
-          if (parsed.valid) {
-            clearTimeout(timer);
-            this._onMessage = previousHandler;
+          if (previousHandler) {
+            try {
+              previousHandler(parsed);
+            } catch (_) {
+            }
+          }
+          if (!parsed || !parsed.valid) return;
+          if (!isRq1 || expectedSize === 0) {
+            cleanup();
             resolve(parsed);
+            return;
+          }
+          if (parsed.command === 18 && parsed.address && parsed.data) {
+            const inAddrInt = parsed.address[0] * 2097152 + parsed.address[1] * 16384 + parsed.address[2] * 128 + parsed.address[3];
+            const offset = inAddrInt - reqAddrInt;
+            if (offset >= 0 && offset < expectedSize) {
+              for (let i = 0; i < parsed.data.length && offset + i < expectedSize; i++) {
+                accumulatedData[offset + i] = parsed.data[i];
+              }
+              bytesReceived += parsed.data.length;
+              if (bytesReceived >= expectedSize || offset + parsed.data.length >= expectedSize) {
+                cleanup();
+                resolve({
+                  valid: true,
+                  command: 18,
+                  address: reqAddr,
+                  data: accumulatedData,
+                  deviceId: parsed.deviceId
+                });
+              }
+            }
           }
         };
         this.send(message);
@@ -1863,6 +1907,12 @@
         REVERB_SOURCE: { offset: 52, size: 1 }
       }
     },
+    // Performance Common MFX-A (Offset 00 02 00)
+    MFXA: {
+      BASE: [16, 0, 2, 0],
+      SIZE: [0, 0, 1, 17]
+      // 273 bytes
+    },
     // Performance Common Chorus (Offset 00 04 00)
     CHORUS: {
       BASE: [16, 0, 4, 0],
@@ -1892,6 +1942,18 @@
         OUTPUT_ASSIGN: { offset: 2, size: 1 }
         // 0-3 (A, B, C, D)
       }
+    },
+    // Performance Common MFX-B (Offset 00 08 00)
+    MFXB: {
+      BASE: [16, 0, 8, 0],
+      SIZE: [0, 0, 1, 17]
+      // 273 bytes
+    },
+    // Performance Common MFX-C (Offset 00 0A 00)
+    MFXC: {
+      BASE: [16, 0, 10, 0],
+      SIZE: [0, 0, 1, 17]
+      // 273 bytes
     }
   };
   function getPartAddress(part) {
@@ -2304,77 +2366,81 @@
       TVF_ENV_L3: { offset: 91, size: 1 },
       TVF_ENV_L4: { offset: 92, size: 1 },
       // TVA
-      TVA_LEVEL: { offset: 110, size: 1 },
-      // 0-127
-      TVA_VEL_CURVE: { offset: 111, size: 1 },
-      // 0-6 (1-7)
-      TVA_VEL_SENS: { offset: 112, size: 1 },
+      TVA_LEVEL: { offset: 0, size: 1 },
+      // 0-127 (Tone Level)
+      TVA_VEL_CURVE: { offset: 97, size: 1 },
+      // 0-7 (FIXED, 1-7)
+      TVA_VEL_SENS: { offset: 98, size: 1 },
       // 1-127 (-63 to +63)
-      TVA_ENV_TIME1_VEL: { offset: 113, size: 1 },
+      TVA_ENV_TIME1_VEL: { offset: 99, size: 1 },
       // 1-127 (-63 to +63)
-      TVA_ENV_TIME4_VEL: { offset: 114, size: 1 },
+      TVA_ENV_TIME4_VEL: { offset: 100, size: 1 },
       // 1-127 (-63 to +63)
-      TVA_ENV_TIME_KEY: { offset: 115, size: 1 },
+      TVA_ENV_TIME_KEY: { offset: 101, size: 1 },
       // 54-74 (-100 to +100)
-      TVA_ENV_T1: { offset: 116, size: 1 },
+      TVA_ENV_T1: { offset: 102, size: 1 },
       // 0-127
-      TVA_ENV_T2: { offset: 117, size: 1 },
-      TVA_ENV_T3: { offset: 118, size: 1 },
-      TVA_ENV_T4: { offset: 119, size: 1 },
-      TVA_ENV_L1: { offset: 120, size: 1 },
+      TVA_ENV_T2: { offset: 103, size: 1 },
+      TVA_ENV_T3: { offset: 104, size: 1 },
+      TVA_ENV_T4: { offset: 105, size: 1 },
+      TVA_ENV_L1: { offset: 106, size: 1 },
       // 0-127
-      TVA_ENV_L2: { offset: 121, size: 1 },
-      TVA_ENV_L3: { offset: 122, size: 1 },
+      TVA_ENV_L2: { offset: 107, size: 1 },
+      TVA_ENV_L3: { offset: 108, size: 1 },
       // LFO 1
-      LFO1_FORM: { offset: 138, size: 1 },
-      // 0-9
-      LFO1_RATE: { offset: 139, size: 1 },
-      // 0-127
-      LFO1_TEMPO_SYNC: { offset: 141, size: 1 },
-      // 0-1 (OFF, ON)
-      LFO1_FADE_MODE: { offset: 142, size: 1 },
-      // 0-3 (ON-IN, ON-OUT, OFF-IN, OFF-OUT)
-      LFO1_DELAY_TIME: { offset: 143, size: 1 },
-      // 0-127
-      LFO1_FADE_TIME: { offset: 144, size: 1 },
-      // 0-127
-      LFO1_OFFSET: { offset: 145, size: 1 },
+      LFO1_FORM: { offset: 109, size: 1 },
+      // 0-10
+      LFO1_RATE: { offset: 110, size: 2 },
+      // 2 nibbles: 00 6E, 00 6F (0-149)
+      LFO1_OFFSET: { offset: 112, size: 1 },
       // 0-4 (-100, -50, 0, +50, +100)
-      LFO1_KEY_TRIGGER: { offset: 147, size: 1 },
+      LFO1_RATE_DETUNE: { offset: 113, size: 1 },
+      // 0-127
+      LFO1_DELAY_TIME: { offset: 114, size: 1 },
+      // 0-127
+      LFO1_DELAY_TIME_KEY: { offset: 115, size: 1 },
+      // 54-74 (-100 to +100)
+      LFO1_FADE_MODE: { offset: 116, size: 1 },
+      // 0-3 (ON-IN, ON-OUT, OFF-IN, OFF-OUT)
+      LFO1_FADE_TIME: { offset: 117, size: 1 },
+      // 0-127
+      LFO1_KEY_TRIGGER: { offset: 118, size: 1 },
       // 0-1 (OFF, ON)
-      LFO1_PITCH_DEPTH: { offset: 148, size: 1 },
+      LFO1_PITCH_DEPTH: { offset: 119, size: 1 },
       // 1-127 (-63 to +63)
-      LFO1_TVF_DEPTH: { offset: 149, size: 1 },
+      LFO1_TVF_DEPTH: { offset: 120, size: 1 },
       // 1-127 (-63 to +63)
-      LFO1_TVA_DEPTH: { offset: 150, size: 1 },
+      LFO1_TVA_DEPTH: { offset: 121, size: 1 },
       // 1-127 (-63 to +63)
-      LFO1_PAN_DEPTH: { offset: 151, size: 1 },
+      LFO1_PAN_DEPTH: { offset: 122, size: 1 },
       // 1-127 (-63 to +63)
       // LFO 2
-      LFO2_FORM: { offset: 250, size: 1 },
-      // 0-9
-      LFO2_RATE: { offset: 251, size: 1 },
-      // 0-127
-      LFO2_TEMPO_SYNC: { offset: 253, size: 1 },
-      // 0-1 (OFF, ON)
-      LFO2_FADE_MODE: { offset: 254, size: 1 },
-      // 0-3
-      LFO2_DELAY_TIME: { offset: 255, size: 1 },
-      // 0-127
-      LFO2_FADE_TIME: { offset: 256, size: 1 },
-      // 0-127
-      LFO2_OFFSET: { offset: 257, size: 1 },
+      LFO2_FORM: { offset: 123, size: 1 },
+      // 0-10
+      LFO2_RATE: { offset: 124, size: 2 },
+      // 2 nibbles: 00 7C, 00 7D (0-149)
+      LFO2_OFFSET: { offset: 126, size: 1 },
       // 0-4
-      LFO2_KEY_TRIGGER: { offset: 260, size: 1 },
-      // 0-1
-      LFO2_PITCH_DEPTH: { offset: 261, size: 1 },
-      // 1-127 (-63 to +63)
-      LFO2_TVF_DEPTH: { offset: 262, size: 1 },
-      // 1-127 (-63 to +63)
-      LFO2_TVA_DEPTH: { offset: 263, size: 1 },
-      // 1-127 (-63 to +63)
-      LFO2_PAN_DEPTH: { offset: 264, size: 1 }
-      // 1-127 (-63 to +63)
+      LFO2_RATE_DETUNE: { offset: 127, size: 1 },
+      // 0-127
+      LFO2_DELAY_TIME: { offset: 128, size: 1 },
+      // 0-127 (7-bit address 01 00 = 128)
+      LFO2_DELAY_TIME_KEY: { offset: 129, size: 1 },
+      // 54-74 (-100 to +100) (7-bit address 01 01 = 129)
+      LFO2_FADE_MODE: { offset: 130, size: 1 },
+      // 0-3 (7-bit address 01 02 = 130)
+      LFO2_FADE_TIME: { offset: 131, size: 1 },
+      // 0-127 (7-bit address 01 03 = 131)
+      LFO2_KEY_TRIGGER: { offset: 132, size: 1 },
+      // 0-1 (7-bit address 01 04 = 132)
+      LFO2_PITCH_DEPTH: { offset: 133, size: 1 },
+      // 1-127 (-63 to +63) (7-bit address 01 05 = 133)
+      LFO2_TVF_DEPTH: { offset: 134, size: 1 },
+      // 1-127 (-63 to +63) (7-bit address 01 06 = 134)
+      LFO2_TVA_DEPTH: { offset: 135, size: 1 },
+      // 1-127 (-63 to +63) (7-bit address 01 07 = 135)
+      LFO2_PAN_DEPTH: { offset: 136, size: 1 }
+      // 1-127 (-63 to +63) (7-bit address 01 08 = 136)
     }
   };
   function addOffset(base, offset) {
@@ -2416,21 +2482,53 @@
     const response = await midi2.sendAndReceive(msg);
     return parsePerformanceReverb(response.data);
   }
+  async function requestPartPatchName(midi2, part, deviceId) {
+    const base = getPatchTempAddress(part);
+    const msg = buildRQ1(base, [0, 0, 0, 12], deviceId);
+    const response = await midi2.sendAndReceive(msg);
+    return decodeName(response.data);
+  }
   async function requestPerformancePart(midi2, part, deviceId) {
     const address = getPartAddress(part);
     const msg = buildRQ1(address, PERF_PART.SIZE, deviceId);
     const response = await midi2.sendAndReceive(msg);
-    return parsePerformancePart(response.data);
+    const partData = parsePerformancePart(response.data);
+    try {
+      const patchName = await requestPartPatchName(midi2, part, deviceId);
+      partData.patchName = patchName || `Part ${part}`;
+    } catch (_) {
+      partData.patchName = `Part ${part}`;
+    }
+    return partData;
   }
   async function requestAllParts(midi2, deviceId, onProgress) {
     const parts = [];
     for (let i = 1; i <= 16; i++) {
       const partData = await requestPerformancePart(midi2, i, deviceId);
       parts.push(partData);
-      if (onProgress) onProgress(i, 16);
-      await new Promise((r) => setTimeout(r, 40));
+      if (onProgress) onProgress(i, 16, partData);
+      await new Promise((r) => setTimeout(r, 25));
     }
     return parts;
+  }
+  async function requestEntirePerformance(midi2, deviceId, onProgress) {
+    if (onProgress) onProgress("common", 0, 18, null);
+    const common = await requestPerformanceCommon(midi2, deviceId);
+    await new Promise((r) => setTimeout(r, 25));
+    if (onProgress) onProgress("chorus", 1, 18, common);
+    const chorus = await requestPerformanceChorus(midi2, deviceId);
+    await new Promise((r) => setTimeout(r, 25));
+    if (onProgress) onProgress("reverb", 2, 18, chorus);
+    const reverb = await requestPerformanceReverb(midi2, deviceId);
+    await new Promise((r) => setTimeout(r, 25));
+    const parts = [];
+    for (let i = 1; i <= 16; i++) {
+      if (onProgress) onProgress("part", 2 + i, 18, null);
+      const partData = await requestPerformancePart(midi2, i, deviceId);
+      parts.push(partData);
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    return { common, chorus, reverb, parts };
   }
   function sendPerformanceCommonParam(midi2, paramKey, value, deviceId) {
     const param = PERF_TEMP.COMMON.params[paramKey];
@@ -2573,6 +2671,22 @@
     const msg = buildRQ1(toneAddress, PATCH_TONE.SIZE, deviceId);
     const response = await midi2.sendAndReceive(msg);
     return parsePatchTone(response.data);
+  }
+  async function requestEntirePatch(midi2, part, deviceId, onProgress) {
+    if (onProgress) onProgress("common", 0, 6, null);
+    const common = await requestPatchCommon(midi2, part, deviceId);
+    await new Promise((r) => setTimeout(r, 25));
+    if (onProgress) onProgress("tmt", 1, 6, common);
+    const tmt = await requestPatchTMT(midi2, part, deviceId);
+    await new Promise((r) => setTimeout(r, 25));
+    const tones = [];
+    for (let t = 1; t <= 4; t++) {
+      if (onProgress) onProgress(`tone${t}`, 1 + t, 6, null);
+      const toneData = await requestPatchTone(midi2, part, t, deviceId);
+      tones.push(toneData);
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    return { common, tmt, tones };
   }
   function sendPatchCommonParam(midi2, part, paramKey, value, deviceId) {
     const param = PATCH_COMMON.params[paramKey];
@@ -2843,45 +2957,47 @@
       tvfEnvL3: data[91] ?? 0,
       tvfEnvL4: data[92] ?? 0,
       // TVA
-      tvaLevel: data[110] ?? 127,
-      tvaVelCurve: data[111] ?? 0,
-      tvaVelSens: data[112] ?? 64,
-      tvaEnvTime1Vel: data[113] ?? 64,
-      tvaEnvTime4Vel: data[114] ?? 64,
-      tvaEnvTimeKey: data[115] ?? 64,
-      tvaEnvT1: data[116] ?? 0,
-      tvaEnvT2: data[117] ?? 0,
-      tvaEnvT3: data[118] ?? 0,
-      tvaEnvT4: data[119] ?? 0,
-      tvaEnvL1: data[120] ?? 0,
-      tvaEnvL2: data[121] ?? 0,
-      tvaEnvL3: data[122] ?? 0,
+      tvaLevel: data[0] ?? 127,
+      tvaVelCurve: data[97] ?? 0,
+      tvaVelSens: data[98] ?? 64,
+      tvaEnvTime1Vel: data[99] ?? 64,
+      tvaEnvTime4Vel: data[100] ?? 64,
+      tvaEnvTimeKey: data[101] ?? 64,
+      tvaEnvT1: data[102] ?? 0,
+      tvaEnvT2: data[103] ?? 0,
+      tvaEnvT3: data[104] ?? 0,
+      tvaEnvT4: data[105] ?? 0,
+      tvaEnvL1: data[106] ?? 0,
+      tvaEnvL2: data[107] ?? 0,
+      tvaEnvL3: data[108] ?? 0,
       // LFO 1
-      lfo1Form: data[138] ?? 0,
-      lfo1Rate: data[139] ?? 0,
-      lfo1TempoSync: data[141] ?? 0,
-      lfo1FadeMode: data[142] ?? 0,
-      lfo1DelayTime: data[143] ?? 0,
-      lfo1FadeTime: data[144] ?? 0,
-      lfo1Offset: data[145] ?? 0,
-      lfo1KeyTrigger: data[147] ?? 0,
-      lfo1PitchDepth: data[148] ?? 64,
-      lfo1TvfDepth: data[149] ?? 64,
-      lfo1TvaDepth: data[150] ?? 64,
-      lfo1PanDepth: data[151] ?? 64,
+      lfo1Form: data[109] ?? 0,
+      lfo1Rate: data[110] ?? 0,
+      lfo1Offset: data[112] ?? 0,
+      lfo1RateDetune: data[113] ?? 0,
+      lfo1DelayTime: data[114] ?? 0,
+      lfo1DelayTimeKey: data[115] ?? 64,
+      lfo1FadeMode: data[116] ?? 0,
+      lfo1FadeTime: data[117] ?? 0,
+      lfo1KeyTrigger: data[118] ?? 0,
+      lfo1PitchDepth: data[119] ?? 64,
+      lfo1TvfDepth: data[120] ?? 64,
+      lfo1TvaDepth: data[121] ?? 64,
+      lfo1PanDepth: data[122] ?? 64,
       // LFO 2
-      lfo2Form: data[250] ?? 0,
-      lfo2Rate: data[251] ?? 0,
-      lfo2TempoSync: data[253] ?? 0,
-      lfo2FadeMode: data[254] ?? 0,
-      lfo2DelayTime: data[255] ?? 0,
-      lfo2FadeTime: data[256] ?? 0,
-      lfo2Offset: data[257] ?? 0,
-      lfo2KeyTrigger: data[260] ?? 0,
-      lfo2PitchDepth: data[261] ?? 64,
-      lfo2TvfDepth: data[262] ?? 64,
-      lfo2TvaDepth: data[263] ?? 64,
-      lfo2PanDepth: data[264] ?? 64
+      lfo2Form: data[123] ?? 0,
+      lfo2Rate: data[124] ?? 0,
+      lfo2Offset: data[126] ?? 0,
+      lfo2RateDetune: data[127] ?? 0,
+      lfo2DelayTime: data[128] ?? 0,
+      lfo2DelayTimeKey: data[129] ?? 64,
+      lfo2FadeMode: data[130] ?? 0,
+      lfo2FadeTime: data[131] ?? 0,
+      lfo2KeyTrigger: data[132] ?? 0,
+      lfo2PitchDepth: data[133] ?? 64,
+      lfo2TvfDepth: data[134] ?? 64,
+      lfo2TvaDepth: data[135] ?? 64,
+      lfo2PanDepth: data[136] ?? 64
     };
   }
 
@@ -3395,6 +3511,7 @@
           <span class="toggle-slider"></span>
         </label>
       </td>
+      <td style="max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;" id="partPatchName${i}">\u2014</td>
       <td>
         <select id="partChannel${i}" style="min-width:55px;">
           ${Array.from(
@@ -3549,6 +3666,13 @@
     $(`partAssign${part}`).value = data.outputAssign ?? 0;
     $(`partMute${part}`).checked = !!data.muteSwitch;
     $(`partRow${part}`).classList.toggle("part-muted", !!data.muteSwitch);
+    if (data.patchName) {
+      const nameEl = $(`partPatchName${part}`);
+      if (nameEl) {
+        nameEl.textContent = data.patchName;
+        nameEl.title = data.patchName;
+      }
+    }
   }
   var currentMatrixIndex = 1;
   var currentLfoIndex = 1;
@@ -3632,6 +3756,25 @@
     const oct = Math.floor(midiNote / 12) - 1;
     return `${notes[midiNote % 12]}${oct}`;
   }
+  function setWaveSelectValue(selectEl, value, groupType) {
+    if (!selectEl) return;
+    const valStr = String(value);
+    let found = false;
+    for (let i = 0; i < selectEl.options.length; i++) {
+      if (selectEl.options[i].value === valStr) {
+        selectEl.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = `${value}: ${getWaveName(groupType, value)}`;
+      selectEl.appendChild(opt);
+      selectEl.value = value;
+    }
+  }
   function updateToneUI(data) {
     if (!data) return;
     currentToneCache[currentToneIndex - 1] = data;
@@ -3643,7 +3786,8 @@
     $("toneCoarseTuneVal").textContent = (data.coarseTune ?? 64) - 64;
     $("toneFineTune").value = data.fineTune ?? 64;
     $("toneFineTuneVal").textContent = (data.fineTune ?? 64) - 64;
-    $("waveGroup").value = data.waveGroupType ?? 0;
+    const grp = data.waveGroupType ?? 0;
+    $("waveGroup").value = grp;
     $("waveGain").value = data.waveGain ?? 1;
     $("waveFxmSwitch").checked = !!data.fxmSwitch;
     $("waveFxmColor").value = data.fxmColor ?? 0;
@@ -3652,9 +3796,8 @@
     $("waveTempoSync").checked = !!data.waveTempoSync;
     const wNumL = data.waveNumberL ?? 1;
     const wNumR = data.waveNumberR ?? 0;
-    $("waveNumberL").value = wNumL;
-    $("waveNumberR").value = wNumR;
-    const grp = data.waveGroupType ?? 0;
+    setWaveSelectValue($("waveNumberL"), wNumL, grp);
+    setWaveSelectValue($("waveNumberR"), wNumR, grp);
     $("waveNameL").textContent = `${wNumL}: ${getWaveName(grp, wNumL)}`;
     $("waveNameR").textContent = wNumR === 0 ? "OFF" : `${wNumR}: ${getWaveName(grp, wNumR)}`;
     const pDepth = data.pitchEnvDepth ?? 64;
@@ -4109,6 +4252,32 @@
         sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, d.param, val, getDeviceId());
       });
     }
+    const entirePatchBtn = $("loadEntirePatchBtn");
+    if (entirePatchBtn) {
+      entirePatchBtn.addEventListener("click", async () => {
+        if (!midi.isConnected) {
+          setStatus("Not connected");
+          return;
+        }
+        const part = currentPart();
+        setStatus(`Loading entire patch for Part ${part} (Common, TMT, and all 4 Tones)...`);
+        try {
+          const patch = await requestEntirePatch(midi, part, getDeviceId(), (stage, cur, total) => {
+            setStatus(`Loading Part ${part} patch: ${stage} (${cur + 1}/${total})...`);
+          });
+          updatePatchCommonUI(patch.common);
+          updatePatchTMTUI(patch.tmt);
+          patch.tones.forEach((toneData, idx) => {
+            store.set(`patch.tones.${idx}`, toneData);
+            currentToneCache[idx] = toneData;
+          });
+          updateToneUI(patch.tones[currentToneIndex - 1]);
+          setStatus(`Successfully loaded entire patch: "${patch.common.name}" with 4 tones & wave data`);
+        } catch (e) {
+          setStatus(`Failed loading entire patch: ${e.message}`);
+        }
+      });
+    }
     $("loadPatchBtn").addEventListener("click", async () => {
       if (!midi.isConnected) {
         setStatus("Not connected");
@@ -4141,7 +4310,7 @@
           if (currentToneIndex === t) {
             updateToneUI(toneData);
           }
-          await new Promise((r) => setTimeout(r, 40));
+          await new Promise((r) => setTimeout(r, 30));
         }
         setStatus(`Loaded all 4 tones for Part ${part}`);
       } catch (e) {
@@ -4407,20 +4576,45 @@
       setStatus(`Failed loading effects: ${e.message}`);
     }
   }
+  async function loadEntirePerformanceData() {
+    if (!midi.isConnected) {
+      setStatus("Not connected");
+      return;
+    }
+    const progEl = $("loadProgress");
+    setStatus("Loading entire performance (Common, Effects, 16 Parts + Patch Names)...");
+    try {
+      const perf = await requestEntirePerformance(midi, getDeviceId(), (stage, cur, total, data) => {
+        if (progEl) progEl.textContent = `Reading ${stage} (${cur + 1}/${total})...`;
+        if (stage === "common" && data) updatePerformanceCommonUI(data);
+        if (stage === "chorus" && data) updatePerformanceChorusUI(data);
+        if (stage === "reverb" && data) updatePerformanceReverbUI(data);
+      });
+      updatePerformanceCommonUI(perf.common);
+      updatePerformanceChorusUI(perf.chorus);
+      updatePerformanceReverbUI(perf.reverb);
+      perf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
+      if (progEl) progEl.textContent = "Entire performance loaded";
+      setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, Effects, 16 Parts)`);
+    } catch (e) {
+      if (progEl) progEl.textContent = "";
+      setStatus(`Failed loading entire performance: ${e.message}`);
+    }
+  }
   async function loadAllPartsData() {
     if (!midi.isConnected) {
       setStatus("Not connected");
       return;
     }
     const progEl = $("loadProgress");
-    setStatus("Loading all 16 parts...");
+    setStatus("Loading all 16 parts with patch names...");
     try {
-      const parts = await requestAllParts(midi, getDeviceId(), (done, total) => {
-        if (progEl) progEl.textContent = `Reading Part ${done}/${total}...`;
+      const parts = await requestAllParts(midi, getDeviceId(), (done, total, partData) => {
+        if (progEl) progEl.textContent = `Reading Part ${done}/${total} (${partData?.patchName || ""})...`;
+        if (partData) updatePartRow(done, partData);
       });
-      parts.forEach((data, idx) => updatePartRow(idx + 1, data));
       if (progEl) progEl.textContent = "All 16 parts loaded";
-      setStatus("Successfully loaded all 16 performance parts");
+      setStatus("Successfully loaded all 16 performance parts and sound names");
     } catch (e) {
       if (progEl) progEl.textContent = "";
       setStatus(`Failed loading parts: ${e.message}`);
@@ -4439,9 +4633,128 @@
       btn.addEventListener("click", () => switchToTab(btn.dataset.tab));
     });
   }
+  var isEdited = false;
+  function markEdited() {
+    if (!isEdited) {
+      isEdited = true;
+      const badge = $("dirtyBadge");
+      if (badge) badge.style.display = "inline-flex";
+    }
+  }
+  function clearEdited() {
+    isEdited = false;
+    const badge = $("dirtyBadge");
+    if (badge) badge.style.display = "none";
+  }
+  function initEditTracking() {
+    document.addEventListener("input", (e) => {
+      if (!e.target) return;
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") {
+        if (e.target.id === "midiInput" || e.target.id === "midiOutput" || e.target.id === "deviceId") return;
+        markEdited();
+      }
+    });
+    document.addEventListener("change", (e) => {
+      if (!e.target) return;
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") {
+        if (e.target.id === "midiInput" || e.target.id === "midiOutput" || e.target.id === "deviceId") return;
+        markEdited();
+      }
+    });
+  }
+  function handleSyncWithUnit() {
+    if (!midi.isConnected) {
+      setStatus("Cannot sync: XV-5050 is not connected. Connect MIDI first.");
+      return;
+    }
+    if (isEdited) {
+      const modal = $("confirmSyncModal");
+      if (modal) {
+        modal.style.display = "flex";
+        return;
+      }
+      if (!window.confirm("You have edited content in the web editor. You will lose all edits. Are you sure you want to sync from unit?")) {
+        return;
+      }
+    }
+    executeSyncWithUnit();
+  }
+  async function executeSyncWithUnit() {
+    const modal = $("confirmSyncModal");
+    if (modal) modal.style.display = "none";
+    const progModal = $("syncProgressModal");
+    const progDetail = $("syncProgressDetail");
+    const progBar = $("syncProgressBar");
+    const setProgress = (percent, detail) => {
+      if (progBar) progBar.style.width = `${percent}%`;
+      if (progDetail) progDetail.textContent = detail;
+      setStatus(`Sync: ${detail} (${percent}%)`);
+    };
+    if (progModal) progModal.style.display = "flex";
+    setProgress(5, "Connecting to XV-5050...");
+    try {
+      const devId = getDeviceId();
+      setProgress(15, "Reading Performance Common & Routing...");
+      const common = await requestPerformanceCommon(midi, devId);
+      updatePerformanceCommonUI(common);
+      store.set("performance.common", common);
+      await new Promise((r) => setTimeout(r, 20));
+      setProgress(25, "Reading Performance Chorus & Reverb...");
+      const chorus = await requestPerformanceChorus(midi, devId);
+      updatePerformanceChorusUI(chorus);
+      store.set("performance.effects.chorus", chorus);
+      const reverb = await requestPerformanceReverb(midi, devId);
+      updatePerformanceReverbUI(reverb);
+      store.set("performance.effects.reverb", reverb);
+      await new Promise((r) => setTimeout(r, 20));
+      setProgress(35, "Reading all 16 Parts & Sound names...");
+      const parts = await requestAllParts(midi, devId, (done, total, partData) => {
+        const pct = 35 + Math.round(done / total * 35);
+        setProgress(pct, `Part ${done}/${total}: "${partData?.patchName || ""}"`);
+        if (partData) updatePartRow(done, partData);
+      });
+      store.set("performance.parts", parts);
+      await new Promise((r) => setTimeout(r, 20));
+      const part = getSelectedPart();
+      setProgress(72, `Reading Part ${part} Patch Common & Structure...`);
+      const patchCommon = await requestPatchCommon(midi, part, devId);
+      updatePatchCommonUI(patchCommon);
+      store.set("patch.common", patchCommon);
+      const patchTmt = await requestPatchTMT(midi, part, devId);
+      updatePatchTMTUI(patchTmt);
+      store.set("patch.tmt", patchTmt);
+      await new Promise((r) => setTimeout(r, 20));
+      for (let t = 1; t <= 4; t++) {
+        const pct = 75 + t * 6;
+        setProgress(pct, `Reading Tone ${t}/4 (Wave, Filter, TVA, Envelopes)...`);
+        const toneData = await requestPatchTone(midi, part, t, devId);
+        store.set(`patch.tones.${t - 1}`, toneData);
+        currentToneCache[t - 1] = toneData;
+        if (currentToneIndex === t) {
+          updateToneUI(toneData);
+        }
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      const activeTone = currentToneCache[currentToneIndex - 1];
+      if (activeTone) updateToneUI(activeTone);
+      setProgress(100, "Sync Complete!");
+      clearEdited();
+      setStatus("\u2713 Successfully synchronized all performance, parts, patch, and wave data from XV-5050");
+      setTimeout(() => {
+        if (progModal) progModal.style.display = "none";
+      }, 450);
+    } catch (err) {
+      if (progModal) progModal.style.display = "none";
+      setStatus(`Sync failed: ${err.message}`);
+      console.error("Sync failed:", err);
+    }
+  }
   function init() {
     buildPartsTable();
     initTabs();
+    initEditTracking();
     bindPerformanceCommonControls();
     bindPatchControls();
     initLibrarianControls();
@@ -4450,6 +4763,16 @@
     $("panicBtn").addEventListener("click", handlePanic);
     $("auditionBtn").addEventListener("click", handleAudition);
     $("clearLogBtn").addEventListener("click", clearLog);
+    const syncBtn = $("syncWithUnitBtn");
+    if (syncBtn) syncBtn.addEventListener("click", handleSyncWithUnit);
+    const cancelSync = $("cancelSyncBtn");
+    if (cancelSync) cancelSync.addEventListener("click", () => {
+      $("confirmSyncModal").style.display = "none";
+    });
+    const proceedSync = $("proceedSyncBtn");
+    if (proceedSync) proceedSync.addEventListener("click", executeSyncWithUnit);
+    const entirePerfBtn = $("loadEntirePerfBtn");
+    if (entirePerfBtn) entirePerfBtn.addEventListener("click", loadEntirePerformanceData);
     $("loadPerfBtn").addEventListener("click", loadPerformanceCommon);
     $("loadPerfFxBtn").addEventListener("click", loadPerformanceFx);
     $("loadAllPartsBtn").addEventListener("click", loadAllPartsData);

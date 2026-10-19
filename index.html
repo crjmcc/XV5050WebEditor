@@ -17,6 +17,7 @@
         <span class="subtitle">Web MIDI Client</span>
       </div>
       <div class="header-actions">
+        <span id="dirtyBadge" class="dirty-badge" style="display:none;" title="Editor has unsaved changes that differ from hardware">● Unsaved Edits</span>
         <button class="btn btn-sm btn-panic" id="panicBtn" title="Send All Sound Off & All Notes Off to all 16 MIDI channels">⚠ All Notes Off</button>
         <button class="btn btn-sm btn-audition" id="auditionBtn" title="Play test Middle C note on active part">▶ Audition Note</button>
         <div class="connection-status">
@@ -59,6 +60,7 @@
         <select id="midiOutput"><option value="">— Select MIDI Output —</option></select>
         <button class="btn btn-primary" id="connectBtn">Connect</button>
         <button class="btn" id="refreshBtn">↻ Refresh</button>
+        <button class="btn btn-sync" id="syncWithUnitBtn" title="Read all parameters from XV-5050 and synchronize the entire web editor">⇄ Sync with Unit</button>
       </div>
     </div>
 
@@ -79,9 +81,10 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title"><span class="icon">⬡</span> Performance Common & Routing</span>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-primary btn-sm" id="loadPerfBtn">↓ Load Common</button>
-            <button class="btn btn-secondary btn-sm" id="loadPerfFxBtn">↓ Load Chorus/Reverb</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="loadEntirePerfBtn">★ Load Entire Performance</button>
+            <button class="btn btn-secondary btn-sm" id="loadPerfBtn">↓ Common</button>
+            <button class="btn btn-secondary btn-sm" id="loadPerfFxBtn">↓ Chorus/Reverb</button>
           </div>
         </div>
 
@@ -244,6 +247,7 @@
               <tr>
                 <th>Part</th>
                 <th>Active</th>
+                <th>Patch Name</th>
                 <th>MIDI Ch</th>
                 <th>Bank MSB</th>
                 <th>Bank LSB</th>
@@ -297,9 +301,10 @@
               <option value="0">Single Patch Mode (Base: 1F 00 00 00)</option>
             </select>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-primary btn-sm" id="loadPatchBtn">↓ Load Patch Common & TMT</button>
-            <button class="btn btn-secondary btn-sm" id="loadTonesBtn">↓ Load 4 Tones</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="loadEntirePatchBtn">★ Load Entire Patch (All Tones & Waves)</button>
+            <button class="btn btn-secondary btn-sm" id="loadPatchBtn">↓ Common & TMT</button>
+            <button class="btn btn-secondary btn-sm" id="loadTonesBtn">↓ 4 Tones</button>
           </div>
         </div>
       </div>
@@ -1073,6 +1078,39 @@
       <span id="statusDeviceInfo"></span>
     </footer>
 
+  </div>
+
+  <!-- Confirm Overwrite Unsaved Edits Modal -->
+  <div id="confirmSyncModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-icon">⚠️</span>
+        <h3>Sync with XV-5050</h3>
+      </div>
+      <div class="modal-body">
+        <p><strong>You have edited content in the web editor.</strong></p>
+        <div class="warning-callout">
+          You will lose all your current edits. Are you sure you want to proceed?
+        </div>
+        <p>Syncing will read all current parameters directly from your connected XV-5050 hardware unit and overwrite what is currently displayed in the editor.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelSyncBtn">Cancel</button>
+        <button class="btn btn-danger" id="proceedSyncBtn">Yes, Sync from Unit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync In-Progress Modal -->
+  <div id="syncProgressModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card sync-card">
+      <div class="sync-spinner"></div>
+      <div class="sync-status-title">Syncing with XV-5050...</div>
+      <div class="sync-status-detail" id="syncProgressDetail">Connecting...</div>
+      <div class="sync-progress-bar">
+        <div class="sync-progress-fill" id="syncProgressBar"></div>
+      </div>
+    </div>
   </div>
 
   <script defer src="dist/editor.js"></script>

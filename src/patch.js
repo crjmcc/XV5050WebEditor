@@ -66,6 +66,37 @@ export async function requestPatchTone(midi, part, tone, deviceId) {
 }
 
 /**
+ * Request an entire patch in one coordinated sweep:
+ * Patch Common, TMT, and all 4 Tones (including full wave configuration).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single patch mode)
+ * @param {number} [deviceId] - Device ID
+ * @param {Function} [onProgress] - Callback (stage, current, total, data)
+ * @returns {Promise<{common: object, tmt: object, tones: object[]}>}
+ */
+export async function requestEntirePatch(midi, part, deviceId, onProgress) {
+  if (onProgress) onProgress('common', 0, 6, null);
+  const common = await requestPatchCommon(midi, part, deviceId);
+  await new Promise(r => setTimeout(r, 25));
+
+  if (onProgress) onProgress('tmt', 1, 6, common);
+  const tmt = await requestPatchTMT(midi, part, deviceId);
+  await new Promise(r => setTimeout(r, 25));
+
+  const tones = [];
+  for (let t = 1; t <= 4; t++) {
+    if (onProgress) onProgress(`tone${t}`, 1 + t, 6, null);
+    const toneData = await requestPatchTone(midi, part, t, deviceId);
+    tones.push(toneData);
+    await new Promise(r => setTimeout(r, 25));
+  }
+
+  return { common, tmt, tones };
+}
+
+
+/**
  * Send a single patch common parameter to the device.
  * 
  * @param {import('./midi.js').MidiManager} midi - MIDI manager
@@ -493,44 +524,46 @@ export function parsePatchTone(data) {
     tvfEnvL3: data[0x5B] ?? 0,
     tvfEnvL4: data[0x5C] ?? 0,
     // TVA
-    tvaLevel: data[0x6E] ?? 127,
-    tvaVelCurve: data[0x6F] ?? 0,
-    tvaVelSens: data[0x70] ?? 64,
-    tvaEnvTime1Vel: data[0x71] ?? 64,
-    tvaEnvTime4Vel: data[0x72] ?? 64,
-    tvaEnvTimeKey: data[0x73] ?? 64,
-    tvaEnvT1: data[0x74] ?? 0,
-    tvaEnvT2: data[0x75] ?? 0,
-    tvaEnvT3: data[0x76] ?? 0,
-    tvaEnvT4: data[0x77] ?? 0,
-    tvaEnvL1: data[0x78] ?? 0,
-    tvaEnvL2: data[0x79] ?? 0,
-    tvaEnvL3: data[0x7A] ?? 0,
+    tvaLevel: data[0x00] ?? 127,
+    tvaVelCurve: data[0x61] ?? 0,
+    tvaVelSens: data[0x62] ?? 64,
+    tvaEnvTime1Vel: data[0x63] ?? 64,
+    tvaEnvTime4Vel: data[0x64] ?? 64,
+    tvaEnvTimeKey: data[0x65] ?? 64,
+    tvaEnvT1: data[0x66] ?? 0,
+    tvaEnvT2: data[0x67] ?? 0,
+    tvaEnvT3: data[0x68] ?? 0,
+    tvaEnvT4: data[0x69] ?? 0,
+    tvaEnvL1: data[0x6A] ?? 0,
+    tvaEnvL2: data[0x6B] ?? 0,
+    tvaEnvL3: data[0x6C] ?? 0,
     // LFO 1
-    lfo1Form: data[0x8A] ?? 0,
-    lfo1Rate: data[0x8B] ?? 0,
-    lfo1TempoSync: data[0x8D] ?? 0,
-    lfo1FadeMode: data[0x8E] ?? 0,
-    lfo1DelayTime: data[0x8F] ?? 0,
-    lfo1FadeTime: data[0x90] ?? 0,
-    lfo1Offset: data[0x91] ?? 0,
-    lfo1KeyTrigger: data[0x93] ?? 0,
-    lfo1PitchDepth: data[0x94] ?? 64,
-    lfo1TvfDepth: data[0x95] ?? 64,
-    lfo1TvaDepth: data[0x96] ?? 64,
-    lfo1PanDepth: data[0x97] ?? 64,
+    lfo1Form: data[0x6D] ?? 0,
+    lfo1Rate: data[0x6E] ?? 0,
+    lfo1Offset: data[0x70] ?? 0,
+    lfo1RateDetune: data[0x71] ?? 0,
+    lfo1DelayTime: data[0x72] ?? 0,
+    lfo1DelayTimeKey: data[0x73] ?? 64,
+    lfo1FadeMode: data[0x74] ?? 0,
+    lfo1FadeTime: data[0x75] ?? 0,
+    lfo1KeyTrigger: data[0x76] ?? 0,
+    lfo1PitchDepth: data[0x77] ?? 64,
+    lfo1TvfDepth: data[0x78] ?? 64,
+    lfo1TvaDepth: data[0x79] ?? 64,
+    lfo1PanDepth: data[0x7A] ?? 64,
     // LFO 2
-    lfo2Form: data[0xFA] ?? 0,
-    lfo2Rate: data[0xFB] ?? 0,
-    lfo2TempoSync: data[0xFD] ?? 0,
-    lfo2FadeMode: data[0xFE] ?? 0,
-    lfo2DelayTime: data[0xFF] ?? 0,
-    lfo2FadeTime: data[0x0100] ?? 0,
-    lfo2Offset: data[0x0101] ?? 0,
-    lfo2KeyTrigger: data[0x0104] ?? 0,
-    lfo2PitchDepth: data[0x0105] ?? 64,
-    lfo2TvfDepth: data[0x0106] ?? 64,
-    lfo2TvaDepth: data[0x0107] ?? 64,
-    lfo2PanDepth: data[0x0108] ?? 64,
+    lfo2Form: data[0x7B] ?? 0,
+    lfo2Rate: data[0x7C] ?? 0,
+    lfo2Offset: data[0x7E] ?? 0,
+    lfo2RateDetune: data[0x7F] ?? 0,
+    lfo2DelayTime: data[0x80] ?? 0,
+    lfo2DelayTimeKey: data[0x81] ?? 64,
+    lfo2FadeMode: data[0x82] ?? 0,
+    lfo2FadeTime: data[0x83] ?? 0,
+    lfo2KeyTrigger: data[0x84] ?? 0,
+    lfo2PitchDepth: data[0x85] ?? 64,
+    lfo2TvfDepth: data[0x86] ?? 64,
+    lfo2TvaDepth: data[0x87] ?? 64,
+    lfo2PanDepth: data[0x88] ?? 64,
   };
 }

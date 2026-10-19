@@ -24,7 +24,9 @@ import {
   requestPerformanceChorus,
   requestPerformanceReverb,
   requestPerformancePart,
+  requestPartPatchName,
   requestAllParts,
+  requestEntirePerformance,
   sendPerformanceCommonParam,
   sendPerformanceChorusParam,
   sendPerformanceReverbParam,
@@ -39,6 +41,7 @@ import {
   requestPatchCommon,
   requestPatchTMT,
   requestPatchTone,
+  requestEntirePatch,
   sendPatchCommonParam,
   sendPatchTMTParam,
   sendPatchToneParam,
@@ -440,6 +443,7 @@ function buildPartsTable() {
           <span class="toggle-slider"></span>
         </label>
       </td>
+      <td style="max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;" id="partPatchName${i}">—</td>
       <td>
         <select id="partChannel${i}" style="min-width:55px;">
           ${Array.from({ length: 16 }, (_, ch) =>
@@ -605,6 +609,13 @@ function updatePartRow(part, data) {
   $(`partAssign${part}`).value = data.outputAssign ?? 0;
   $(`partMute${part}`).checked = !!data.muteSwitch;
   $(`partRow${part}`).classList.toggle('part-muted', !!data.muteSwitch);
+  if (data.patchName) {
+    const nameEl = $(`partPatchName${part}`);
+    if (nameEl) {
+      nameEl.textContent = data.patchName;
+      nameEl.title = data.patchName;
+    }
+  }
 }
 
 // =============================================================================
@@ -708,6 +719,26 @@ function formatKeyNote(midiNote) {
   return `${notes[midiNote % 12]}${oct}`;
 }
 
+function setWaveSelectValue(selectEl, value, groupType) {
+  if (!selectEl) return;
+  const valStr = String(value);
+  let found = false;
+  for (let i = 0; i < selectEl.options.length; i++) {
+    if (selectEl.options[i].value === valStr) {
+      selectEl.selectedIndex = i;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = `${value}: ${getWaveName(groupType, value)}`;
+    selectEl.appendChild(opt);
+    selectEl.value = value;
+  }
+}
+
 function updateToneUI(data) {
   if (!data) return;
   currentToneCache[currentToneIndex - 1] = data;
@@ -721,7 +752,8 @@ function updateToneUI(data) {
   $('toneCoarseTuneVal').textContent = (data.coarseTune ?? 64) - 64;
   $('toneFineTune').value = data.fineTune ?? 64;
   $('toneFineTuneVal').textContent = (data.fineTune ?? 64) - 64;
-  $('waveGroup').value = data.waveGroupType ?? 0;
+  const grp = data.waveGroupType ?? 0;
+  $('waveGroup').value = grp;
   $('waveGain').value = data.waveGain ?? 1;
   $('waveFxmSwitch').checked = !!data.fxmSwitch;
   $('waveFxmColor').value = data.fxmColor ?? 0;
@@ -731,9 +763,8 @@ function updateToneUI(data) {
 
   const wNumL = data.waveNumberL ?? 1;
   const wNumR = data.waveNumberR ?? 0;
-  $('waveNumberL').value = wNumL;
-  $('waveNumberR').value = wNumR;
-  const grp = data.waveGroupType ?? 0;
+  setWaveSelectValue($('waveNumberL'), wNumL, grp);
+  setWaveSelectValue($('waveNumberR'), wNumR, grp);
   $('waveNameL').textContent = `${wNumL}: ${getWaveName(grp, wNumL)}`;
   $('waveNameR').textContent = wNumR === 0 ? 'OFF' : `${wNumR}: ${getWaveName(grp, wNumR)}`;
 
@@ -1276,7 +1307,32 @@ function bindPatchControls() {
     });
   }
 
-  // Load Patch Button
+  // Load Entire Patch Button (Common, TMT, 4 Tones with Waveforms)
+  const entirePatchBtn = $('loadEntirePatchBtn');
+  if (entirePatchBtn) {
+    entirePatchBtn.addEventListener('click', async () => {
+      if (!midi.isConnected) { setStatus('Not connected'); return; }
+      const part = currentPart();
+      setStatus(`Loading entire patch for Part ${part} (Common, TMT, and all 4 Tones)...`);
+      try {
+        const patch = await requestEntirePatch(midi, part, getDeviceId(), (stage, cur, total) => {
+          setStatus(`Loading Part ${part} patch: ${stage} (${cur + 1}/${total})...`);
+        });
+        updatePatchCommonUI(patch.common);
+        updatePatchTMTUI(patch.tmt);
+        patch.tones.forEach((toneData, idx) => {
+          store.set(`patch.tones.${idx}`, toneData);
+          currentToneCache[idx] = toneData;
+        });
+        updateToneUI(patch.tones[currentToneIndex - 1]);
+        setStatus(`Successfully loaded entire patch: "${patch.common.name}" with 4 tones & wave data`);
+      } catch (e) {
+        setStatus(`Failed loading entire patch: ${e.message}`);
+      }
+    });
+  }
+
+  // Load Patch Button (Common & TMT)
   $('loadPatchBtn').addEventListener('click', async () => {
     if (!midi.isConnected) { setStatus('Not connected'); return; }
     const part = currentPart();
@@ -1305,7 +1361,7 @@ function bindPatchControls() {
         if (currentToneIndex === t) {
           updateToneUI(toneData);
         }
-        await new Promise(r => setTimeout(r, 40));
+        await new Promise(r => setTimeout(r, 30));
       }
       setStatus(`Loaded all 4 tones for Part ${part}`);
     } catch (e) {
@@ -1623,17 +1679,40 @@ async function loadPerformanceFx() {
   }
 }
 
+async function loadEntirePerformanceData() {
+  if (!midi.isConnected) { setStatus('Not connected'); return; }
+  const progEl = $('loadProgress');
+  setStatus('Loading entire performance (Common, Effects, 16 Parts + Patch Names)...');
+  try {
+    const perf = await requestEntirePerformance(midi, getDeviceId(), (stage, cur, total, data) => {
+      if (progEl) progEl.textContent = `Reading ${stage} (${cur + 1}/${total})...`;
+      if (stage === 'common' && data) updatePerformanceCommonUI(data);
+      if (stage === 'chorus' && data) updatePerformanceChorusUI(data);
+      if (stage === 'reverb' && data) updatePerformanceReverbUI(data);
+    });
+    updatePerformanceCommonUI(perf.common);
+    updatePerformanceChorusUI(perf.chorus);
+    updatePerformanceReverbUI(perf.reverb);
+    perf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
+    if (progEl) progEl.textContent = 'Entire performance loaded';
+    setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, Effects, 16 Parts)`);
+  } catch (e) {
+    if (progEl) progEl.textContent = '';
+    setStatus(`Failed loading entire performance: ${e.message}`);
+  }
+}
+
 async function loadAllPartsData() {
   if (!midi.isConnected) { setStatus('Not connected'); return; }
   const progEl = $('loadProgress');
-  setStatus('Loading all 16 parts...');
+  setStatus('Loading all 16 parts with patch names...');
   try {
-    const parts = await requestAllParts(midi, getDeviceId(), (done, total) => {
-      if (progEl) progEl.textContent = `Reading Part ${done}/${total}...`;
+    const parts = await requestAllParts(midi, getDeviceId(), (done, total, partData) => {
+      if (progEl) progEl.textContent = `Reading Part ${done}/${total} (${partData?.patchName || ''})...`;
+      if (partData) updatePartRow(done, partData);
     });
-    parts.forEach((data, idx) => updatePartRow(idx + 1, data));
     if (progEl) progEl.textContent = 'All 16 parts loaded';
-    setStatus('Successfully loaded all 16 performance parts');
+    setStatus('Successfully loaded all 16 performance parts and sound names');
   } catch (e) {
     if (progEl) progEl.textContent = '';
     setStatus(`Failed loading parts: ${e.message}`);
@@ -1660,12 +1739,164 @@ function initTabs() {
 }
 
 // =============================================================================
+// Edit Tracking & Sync with Unit
+// =============================================================================
+
+let isEdited = false;
+
+function markEdited() {
+  if (!isEdited) {
+    isEdited = true;
+    const badge = $('dirtyBadge');
+    if (badge) badge.style.display = 'inline-flex';
+  }
+}
+
+function clearEdited() {
+  isEdited = false;
+  const badge = $('dirtyBadge');
+  if (badge) badge.style.display = 'none';
+}
+
+function initEditTracking() {
+  document.addEventListener('input', (e) => {
+    if (!e.target) return;
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+      if (e.target.id === 'midiInput' || e.target.id === 'midiOutput' || e.target.id === 'deviceId') return;
+      markEdited();
+    }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (!e.target) return;
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+      if (e.target.id === 'midiInput' || e.target.id === 'midiOutput' || e.target.id === 'deviceId') return;
+      markEdited();
+    }
+  });
+}
+
+function handleSyncWithUnit() {
+  if (!midi.isConnected) {
+    setStatus('Cannot sync: XV-5050 is not connected. Connect MIDI first.');
+    return;
+  }
+
+  if (isEdited) {
+    const modal = $('confirmSyncModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      return;
+    }
+    if (!window.confirm('You have edited content in the web editor. You will lose all edits. Are you sure you want to sync from unit?')) {
+      return;
+    }
+  }
+
+  executeSyncWithUnit();
+}
+
+async function executeSyncWithUnit() {
+  const modal = $('confirmSyncModal');
+  if (modal) modal.style.display = 'none';
+
+  const progModal = $('syncProgressModal');
+  const progDetail = $('syncProgressDetail');
+  const progBar = $('syncProgressBar');
+
+  const setProgress = (percent, detail) => {
+    if (progBar) progBar.style.width = `${percent}%`;
+    if (progDetail) progDetail.textContent = detail;
+    setStatus(`Sync: ${detail} (${percent}%)`);
+  };
+
+  if (progModal) progModal.style.display = 'flex';
+  setProgress(5, 'Connecting to XV-5050...');
+
+  try {
+    const devId = getDeviceId();
+
+    // 1. Performance Common
+    setProgress(15, 'Reading Performance Common & Routing...');
+    const common = await requestPerformanceCommon(midi, devId);
+    updatePerformanceCommonUI(common);
+    store.set('performance.common', common);
+    await new Promise(r => setTimeout(r, 20));
+
+    // 2. Performance Chorus & Reverb
+    setProgress(25, 'Reading Performance Chorus & Reverb...');
+    const chorus = await requestPerformanceChorus(midi, devId);
+    updatePerformanceChorusUI(chorus);
+    store.set('performance.effects.chorus', chorus);
+
+    const reverb = await requestPerformanceReverb(midi, devId);
+    updatePerformanceReverbUI(reverb);
+    store.set('performance.effects.reverb', reverb);
+    await new Promise(r => setTimeout(r, 20));
+
+    // 3. Performance Parts (All 16 parts with sound names)
+    setProgress(35, 'Reading all 16 Parts & Sound names...');
+    const parts = await requestAllParts(midi, devId, (done, total, partData) => {
+      const pct = 35 + Math.round((done / total) * 35);
+      setProgress(pct, `Part ${done}/${total}: "${partData?.patchName || ''}"`);
+      if (partData) updatePartRow(done, partData);
+    });
+    store.set('performance.parts', parts);
+    await new Promise(r => setTimeout(r, 20));
+
+    // 4. Active Part Patch Common & TMT
+    const part = getSelectedPart();
+    setProgress(72, `Reading Part ${part} Patch Common & Structure...`);
+    const patchCommon = await requestPatchCommon(midi, part, devId);
+    updatePatchCommonUI(patchCommon);
+    store.set('patch.common', patchCommon);
+
+    const patchTmt = await requestPatchTMT(midi, part, devId);
+    updatePatchTMTUI(patchTmt);
+    store.set('patch.tmt', patchTmt);
+    await new Promise(r => setTimeout(r, 20));
+
+    // 5. Active Part All 4 Tones & Wave Data
+    for (let t = 1; t <= 4; t++) {
+      const pct = 75 + (t * 6);
+      setProgress(pct, `Reading Tone ${t}/4 (Wave, Filter, TVA, Envelopes)...`);
+      const toneData = await requestPatchTone(midi, part, t, devId);
+      store.set(`patch.tones.${t - 1}`, toneData);
+      currentToneCache[t - 1] = toneData;
+      if (currentToneIndex === t) {
+        updateToneUI(toneData);
+      }
+      await new Promise(r => setTimeout(r, 20));
+    }
+
+    const activeTone = currentToneCache[currentToneIndex - 1];
+    if (activeTone) updateToneUI(activeTone);
+
+    setProgress(100, 'Sync Complete!');
+    clearEdited();
+    setStatus('✓ Successfully synchronized all performance, parts, patch, and wave data from XV-5050');
+
+    setTimeout(() => {
+      if (progModal) progModal.style.display = 'none';
+    }, 450);
+
+  } catch (err) {
+    if (progModal) progModal.style.display = 'none';
+    setStatus(`Sync failed: ${err.message}`);
+    console.error('Sync failed:', err);
+  }
+}
+
+// =============================================================================
 // Initialization
 // =============================================================================
 
 function init() {
   buildPartsTable();
   initTabs();
+  initEditTracking();
 
   bindPerformanceCommonControls();
   bindPatchControls();
@@ -1678,7 +1909,21 @@ function init() {
   $('auditionBtn').addEventListener('click', handleAudition);
   $('clearLogBtn').addEventListener('click', clearLog);
 
+  // Sync with Unit & Modals
+  const syncBtn = $('syncWithUnitBtn');
+  if (syncBtn) syncBtn.addEventListener('click', handleSyncWithUnit);
+
+  const cancelSync = $('cancelSyncBtn');
+  if (cancelSync) cancelSync.addEventListener('click', () => {
+    $('confirmSyncModal').style.display = 'none';
+  });
+
+  const proceedSync = $('proceedSyncBtn');
+  if (proceedSync) proceedSync.addEventListener('click', executeSyncWithUnit);
+
   // Performance loader buttons
+  const entirePerfBtn = $('loadEntirePerfBtn');
+  if (entirePerfBtn) entirePerfBtn.addEventListener('click', loadEntirePerformanceData);
   $('loadPerfBtn').addEventListener('click', loadPerformanceCommon);
   $('loadPerfFxBtn').addEventListener('click', loadPerformanceFx);
   $('loadAllPartsBtn').addEventListener('click', loadAllPartsData);

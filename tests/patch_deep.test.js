@@ -139,22 +139,22 @@ describe('Deep Tone Generator Engine (Stage 2 Gap 3)', () => {
     assert.equal(PATCH_TONE.params.TVF_ENV_L4.offset, 0x5C);
 
     // TVA Amp & Envelope
-    assert.equal(PATCH_TONE.params.TVA_LEVEL.offset, 0x6E);
-    assert.equal(PATCH_TONE.params.TVA_ENV_T1.offset, 0x74);
-    assert.equal(PATCH_TONE.params.TVA_ENV_L3.offset, 0x7A);
+    assert.equal(PATCH_TONE.params.TVA_LEVEL.offset, 0x00);
+    assert.equal(PATCH_TONE.params.TVA_ENV_T1.offset, 0x66);
+    assert.equal(PATCH_TONE.params.TVA_ENV_L3.offset, 0x6C);
 
     // Dual LFO 1 & 2
-    assert.equal(PATCH_TONE.params.LFO1_FORM.offset, 0x8A);
-    assert.equal(PATCH_TONE.params.LFO1_RATE.offset, 0x8B);
-    assert.equal(PATCH_TONE.params.LFO1_PITCH_DEPTH.offset, 0x94);
-    assert.equal(PATCH_TONE.params.LFO2_FORM.offset, 0xFA);
-    assert.equal(PATCH_TONE.params.LFO2_RATE.offset, 0xFB);
-    assert.equal(PATCH_TONE.params.LFO2_TVF_DEPTH.offset, 0x0106);
+    assert.equal(PATCH_TONE.params.LFO1_FORM.offset, 0x6D);
+    assert.equal(PATCH_TONE.params.LFO1_RATE.offset, 0x6E);
+    assert.equal(PATCH_TONE.params.LFO1_PITCH_DEPTH.offset, 0x77);
+    assert.equal(PATCH_TONE.params.LFO2_FORM.offset, 0x7B);
+    assert.equal(PATCH_TONE.params.LFO2_RATE.offset, 0x7C);
+    assert.equal(PATCH_TONE.params.LFO2_TVF_DEPTH.offset, 0x86);
   });
 
   test('parsePatchTone parses complete Wave, TVF, TVA, Envelope, and LFO blocks', () => {
     const raw = new Array(0x0109).fill(0);
-    raw[0x00] = 110; // Tone Level
+    raw[0x00] = 110; // Tone Level (TVA Level)
     raw[0x04] = 64;  // Pan C
     // Wave
     raw[0x27] = 2;   // SRX
@@ -173,17 +173,16 @@ describe('Deep Tone Generator Engine (Stage 2 Gap 3)', () => {
     raw[0x55] = 30;  // TVF T1
     raw[0x59] = 120; // TVF L1
     // TVA
-    raw[0x6E] = 105; // TVA Level
-    raw[0x74] = 15;  // TVA T1
-    raw[0x78] = 127; // TVA L1
+    raw[0x66] = 15;  // TVA T1
+    raw[0x6A] = 127; // TVA L1
     // LFO1
-    raw[0x8A] = 1;   // SIN wave
-    raw[0x8B] = 85;  // Rate
-    raw[0x94] = 74;  // Pitch Depth +10
+    raw[0x6D] = 1;   // SIN wave
+    raw[0x6E] = 85;  // Rate
+    raw[0x77] = 74;  // Pitch Depth +10
     // LFO2
-    raw[0xFA] = 4;   // SQR wave
-    raw[0xFB] = 40;  // Rate
-    raw[0x0106] = 84;// TVF Depth +20
+    raw[0x7B] = 4;   // SQR wave
+    raw[0x7C] = 40;  // Rate
+    raw[0x86] = 84;  // TVF Depth +20 (01 06 = 134)
 
     const parsed = parsePatchTone(raw);
     assert.equal(parsed.toneLevel, 110);
@@ -197,7 +196,7 @@ describe('Deep Tone Generator Engine (Stage 2 Gap 3)', () => {
     assert.equal(parsed.tvfResonance, 45);
     assert.equal(parsed.tvfEnvDepth, 94);
     assert.equal(parsed.tvfEnvT1, 30);
-    assert.equal(parsed.tvaLevel, 105);
+    assert.equal(parsed.tvaLevel, 110);
     assert.equal(parsed.tvaEnvT1, 15);
     assert.equal(parsed.lfo1Form, 1);
     assert.equal(parsed.lfo1Rate, 85);

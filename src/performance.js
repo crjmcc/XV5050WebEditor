@@ -10,6 +10,7 @@ import {
   PERF_TEMP,
   PERF_PART,
   getPartAddress,
+  getPatchTempAddress,
   addOffset,
 } from './addresses.js';
 import { decodeName, encodeName } from './parameters.js';
@@ -66,38 +67,96 @@ export async function requestPerformanceReverb(midi, deviceId) {
 }
 
 /**
- * Request a single performance part block (Part 1-16).
+ * Request the Patch Name for a specific Performance Part (Part 1-16).
+ * Queried from the part's Temporary Patch Common area.
  * 
  * @param {import('./midi.js').MidiManager} midi - MIDI manager
  * @param {number} part - Part number (1-16)
  * @param {number} [deviceId] - Device ID
- * @returns {Promise<object>} Parsed part data
+ * @returns {Promise<string>} Decoded patch name
+ */
+export async function requestPartPatchName(midi, part, deviceId) {
+  const base = getPatchTempAddress(part);
+  const msg = buildRQ1(base, [0x00, 0x00, 0x00, 0x0C], deviceId);
+  const response = await midi.sendAndReceive(msg);
+  return decodeName(response.data);
+}
+
+/**
+ * Request a single performance part block (Part 1-16) including its loaded patch name.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16)
+ * @param {number} [deviceId] - Device ID
+ * @returns {Promise<object>} Parsed part data with patchName property
  */
 export async function requestPerformancePart(midi, part, deviceId) {
   const address = getPartAddress(part);
   const msg = buildRQ1(address, PERF_PART.SIZE, deviceId);
   const response = await midi.sendAndReceive(msg);
-  return parsePerformancePart(response.data);
+  const partData = parsePerformancePart(response.data);
+
+  try {
+    const patchName = await requestPartPatchName(midi, part, deviceId);
+    partData.patchName = patchName || `Part ${part}`;
+  } catch (_) {
+    partData.patchName = `Part ${part}`;
+  }
+
+  return partData;
 }
 
 /**
- * Request all 16 performance parts from the device sequentially.
+ * Request all 16 performance parts from the device sequentially,
+ * querying both part parameters and sound/patch names.
  * 
  * @param {import('./midi.js').MidiManager} midi - MIDI manager
  * @param {number} [deviceId] - Device ID
- * @param {Function} [onProgress] - Callback (completedPartNumber, totalParts)
- * @returns {Promise<object[]>} Array of 16 parsed part objects
+ * @param {Function} [onProgress] - Callback (completedPartNumber, totalParts, partData)
+ * @returns {Promise<object[]>} Array of 16 parsed part objects with patch names
  */
 export async function requestAllParts(midi, deviceId, onProgress) {
   const parts = [];
   for (let i = 1; i <= 16; i++) {
     const partData = await requestPerformancePart(midi, i, deviceId);
     parts.push(partData);
-    if (onProgress) onProgress(i, 16);
-    // Pause to prevent hardware buffer congestion
-    await new Promise(r => setTimeout(r, 40));
+    if (onProgress) onProgress(i, 16, partData);
+    await new Promise(r => setTimeout(r, 25));
   }
   return parts;
+}
+
+/**
+ * Request an entire performance in one coordinated operation:
+ * Performance Common, Chorus, Reverb, and all 16 Parts + Patch Names.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} [deviceId] - Device ID
+ * @param {Function} [onProgress] - Callback (stage, current, total, data)
+ * @returns {Promise<{common: object, chorus: object, reverb: object, parts: object[]}>}
+ */
+export async function requestEntirePerformance(midi, deviceId, onProgress) {
+  if (onProgress) onProgress('common', 0, 18, null);
+  const common = await requestPerformanceCommon(midi, deviceId);
+  await new Promise(r => setTimeout(r, 25));
+
+  if (onProgress) onProgress('chorus', 1, 18, common);
+  const chorus = await requestPerformanceChorus(midi, deviceId);
+  await new Promise(r => setTimeout(r, 25));
+
+  if (onProgress) onProgress('reverb', 2, 18, chorus);
+  const reverb = await requestPerformanceReverb(midi, deviceId);
+  await new Promise(r => setTimeout(r, 25));
+
+  const parts = [];
+  for (let i = 1; i <= 16; i++) {
+    if (onProgress) onProgress('part', 2 + i, 18, null);
+    const partData = await requestPerformancePart(midi, i, deviceId);
+    parts.push(partData);
+    await new Promise(r => setTimeout(r, 25));
+  }
+
+  return { common, chorus, reverb, parts };
 }
 
 /**

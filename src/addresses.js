@@ -68,6 +68,12 @@ export const PERF_TEMP = {
     },
   },
 
+  // Performance Common MFX-A (Offset 00 02 00)
+  MFXA: {
+    BASE: [0x10, 0x00, 0x02, 0x00],
+    SIZE: [0x00, 0x00, 0x01, 0x11], // 273 bytes
+  },
+
   // Performance Common Chorus (Offset 00 04 00)
   CHORUS: {
     BASE: [0x10, 0x00, 0x04, 0x00],
@@ -89,6 +95,18 @@ export const PERF_TEMP = {
       REVERB_LEVEL:       { offset: 0x01, size: 1 }, // 0-127
       OUTPUT_ASSIGN:      { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
     },
+  },
+
+  // Performance Common MFX-B (Offset 00 08 00)
+  MFXB: {
+    BASE: [0x10, 0x00, 0x08, 0x00],
+    SIZE: [0x00, 0x00, 0x01, 0x11], // 273 bytes
+  },
+
+  // Performance Common MFX-C (Offset 00 0A 00)
+  MFXC: {
+    BASE: [0x10, 0x00, 0x0A, 0x00],
+    SIZE: [0x00, 0x00, 0x01, 0x11], // 273 bytes
   },
 };
 
@@ -522,45 +540,47 @@ export const PATCH_TONE = {
     TVF_ENV_L3:           { offset: 0x5B, size: 1 },
     TVF_ENV_L4:           { offset: 0x5C, size: 1 },
     // TVA
-    TVA_LEVEL:            { offset: 0x6E, size: 1 }, // 0-127
-    TVA_VEL_CURVE:        { offset: 0x6F, size: 1 }, // 0-6 (1-7)
-    TVA_VEL_SENS:         { offset: 0x70, size: 1 }, // 1-127 (-63 to +63)
-    TVA_ENV_TIME1_VEL:    { offset: 0x71, size: 1 }, // 1-127 (-63 to +63)
-    TVA_ENV_TIME4_VEL:    { offset: 0x72, size: 1 }, // 1-127 (-63 to +63)
-    TVA_ENV_TIME_KEY:     { offset: 0x73, size: 1 }, // 54-74 (-100 to +100)
-    TVA_ENV_T1:           { offset: 0x74, size: 1 }, // 0-127
-    TVA_ENV_T2:           { offset: 0x75, size: 1 },
-    TVA_ENV_T3:           { offset: 0x76, size: 1 },
-    TVA_ENV_T4:           { offset: 0x77, size: 1 },
-    TVA_ENV_L1:           { offset: 0x78, size: 1 }, // 0-127
-    TVA_ENV_L2:           { offset: 0x79, size: 1 },
-    TVA_ENV_L3:           { offset: 0x7A, size: 1 },
+    TVA_LEVEL:            { offset: 0x00, size: 1 }, // 0-127 (Tone Level)
+    TVA_VEL_CURVE:        { offset: 0x61, size: 1 }, // 0-7 (FIXED, 1-7)
+    TVA_VEL_SENS:         { offset: 0x62, size: 1 }, // 1-127 (-63 to +63)
+    TVA_ENV_TIME1_VEL:    { offset: 0x63, size: 1 }, // 1-127 (-63 to +63)
+    TVA_ENV_TIME4_VEL:    { offset: 0x64, size: 1 }, // 1-127 (-63 to +63)
+    TVA_ENV_TIME_KEY:     { offset: 0x65, size: 1 }, // 54-74 (-100 to +100)
+    TVA_ENV_T1:           { offset: 0x66, size: 1 }, // 0-127
+    TVA_ENV_T2:           { offset: 0x67, size: 1 },
+    TVA_ENV_T3:           { offset: 0x68, size: 1 },
+    TVA_ENV_T4:           { offset: 0x69, size: 1 },
+    TVA_ENV_L1:           { offset: 0x6A, size: 1 }, // 0-127
+    TVA_ENV_L2:           { offset: 0x6B, size: 1 },
+    TVA_ENV_L3:           { offset: 0x6C, size: 1 },
     // LFO 1
-    LFO1_FORM:            { offset: 0x8A, size: 1 }, // 0-9
-    LFO1_RATE:            { offset: 0x8B, size: 1 }, // 0-127
-    LFO1_TEMPO_SYNC:      { offset: 0x8D, size: 1 }, // 0-1 (OFF, ON)
-    LFO1_FADE_MODE:       { offset: 0x8E, size: 1 }, // 0-3 (ON-IN, ON-OUT, OFF-IN, OFF-OUT)
-    LFO1_DELAY_TIME:      { offset: 0x8F, size: 1 }, // 0-127
-    LFO1_FADE_TIME:       { offset: 0x90, size: 1 }, // 0-127
-    LFO1_OFFSET:          { offset: 0x91, size: 1 }, // 0-4 (-100, -50, 0, +50, +100)
-    LFO1_KEY_TRIGGER:     { offset: 0x93, size: 1 }, // 0-1 (OFF, ON)
-    LFO1_PITCH_DEPTH:     { offset: 0x94, size: 1 }, // 1-127 (-63 to +63)
-    LFO1_TVF_DEPTH:       { offset: 0x95, size: 1 }, // 1-127 (-63 to +63)
-    LFO1_TVA_DEPTH:       { offset: 0x96, size: 1 }, // 1-127 (-63 to +63)
-    LFO1_PAN_DEPTH:       { offset: 0x97, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_FORM:            { offset: 0x6D, size: 1 }, // 0-10
+    LFO1_RATE:            { offset: 0x6E, size: 2 }, // 2 nibbles: 00 6E, 00 6F (0-149)
+    LFO1_OFFSET:          { offset: 0x70, size: 1 }, // 0-4 (-100, -50, 0, +50, +100)
+    LFO1_RATE_DETUNE:     { offset: 0x71, size: 1 }, // 0-127
+    LFO1_DELAY_TIME:      { offset: 0x72, size: 1 }, // 0-127
+    LFO1_DELAY_TIME_KEY:  { offset: 0x73, size: 1 }, // 54-74 (-100 to +100)
+    LFO1_FADE_MODE:       { offset: 0x74, size: 1 }, // 0-3 (ON-IN, ON-OUT, OFF-IN, OFF-OUT)
+    LFO1_FADE_TIME:       { offset: 0x75, size: 1 }, // 0-127
+    LFO1_KEY_TRIGGER:     { offset: 0x76, size: 1 }, // 0-1 (OFF, ON)
+    LFO1_PITCH_DEPTH:     { offset: 0x77, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_TVF_DEPTH:       { offset: 0x78, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_TVA_DEPTH:       { offset: 0x79, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_PAN_DEPTH:       { offset: 0x7A, size: 1 }, // 1-127 (-63 to +63)
     // LFO 2
-    LFO2_FORM:            { offset: 0xFA, size: 1 }, // 0-9
-    LFO2_RATE:            { offset: 0xFB, size: 1 }, // 0-127
-    LFO2_TEMPO_SYNC:      { offset: 0xFD, size: 1 }, // 0-1 (OFF, ON)
-    LFO2_FADE_MODE:       { offset: 0xFE, size: 1 }, // 0-3
-    LFO2_DELAY_TIME:      { offset: 0xFF, size: 1 }, // 0-127
-    LFO2_FADE_TIME:       { offset: 0x0100, size: 1 }, // 0-127
-    LFO2_OFFSET:          { offset: 0x0101, size: 1 }, // 0-4
-    LFO2_KEY_TRIGGER:     { offset: 0x0104, size: 1 }, // 0-1
-    LFO2_PITCH_DEPTH:     { offset: 0x0105, size: 1 }, // 1-127 (-63 to +63)
-    LFO2_TVF_DEPTH:       { offset: 0x0106, size: 1 }, // 1-127 (-63 to +63)
-    LFO2_TVA_DEPTH:       { offset: 0x0107, size: 1 }, // 1-127 (-63 to +63)
-    LFO2_PAN_DEPTH:       { offset: 0x0108, size: 1 }, // 1-127 (-63 to +63)
+    LFO2_FORM:            { offset: 0x7B, size: 1 }, // 0-10
+    LFO2_RATE:            { offset: 0x7C, size: 2 }, // 2 nibbles: 00 7C, 00 7D (0-149)
+    LFO2_OFFSET:          { offset: 0x7E, size: 1 }, // 0-4
+    LFO2_RATE_DETUNE:     { offset: 0x7F, size: 1 }, // 0-127
+    LFO2_DELAY_TIME:      { offset: 0x80, size: 1 }, // 0-127 (7-bit address 01 00 = 128)
+    LFO2_DELAY_TIME_KEY:  { offset: 0x81, size: 1 }, // 54-74 (-100 to +100) (7-bit address 01 01 = 129)
+    LFO2_FADE_MODE:       { offset: 0x82, size: 1 }, // 0-3 (7-bit address 01 02 = 130)
+    LFO2_FADE_TIME:       { offset: 0x83, size: 1 }, // 0-127 (7-bit address 01 03 = 131)
+    LFO2_KEY_TRIGGER:     { offset: 0x84, size: 1 }, // 0-1 (7-bit address 01 04 = 132)
+    LFO2_PITCH_DEPTH:     { offset: 0x85, size: 1 }, // 1-127 (-63 to +63) (7-bit address 01 05 = 133)
+    LFO2_TVF_DEPTH:       { offset: 0x86, size: 1 }, // 1-127 (-63 to +63) (7-bit address 01 06 = 134)
+    LFO2_TVA_DEPTH:       { offset: 0x87, size: 1 }, // 1-127 (-63 to +63) (7-bit address 01 07 = 135)
+    LFO2_PAN_DEPTH:       { offset: 0x88, size: 1 }, // 1-127 (-63 to +63) (7-bit address 01 08 = 136)
   },
 };
 

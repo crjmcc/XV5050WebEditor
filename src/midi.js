@@ -213,26 +213,84 @@ export class MidiManager {
   }
 
   /**
-   * Send a SysEx message and wait for a reply within a timeout.
-   * Returns the first valid parsed SysEx response.
+   * Send a SysEx message and wait for the complete response within a timeout.
+   * Handles multi-packet SysEx responses (e.g. Tone 265 bytes, MFX 273 bytes)
+   * where the hardware sends successive DT1 packets up to 256 bytes each.
    * 
-   * @param {Uint8Array} message - SysEx message to send
-   * @param {number} [timeout=2000] - Timeout in milliseconds
-   * @returns {Promise<object>} Parsed SysEx response
+   * @param {Uint8Array|number[]} message - SysEx message to send
+   * @param {number} [timeout=3000] - Timeout in milliseconds
+   * @returns {Promise<object>} Complete parsed SysEx response
    */
-  sendAndReceive(message, timeout = 2000) {
+  sendAndReceive(message, timeout = 3000) {
     return new Promise((resolve, reject) => {
+      // Check if message is an RQ1 data request
+      const isRq1 = message && message[0] === 0xF0 && message[5] === 0x11 && message.length >= 14;
+      let reqAddr = null;
+      let expectedSize = 0;
+      let accumulatedData = [];
+      let bytesReceived = 0;
+
+      if (isRq1) {
+        reqAddr = [message[6], message[7], message[8], message[9]];
+        // XV-5050 7-bit size arithmetic: [b0, b1, b2, b3] -> (b0 * 128^3) + (b1 * 128^2) + (b2 * 128) + b3
+        expectedSize = (message[10] * 2097152) + (message[11] * 16384) + (message[12] * 128) + message[13];
+        accumulatedData = new Array(expectedSize).fill(0);
+      }
+
+      const reqAddrInt = reqAddr ? ((reqAddr[0] * 2097152) + (reqAddr[1] * 16384) + (reqAddr[2] * 128) + reqAddr[3]) : 0;
+
       const previousHandler = this._onMessage;
-      const timer = setTimeout(() => {
+      let timer = null;
+
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
         this._onMessage = previousHandler;
-        reject(new Error('SysEx response timeout'));
+      };
+
+      timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`SysEx response timeout (received ${bytesReceived}/${expectedSize || '?'} bytes)`));
       }, timeout);
 
       this._onMessage = (parsed) => {
-        if (parsed.valid) {
-          clearTimeout(timer);
-          this._onMessage = previousHandler;
+        // Also notify previous handler (e.g. monitor) so UI traffic/state updates
+        if (previousHandler) {
+          try { previousHandler(parsed); } catch (_) {}
+        }
+
+        if (!parsed || !parsed.valid) return;
+
+        // If not an RQ1 request, resolve on first valid SysEx response
+        if (!isRq1 || expectedSize === 0) {
+          cleanup();
           resolve(parsed);
+          return;
+        }
+
+        // For RQ1 requests, verify this DT1 response matches the requested address range
+        if (parsed.command === 0x12 && parsed.address && parsed.data) {
+          const inAddrInt = (parsed.address[0] * 2097152) + (parsed.address[1] * 16384) + (parsed.address[2] * 128) + parsed.address[3];
+          const offset = inAddrInt - reqAddrInt;
+
+          // Check if packet falls within the expected address window [0, expectedSize)
+          if (offset >= 0 && offset < expectedSize) {
+            for (let i = 0; i < parsed.data.length && (offset + i) < expectedSize; i++) {
+              accumulatedData[offset + i] = parsed.data[i];
+            }
+            bytesReceived += parsed.data.length;
+
+            // If we've received all expected bytes, complete!
+            if (bytesReceived >= expectedSize || (offset + parsed.data.length) >= expectedSize) {
+              cleanup();
+              resolve({
+                valid: true,
+                command: 0x12,
+                address: reqAddr,
+                data: accumulatedData,
+                deviceId: parsed.deviceId,
+              });
+            }
+          }
         }
       };
 

@@ -95,13 +95,13 @@ describe('Stage 2 Sending Helpers & Patch Effects (Gaps 1, 2, 3, 4)', () => {
     sendToneLFOParam(midi, 0, 3, 2, 'RATE', 80, 0x10);
 
     assert.equal(midi.sent.length, 2);
-    // Tone 3 base is 1F 00 24 00. LFO1 Form is 0x8A -> 1F 00 24 8A
-    // Note: 0x8A in 7-bit math: 24 00 + 8A = 25 0A
-    const expectedLfo1Addr = addOffset([0x1F, 0x00, 0x24, 0x00], 0x8A);
+    // Tone 3 base is 1F 00 24 00. LFO1 Form is 0x6D -> 1F 00 24 6D
+    const expectedLfo1Addr = addOffset([0x1F, 0x00, 0x24, 0x00], 0x6D);
     assert.deepEqual(Array.from(midi.sent[0].slice(6, 10)), expectedLfo1Addr);
     assert.equal(midi.sent[0][10], 4);
 
-    const expectedLfo2Addr = addOffset([0x1F, 0x00, 0x24, 0x00], 0xFB);
+    // LFO2 Rate is 0x7C -> 1F 00 24 7C
+    const expectedLfo2Addr = addOffset([0x1F, 0x00, 0x24, 0x00], 0x7C);
     assert.deepEqual(Array.from(midi.sent[1].slice(6, 10)), expectedLfo2Addr);
     assert.equal(midi.sent[1][10], 80);
   });
