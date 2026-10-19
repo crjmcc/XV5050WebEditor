@@ -802,3 +802,212 @@ input[type="range"]::-moz-range-thumb {
     align-items: stretch;
   }
 }
+
+/* -- Stage 2: Matrix, Visual Curves & Librarian ---------------------------- */
+
+/* Sub-tab navigation */
+.sub-tab-bar {
+  display: flex;
+  gap: var(--space-xs);
+  background: var(--bg-primary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+  border: 1px solid var(--border);
+}
+
+.sub-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sub-tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.sub-tab-btn.active {
+  background: var(--accent-dim);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Visual Curve Display Containers */
+.curve-display-card {
+  background: #060910;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.curve-display-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 212, 255, 0.03) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.curve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+.curve-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.curve-badge {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: rgba(0, 212, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.curve-svg {
+  width: 100%;
+  height: 110px;
+  display: block;
+  background: radial-gradient(ellipse at center, #0d1424 0%, #060910 100%);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.curve-path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px var(--accent-dim));
+}
+
+.curve-fill {
+  fill: url(#curveGradient);
+  opacity: 0.25;
+}
+
+.curve-grid {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-dasharray: 2 2;
+  stroke-width: 1;
+}
+
+/* Modulation Matrix Table */
+.matrix-dest-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.matrix-dest-row:last-child {
+  border-bottom: none;
+}
+
+/* Zone Range Sliders */
+.zone-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-md);
+}
+
+.zone-tone-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+/* Librarian Dropzone & Storage Slots */
+.dropzone {
+  border: 2px dashed var(--border-active);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  text-align: center;
+  background: rgba(0, 212, 255, 0.02);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  margin-bottom: var(--space-lg);
+}
+
+.dropzone:hover, .dropzone.dragover {
+  border-color: var(--accent);
+  background: rgba(0, 212, 255, 0.08);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.dropzone-icon {
+  font-size: 2.5rem;
+  color: var(--accent);
+  margin-bottom: var(--space-sm);
+}
+
+.bank-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-md);
+}
+
+.bank-slot-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  transition: all var(--transition-fast);
+}
+
+.bank-slot-card:hover {
+  border-color: var(--accent-dim);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.bank-slot-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.bank-slot-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bank-slot-actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+

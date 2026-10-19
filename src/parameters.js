@@ -101,6 +101,39 @@ export const PERF_PART_PARAMS = {
 };
 
 // =============================================================================
+// Stage 2 Enums and Tables
+// =============================================================================
+
+export const MATRIX_SOURCES = [
+  'OFF',
+  ...Array.from({ length: 95 }, (_, i) => `CC${String(i + 1).padStart(2, '0')}`),
+  'BEND', 'AFT', 'SYS1', 'SYS2', 'SYS3', 'SYS4',
+  'VELOCITY', 'KEYFOLLOW', 'TEMPO', 'LFO1', 'LFO2',
+  'PIT-ENV', 'TVF-ENV', 'TVA-ENV'
+];
+
+export const MATRIX_DESTINATIONS = [
+  'OFF', 'PCH', 'CUT', 'RES', 'LEV', 'PAN',
+  'DRY', 'CHO', 'REV',
+  'PIT-LFO1', 'PIT-LFO2', 'TVF-LFO1', 'TVF-LFO2', 'TVA-LFO1', 'TVA-LFO2',
+  'PAN-LFO1', 'PAN-LFO2', 'LFO1-RATE', 'LFO2-RATE',
+  'PIT-ATK', 'PIT-DCY', 'PIT-REL',
+  'TVF-ATK', 'TVF-DCY', 'TVF-REL',
+  'TVA-ATK', 'TVA-DCY', 'TVA-REL',
+  'TMT', 'FXM',
+  'MFX-CTRL1', 'MFX-CTRL2', 'MFX-CTRL3', 'MFX-CTRL4'
+];
+
+export const LFO_WAVEFORMS = [
+  'TRI', 'SIN', 'SAW-UP', 'SAW-DN', 'SQR',
+  'TRP', 'S&H', 'RND', 'STEP1', 'STEP2'
+];
+
+export const FILTER_TYPES = [
+  'OFF', 'LPF', 'BPF', 'HPF', 'PKG', 'LPF2', 'LPF3'
+];
+
+// =============================================================================
 // Patch Common parameter definitions
 // =============================================================================
 export const PATCH_COMMON_PARAMS = {
@@ -122,10 +155,27 @@ export const PATCH_COMMON_PARAMS = {
   PORTAMENTO_TYPE:    { name: 'Portamento Type', min: 0, max: 1, type: 'enum', enumValues: ['RATE', 'TIME'] },
   PORTAMENTO_START:   { name: 'Portamento Start', min: 0, max: 1, type: 'enum', enumValues: ['PITCH', 'NOTE'] },
   PORTAMENTO_TIME:    { name: 'Portamento Time', min: 0, max: 127, type: 'number' },
+  PATCH_CLOCK_SOURCE: { name: 'Patch Clock Source', min: 0, max: 1, type: 'enum', enumValues: ['PATCH', 'SYSTEM'] },
+  CUTOFF_OFFSET:      { name: 'Cutoff Offset', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  RESONANCE_OFFSET:   { name: 'Resonance Offset', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  ATTACK_TIME_OFFSET: { name: 'Attack Offset', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  RELEASE_TIME_OFFSET:{ name: 'Release Offset', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  VELOCITY_SENS_OFFSET:{ name: 'Velocity Sens Offset', min: 1, max: 127, type: 'signed', displayOffset: -64 },
   OUTPUT_ASSIGN:      { name: 'Output Assign', min: 0, max: 13, type: 'enum',
     enumValues: ['MFX', 'A', 'B', 'C', 'D', '1', '2', '3', '4', '5', '6', '7', '8', 'TONE'] },
+  TMT_CTRL_SWITCH:    { name: 'TMT Ctrl Switch', min: 0, max: 1, type: 'switch' },
   BEND_RANGE_UP:      { name: 'Bend Range Up', min: 0, max: 48, type: 'number' },
   BEND_RANGE_DOWN:    { name: 'Bend Range Down', min: 0, max: 48, type: 'number' },
+  // Matrix Control 1-4 definitions
+  MATRIX_CTRL_1_SOURCE: { name: 'Matrix 1 Source', min: 0, max: 109, type: 'enum', enumValues: MATRIX_SOURCES },
+  MATRIX_CTRL_1_DEST_1: { name: 'Matrix 1 Dest 1', min: 0, max: 33, type: 'enum', enumValues: MATRIX_DESTINATIONS },
+  MATRIX_CTRL_1_SENS_1: { name: 'Matrix 1 Sens 1', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  MATRIX_CTRL_1_DEST_2: { name: 'Matrix 1 Dest 2', min: 0, max: 33, type: 'enum', enumValues: MATRIX_DESTINATIONS },
+  MATRIX_CTRL_1_SENS_2: { name: 'Matrix 1 Sens 2', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  MATRIX_CTRL_1_DEST_3: { name: 'Matrix 1 Dest 3', min: 0, max: 33, type: 'enum', enumValues: MATRIX_DESTINATIONS },
+  MATRIX_CTRL_1_SENS_3: { name: 'Matrix 1 Sens 3', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  MATRIX_CTRL_1_DEST_4: { name: 'Matrix 1 Dest 4', min: 0, max: 33, type: 'enum', enumValues: MATRIX_DESTINATIONS },
+  MATRIX_CTRL_1_SENS_4: { name: 'Matrix 1 Sens 4', min: 1, max: 127, type: 'signed', displayOffset: -64 },
 };
 
 // =============================================================================
@@ -138,26 +188,90 @@ export const PATCH_TMT_PARAMS = {
   STRUCTURE_TYPE_3_4: { name: 'Structure 3-4', min: 0, max: 9, type: 'enum',
     enumValues: ['1 (Type 1)', '2 (Type 2)', '3 (Type 3)', '4 (Type 4)', '5 (Type 5)', '6 (Type 6)', '7 (Type 7)', '8 (Type 8)', '9 (Type 9)', '10 (Type 10)'] },
   BOOSTER_3_4:        { name: 'Booster 3-4', min: 0, max: 3, type: 'enum', enumValues: ['0 dB', '+6 dB', '+12 dB', '+18 dB'] },
+  TMT_VEL_CONTROL:    { name: 'TMT Velocity Control', min: 0, max: 2, type: 'enum', enumValues: ['OFF', 'ON', 'RANDOM'] },
   TONE_1_SWITCH:      { name: 'Tone 1 Switch', min: 0, max: 1, type: 'switch' },
+  TONE_1_KEY_LOWER:   { name: 'Tone 1 Key Lower', min: 0, max: 127, type: 'number' },
+  TONE_1_KEY_UPPER:   { name: 'Tone 1 Key Upper', min: 0, max: 127, type: 'number' },
+  TONE_1_VEL_LOWER:   { name: 'Tone 1 Vel Lower', min: 1, max: 127, type: 'number' },
+  TONE_1_VEL_UPPER:   { name: 'Tone 1 Vel Upper', min: 1, max: 127, type: 'number' },
   TONE_2_SWITCH:      { name: 'Tone 2 Switch', min: 0, max: 1, type: 'switch' },
+  TONE_2_KEY_LOWER:   { name: 'Tone 2 Key Lower', min: 0, max: 127, type: 'number' },
+  TONE_2_KEY_UPPER:   { name: 'Tone 2 Key Upper', min: 0, max: 127, type: 'number' },
+  TONE_2_VEL_LOWER:   { name: 'Tone 2 Vel Lower', min: 1, max: 127, type: 'number' },
+  TONE_2_VEL_UPPER:   { name: 'Tone 2 Vel Upper', min: 1, max: 127, type: 'number' },
   TONE_3_SWITCH:      { name: 'Tone 3 Switch', min: 0, max: 1, type: 'switch' },
+  TONE_3_KEY_LOWER:   { name: 'Tone 3 Key Lower', min: 0, max: 127, type: 'number' },
+  TONE_3_KEY_UPPER:   { name: 'Tone 3 Key Upper', min: 0, max: 127, type: 'number' },
+  TONE_3_VEL_LOWER:   { name: 'Tone 3 Vel Lower', min: 1, max: 127, type: 'number' },
+  TONE_3_VEL_UPPER:   { name: 'Tone 3 Vel Upper', min: 1, max: 127, type: 'number' },
   TONE_4_SWITCH:      { name: 'Tone 4 Switch', min: 0, max: 1, type: 'switch' },
+  TONE_4_KEY_LOWER:   { name: 'Tone 4 Key Lower', min: 0, max: 127, type: 'number' },
+  TONE_4_KEY_UPPER:   { name: 'Tone 4 Key Upper', min: 0, max: 127, type: 'number' },
+  TONE_4_VEL_LOWER:   { name: 'Tone 4 Vel Lower', min: 1, max: 127, type: 'number' },
+  TONE_4_VEL_UPPER:   { name: 'Tone 4 Vel Upper', min: 1, max: 127, type: 'number' },
 };
 
 // =============================================================================
 // Patch Tone parameter definitions
 // =============================================================================
 export const PATCH_TONE_PARAMS = {
-  TONE_LEVEL:      { name: 'Tone Level', min: 0, max: 127, type: 'number' },
-  COARSE_TUNE:     { name: 'Coarse Tune', min: 16, max: 112, type: 'signed', displayOffset: -64 },
-  FINE_TUNE:       { name: 'Fine Tune', min: 14, max: 114, type: 'signed', displayOffset: -64 },
-  TONE_PAN:        { name: 'Tone Pan', min: 0, max: 127, type: 'pan' },
-  WAVE_GROUP_TYPE: { name: 'Wave Group', min: 0, max: 3, type: 'enum', enumValues: ['INT', 'SR-JV80', 'SRX', 'SAMPLE'] },
-  WAVE_GAIN:       { name: 'Wave Gain', min: 0, max: 3, type: 'enum', enumValues: ['-6 dB', '0 dB', '+6 dB', '+12 dB'] },
-  TVF_FILTER_TYPE: { name: 'Filter Type', min: 0, max: 6, type: 'enum', enumValues: ['OFF', 'LPF', 'BPF', 'HPF', 'PKG', 'LPF2', 'LPF3'] },
-  TVF_CUTOFF:      { name: 'Cutoff', min: 0, max: 127, type: 'number' },
-  TVF_RESONANCE:   { name: 'Resonance', min: 0, max: 127, type: 'number' },
-  TVA_LEVEL:       { name: 'TVA Level', min: 0, max: 127, type: 'number' },
+  TONE_LEVEL:           { name: 'Tone Level', min: 0, max: 127, type: 'number' },
+  COARSE_TUNE:          { name: 'Coarse Tune', min: 16, max: 112, type: 'signed', displayOffset: -64 },
+  FINE_TUNE:            { name: 'Fine Tune', min: 14, max: 114, type: 'signed', displayOffset: -64 },
+  TONE_PAN:             { name: 'Tone Pan', min: 0, max: 127, type: 'pan' },
+  WAVE_GROUP_TYPE:      { name: 'Wave Group', min: 0, max: 3, type: 'enum', enumValues: ['INT', 'SR-JV80', 'SRX', 'SAMPLE'] },
+  WAVE_GAIN:            { name: 'Wave Gain', min: 0, max: 3, type: 'enum', enumValues: ['-6 dB', '0 dB', '+6 dB', '+12 dB'] },
+  WAVE_FXM_SWITCH:      { name: 'FXM Switch', min: 0, max: 1, type: 'switch' },
+  WAVE_FXM_COLOR:       { name: 'FXM Color', min: 0, max: 3, type: 'enum', enumValues: ['1', '2', '3', '4'] },
+  WAVE_FXM_DEPTH:       { name: 'FXM Depth', min: 0, max: 16, type: 'number' },
+  WAVE_TEMPO_SYNC:      { name: 'Wave Tempo Sync', min: 0, max: 1, type: 'switch' },
+  // Pitch Envelope
+  PITCH_ENV_DEPTH:      { name: 'Pitch Env Depth', min: 52, max: 76, type: 'signed', displayOffset: -64 },
+  PITCH_ENV_VEL_SENS:   { name: 'Pitch Env Vel Sens', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  PITCH_ENV_T1:         { name: 'Pitch Env T1', min: 0, max: 127, type: 'number' },
+  PITCH_ENV_T2:         { name: 'Pitch Env T2', min: 0, max: 127, type: 'number' },
+  PITCH_ENV_T3:         { name: 'Pitch Env T3', min: 0, max: 127, type: 'number' },
+  PITCH_ENV_T4:         { name: 'Pitch Env T4', min: 0, max: 127, type: 'number' },
+  PITCH_ENV_L0:         { name: 'Pitch Env L0', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  PITCH_ENV_L1:         { name: 'Pitch Env L1', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  PITCH_ENV_L2:         { name: 'Pitch Env L2', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  PITCH_ENV_L3:         { name: 'Pitch Env L3', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  PITCH_ENV_L4:         { name: 'Pitch Env L4', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  // TVF
+  TVF_FILTER_TYPE:      { name: 'Filter Type', min: 0, max: 6, type: 'enum', enumValues: FILTER_TYPES },
+  TVF_CUTOFF:           { name: 'Cutoff', min: 0, max: 127, type: 'number' },
+  TVF_RESONANCE:        { name: 'Resonance', min: 0, max: 127, type: 'number' },
+  TVF_ENV_DEPTH:        { name: 'TVF Env Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  TVF_ENV_T1:           { name: 'TVF Env T1', min: 0, max: 127, type: 'number' },
+  TVF_ENV_T2:           { name: 'TVF Env T2', min: 0, max: 127, type: 'number' },
+  TVF_ENV_T3:           { name: 'TVF Env T3', min: 0, max: 127, type: 'number' },
+  TVF_ENV_T4:           { name: 'TVF Env T4', min: 0, max: 127, type: 'number' },
+  TVF_ENV_L1:           { name: 'TVF Env L1', min: 0, max: 127, type: 'number' },
+  TVF_ENV_L2:           { name: 'TVF Env L2', min: 0, max: 127, type: 'number' },
+  TVF_ENV_L3:           { name: 'TVF Env L3', min: 0, max: 127, type: 'number' },
+  TVF_ENV_L4:           { name: 'TVF Env L4', min: 0, max: 127, type: 'number' },
+  // TVA
+  TVA_LEVEL:            { name: 'TVA Level', min: 0, max: 127, type: 'number' },
+  TVA_ENV_T1:           { name: 'TVA Env T1', min: 0, max: 127, type: 'number' },
+  TVA_ENV_T2:           { name: 'TVA Env T2', min: 0, max: 127, type: 'number' },
+  TVA_ENV_T3:           { name: 'TVA Env T3', min: 0, max: 127, type: 'number' },
+  TVA_ENV_T4:           { name: 'TVA Env T4', min: 0, max: 127, type: 'number' },
+  TVA_ENV_L1:           { name: 'TVA Env L1', min: 0, max: 127, type: 'number' },
+  TVA_ENV_L2:           { name: 'TVA Env L2', min: 0, max: 127, type: 'number' },
+  TVA_ENV_L3:           { name: 'TVA Env L3', min: 0, max: 127, type: 'number' },
+  // LFO 1 & 2
+  LFO1_FORM:            { name: 'LFO 1 Form', min: 0, max: 9, type: 'enum', enumValues: LFO_WAVEFORMS },
+  LFO1_RATE:            { name: 'LFO 1 Rate', min: 0, max: 127, type: 'number' },
+  LFO1_PITCH_DEPTH:     { name: 'LFO 1 Pitch Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO1_TVF_DEPTH:       { name: 'LFO 1 TVF Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO1_TVA_DEPTH:       { name: 'LFO 1 TVA Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO1_PAN_DEPTH:       { name: 'LFO 1 Pan Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO2_FORM:            { name: 'LFO 2 Form', min: 0, max: 9, type: 'enum', enumValues: LFO_WAVEFORMS },
+  LFO2_RATE:            { name: 'LFO 2 Rate', min: 0, max: 127, type: 'number' },
+  LFO2_PITCH_DEPTH:     { name: 'LFO 2 Pitch Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO2_TVF_DEPTH:       { name: 'LFO 2 TVF Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO2_TVA_DEPTH:       { name: 'LFO 2 TVA Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
+  LFO2_PAN_DEPTH:       { name: 'LFO 2 Pan Depth', min: 1, max: 127, type: 'signed', displayOffset: -64 },
 };
 
 // =============================================================================

@@ -252,8 +252,119 @@ export const PATCH_COMMON = {
     TMT_CTRL_SWITCH:      { offset: 0x28, size: 1 }, // 0-1 (OFF, ON)
     BEND_RANGE_UP:        { offset: 0x29, size: 1 }, // 0-48
     BEND_RANGE_DOWN:      { offset: 0x2A, size: 1 }, // 0-48
+    // Matrix Control 1
+    MATRIX_CTRL_1_SOURCE: { offset: 0x2B, size: 1 }, // 0-109
+    MATRIX_CTRL_1_DEST_1: { offset: 0x2C, size: 1 }, // 0-33
+    MATRIX_CTRL_1_SENS_1: { offset: 0x2D, size: 1 }, // 1-127 (-63 to +63)
+    MATRIX_CTRL_1_DEST_2: { offset: 0x2E, size: 1 },
+    MATRIX_CTRL_1_SENS_2: { offset: 0x2F, size: 1 },
+    MATRIX_CTRL_1_DEST_3: { offset: 0x30, size: 1 },
+    MATRIX_CTRL_1_SENS_3: { offset: 0x31, size: 1 },
+    MATRIX_CTRL_1_DEST_4: { offset: 0x32, size: 1 },
+    MATRIX_CTRL_1_SENS_4: { offset: 0x33, size: 1 },
+    // Matrix Control 2
+    MATRIX_CTRL_2_SOURCE: { offset: 0x34, size: 1 },
+    MATRIX_CTRL_2_DEST_1: { offset: 0x35, size: 1 },
+    MATRIX_CTRL_2_SENS_1: { offset: 0x36, size: 1 },
+    MATRIX_CTRL_2_DEST_2: { offset: 0x37, size: 1 },
+    MATRIX_CTRL_2_SENS_2: { offset: 0x38, size: 1 },
+    MATRIX_CTRL_2_DEST_3: { offset: 0x39, size: 1 },
+    MATRIX_CTRL_2_SENS_3: { offset: 0x3A, size: 1 },
+    MATRIX_CTRL_2_DEST_4: { offset: 0x3B, size: 1 },
+    MATRIX_CTRL_2_SENS_4: { offset: 0x3C, size: 1 },
+    // Matrix Control 3
+    MATRIX_CTRL_3_SOURCE: { offset: 0x3D, size: 1 },
+    MATRIX_CTRL_3_DEST_1: { offset: 0x3E, size: 1 },
+    MATRIX_CTRL_3_SENS_1: { offset: 0x3F, size: 1 },
+    MATRIX_CTRL_3_DEST_2: { offset: 0x40, size: 1 },
+    MATRIX_CTRL_3_SENS_2: { offset: 0x41, size: 1 },
+    MATRIX_CTRL_3_DEST_3: { offset: 0x42, size: 1 },
+    MATRIX_CTRL_3_SENS_3: { offset: 0x43, size: 1 },
+    MATRIX_CTRL_3_DEST_4: { offset: 0x44, size: 1 },
+    MATRIX_CTRL_3_SENS_4: { offset: 0x45, size: 1 },
+    // Matrix Control 4
+    MATRIX_CTRL_4_SOURCE: { offset: 0x46, size: 1 },
+    MATRIX_CTRL_4_DEST_1: { offset: 0x47, size: 1 },
+    MATRIX_CTRL_4_SENS_1: { offset: 0x48, size: 1 },
+    MATRIX_CTRL_4_DEST_2: { offset: 0x49, size: 1 },
+    MATRIX_CTRL_4_SENS_2: { offset: 0x4A, size: 1 },
+    MATRIX_CTRL_4_DEST_3: { offset: 0x4B, size: 1 },
+    MATRIX_CTRL_4_SENS_3: { offset: 0x4C, size: 1 },
+    MATRIX_CTRL_4_DEST_4: { offset: 0x4D, size: 1 },
+    MATRIX_CTRL_4_SENS_4: { offset: 0x4E, size: 1 },
   },
 };
+
+// 1-4-1-2 Patch Common MFX (Offset 00 02 00)
+export const PATCH_MFX = {
+  OFFSET: [0x00, 0x00, 0x02, 0x00],
+  SIZE:   [0x00, 0x00, 0x01, 0x11], // 273 bytes
+  params: {
+    MFX_TYPE:             { offset: 0x00, size: 1 }, // 0-127 (0-90 MFX types)
+    DRY_LEVEL:            { offset: 0x01, size: 1 }, // 0-127
+    CHORUS_SEND:          { offset: 0x02, size: 1 }, // 0-127
+    REVERB_SEND:          { offset: 0x03, size: 1 }, // 0-127
+    OUTPUT_ASSIGN:        { offset: 0x04, size: 1 }, // 0-3 (A, B, C, D)
+    MFX_CTRL_1_SOURCE:    { offset: 0x05, size: 1 }, // 0-101
+    MFX_CTRL_1_SENS:      { offset: 0x06, size: 1 }, // 1-127 (-63 to +63)
+    MFX_CTRL_2_SOURCE:    { offset: 0x07, size: 1 }, // 0-101
+    MFX_CTRL_2_SENS:      { offset: 0x08, size: 1 }, // 1-127 (-63 to +63)
+    MFX_CTRL_3_SOURCE:    { offset: 0x09, size: 1 }, // 0-101
+    MFX_CTRL_3_SENS:      { offset: 0x0A, size: 1 }, // 1-127 (-63 to +63)
+    MFX_CTRL_4_SOURCE:    { offset: 0x0B, size: 1 }, // 0-101
+    MFX_CTRL_4_SENS:      { offset: 0x0C, size: 1 }, // 1-127 (-63 to +63)
+  },
+};
+
+// 1-4-1-3 Patch Common Chorus (Offset 00 04 00)
+export const PATCH_CHORUS = {
+  OFFSET: [0x00, 0x00, 0x04, 0x00],
+  SIZE:   [0x00, 0x00, 0x00, 0x34], // 52 bytes
+  params: {
+    CHORUS_TYPE:          { offset: 0x00, size: 1 }, // 0-3 (OFF, CHORUS, DELAY, GM2 CHORUS)
+    CHORUS_LEVEL:         { offset: 0x01, size: 1 }, // 0-127
+    OUTPUT_ASSIGN:        { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
+    OUTPUT_SELECT:        { offset: 0x03, size: 1 }, // 0-2 (MAIN, REV, MAIN+REV)
+  },
+};
+
+// 1-4-1-4 Patch Common Reverb (Offset 00 06 00)
+export const PATCH_REVERB = {
+  OFFSET: [0x00, 0x00, 0x06, 0x00],
+  SIZE:   [0x00, 0x00, 0x00, 0x53], // 83 bytes
+  params: {
+    REVERB_TYPE:          { offset: 0x00, size: 1 }, // 0-5 (OFF, REVERB, SRV ROOM, SRV HALL, SRV PLATE, GM2 REVERB)
+    REVERB_LEVEL:         { offset: 0x01, size: 1 }, // 0-127
+    OUTPUT_ASSIGN:        { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
+  },
+};
+
+/**
+ * Get Patch MFX address.
+ * @param {number[]} patchBase - Base address of patch
+ * @returns {number[]} 4-byte address
+ */
+export function getPatchMFXAddress(patchBase) {
+  return [patchBase[0], patchBase[1], patchBase[2] + 0x02, patchBase[3]];
+}
+
+/**
+ * Get Patch Chorus address.
+ * @param {number[]} patchBase - Base address of patch
+ * @returns {number[]} 4-byte address
+ */
+export function getPatchChorusAddress(patchBase) {
+  return [patchBase[0], patchBase[1], patchBase[2] + 0x04, patchBase[3]];
+}
+
+/**
+ * Get Patch Reverb address.
+ * @param {number[]} patchBase - Base address of patch
+ * @returns {number[]} 4-byte address
+ */
+export function getPatchReverbAddress(patchBase) {
+  return [patchBase[0], patchBase[1], patchBase[2] + 0x06, patchBase[3]];
+}
 
 // 1-4-1-5 Patch TMT (Tone Mix Table, Offset 00 10 00)
 export const PATCH_TMT = {
@@ -269,26 +380,42 @@ export const PATCH_TMT = {
     TONE_1_SWITCH:        { offset: 0x05, size: 1 }, // 0-1 (OFF, ON)
     TONE_1_KEY_LOWER:     { offset: 0x06, size: 1 },
     TONE_1_KEY_UPPER:     { offset: 0x07, size: 1 },
+    TONE_1_KEY_FADE_L:    { offset: 0x08, size: 1 },
+    TONE_1_KEY_FADE_U:    { offset: 0x09, size: 1 },
     TONE_1_VEL_LOWER:     { offset: 0x0A, size: 1 },
     TONE_1_VEL_UPPER:     { offset: 0x0B, size: 1 },
+    TONE_1_VEL_FADE_L:    { offset: 0x0C, size: 1 },
+    TONE_1_VEL_FADE_U:    { offset: 0x0D, size: 1 },
     // Tone 2
     TONE_2_SWITCH:        { offset: 0x0E, size: 1 }, // 0-1 (OFF, ON)
     TONE_2_KEY_LOWER:     { offset: 0x0F, size: 1 },
     TONE_2_KEY_UPPER:     { offset: 0x10, size: 1 },
+    TONE_2_KEY_FADE_L:    { offset: 0x11, size: 1 },
+    TONE_2_KEY_FADE_U:    { offset: 0x12, size: 1 },
     TONE_2_VEL_LOWER:     { offset: 0x13, size: 1 },
     TONE_2_VEL_UPPER:     { offset: 0x14, size: 1 },
+    TONE_2_VEL_FADE_L:    { offset: 0x15, size: 1 },
+    TONE_2_VEL_FADE_U:    { offset: 0x16, size: 1 },
     // Tone 3
     TONE_3_SWITCH:        { offset: 0x17, size: 1 }, // 0-1 (OFF, ON)
     TONE_3_KEY_LOWER:     { offset: 0x18, size: 1 },
     TONE_3_KEY_UPPER:     { offset: 0x19, size: 1 },
+    TONE_3_KEY_FADE_L:    { offset: 0x1A, size: 1 },
+    TONE_3_KEY_FADE_U:    { offset: 0x1B, size: 1 },
     TONE_3_VEL_LOWER:     { offset: 0x1C, size: 1 },
     TONE_3_VEL_UPPER:     { offset: 0x1D, size: 1 },
+    TONE_3_VEL_FADE_L:    { offset: 0x1E, size: 1 },
+    TONE_3_VEL_FADE_U:    { offset: 0x1F, size: 1 },
     // Tone 4
     TONE_4_SWITCH:        { offset: 0x20, size: 1 }, // 0-1 (OFF, ON)
     TONE_4_KEY_LOWER:     { offset: 0x21, size: 1 },
     TONE_4_KEY_UPPER:     { offset: 0x22, size: 1 },
+    TONE_4_KEY_FADE_L:    { offset: 0x23, size: 1 },
+    TONE_4_KEY_FADE_U:    { offset: 0x24, size: 1 },
     TONE_4_VEL_LOWER:     { offset: 0x25, size: 1 },
     TONE_4_VEL_UPPER:     { offset: 0x26, size: 1 },
+    TONE_4_VEL_FADE_L:    { offset: 0x27, size: 1 },
+    TONE_4_VEL_FADE_U:    { offset: 0x28, size: 1 },
   },
 };
 
@@ -331,6 +458,7 @@ export const PATCH_TONE = {
     TONE_PAN:             { offset: 0x04, size: 1 }, // 0-127 (64=Center)
     PAN_KEYFOLLOW:        { offset: 0x05, size: 1 }, // 54-74 (-100 to +100)
     RANDOM_PAN_DEPTH:     { offset: 0x06, size: 1 }, // 0-63
+    ALT_PAN_DEPTH:        { offset: 0x07, size: 1 }, // 1-127 (-63 to +63)
     // Wave
     WAVE_GROUP_TYPE:      { offset: 0x27, size: 1 }, // 0-3 (INT, SR-JV80, SRX, SAMPLE)
     WAVE_GROUP_ID_1:      { offset: 0x28, size: 1 }, // 4 nibbles
@@ -341,16 +469,93 @@ export const PATCH_TONE = {
     WAVE_NUMBER_L_2:      { offset: 0x2D, size: 1 },
     WAVE_NUMBER_L_3:      { offset: 0x2E, size: 1 },
     WAVE_NUMBER_L_4:      { offset: 0x2F, size: 1 },
+    WAVE_NUMBER_R_1:      { offset: 0x30, size: 1 }, // 4 nibbles
+    WAVE_NUMBER_R_2:      { offset: 0x31, size: 1 },
+    WAVE_NUMBER_R_3:      { offset: 0x32, size: 1 },
+    WAVE_NUMBER_R_4:      { offset: 0x33, size: 1 },
     WAVE_GAIN:            { offset: 0x34, size: 1 }, // 0-3 (-6, 0, +6, +12 dB)
     WAVE_FXM_SWITCH:      { offset: 0x35, size: 1 }, // 0-1 (OFF, ON)
     WAVE_FXM_COLOR:       { offset: 0x36, size: 1 }, // 0-3 (1-4)
     WAVE_FXM_DEPTH:       { offset: 0x37, size: 1 }, // 0-16
+    WAVE_TEMPO_SYNC:      { offset: 0x38, size: 1 }, // 0-1 (OFF, ON)
+    WAVE_PITCH_KEYFOLLOW: { offset: 0x39, size: 1 }, // 44-84 (-200% to +200%)
+    // Pitch Envelope
+    PITCH_ENV_DEPTH:      { offset: 0x3A, size: 1 }, // 52-76 (-12 to +12)
+    PITCH_ENV_VEL_SENS:   { offset: 0x3B, size: 1 }, // 1-127 (-63 to +63)
+    PITCH_ENV_TIME1_VEL:  { offset: 0x3C, size: 1 }, // 1-127 (-63 to +63)
+    PITCH_ENV_TIME4_VEL:  { offset: 0x3D, size: 1 }, // 1-127 (-63 to +63)
+    PITCH_ENV_TIME_KEY:   { offset: 0x3E, size: 1 }, // 54-74 (-100 to +100)
+    PITCH_ENV_T1:         { offset: 0x3F, size: 1 }, // 0-127
+    PITCH_ENV_T2:         { offset: 0x40, size: 1 },
+    PITCH_ENV_T3:         { offset: 0x41, size: 1 },
+    PITCH_ENV_T4:         { offset: 0x42, size: 1 },
+    PITCH_ENV_L0:         { offset: 0x43, size: 1 }, // 1-127 (-63 to +63)
+    PITCH_ENV_L1:         { offset: 0x44, size: 1 },
+    PITCH_ENV_L2:         { offset: 0x45, size: 1 },
+    PITCH_ENV_L3:         { offset: 0x46, size: 1 },
+    PITCH_ENV_L4:         { offset: 0x47, size: 1 },
     // TVF
     TVF_FILTER_TYPE:      { offset: 0x48, size: 1 }, // 0-6 (OFF, LPF, BPF, HPF, PKG, LPF2, LPF3)
     TVF_CUTOFF:           { offset: 0x49, size: 1 }, // 0-127
+    TVF_CUTOFF_KEYFOLLOW: { offset: 0x4A, size: 1 }, // 44-84 (-200% to +200%)
+    TVF_CUTOFF_VEL_CURVE: { offset: 0x4B, size: 1 }, // 0-7 (FIXED, 1-7)
+    TVF_CUTOFF_VEL_SENS:  { offset: 0x4C, size: 1 }, // 1-127 (-63 to +63)
     TVF_RESONANCE:        { offset: 0x4D, size: 1 }, // 0-127
+    TVF_RESO_VEL_SENS:    { offset: 0x4E, size: 1 }, // 1-127 (-63 to +63)
+    TVF_ENV_DEPTH:        { offset: 0x4F, size: 1 }, // 1-127 (-63 to +63)
+    TVF_ENV_VEL_CURVE:    { offset: 0x50, size: 1 }, // 0-6 (1-7)
+    TVF_ENV_VEL_SENS:     { offset: 0x51, size: 1 }, // 1-127 (-63 to +63)
+    TVF_ENV_TIME1_VEL:    { offset: 0x52, size: 1 }, // 1-127 (-63 to +63)
+    TVF_ENV_TIME4_VEL:    { offset: 0x53, size: 1 }, // 1-127 (-63 to +63)
+    TVF_ENV_TIME_KEY:     { offset: 0x54, size: 1 }, // 54-74 (-100 to +100)
+    TVF_ENV_T1:           { offset: 0x55, size: 1 }, // 0-127
+    TVF_ENV_T2:           { offset: 0x56, size: 1 },
+    TVF_ENV_T3:           { offset: 0x57, size: 1 },
+    TVF_ENV_T4:           { offset: 0x58, size: 1 },
+    TVF_ENV_L1:           { offset: 0x59, size: 1 }, // 0-127
+    TVF_ENV_L2:           { offset: 0x5A, size: 1 },
+    TVF_ENV_L3:           { offset: 0x5B, size: 1 },
+    TVF_ENV_L4:           { offset: 0x5C, size: 1 },
     // TVA
     TVA_LEVEL:            { offset: 0x6E, size: 1 }, // 0-127
+    TVA_VEL_CURVE:        { offset: 0x6F, size: 1 }, // 0-6 (1-7)
+    TVA_VEL_SENS:         { offset: 0x70, size: 1 }, // 1-127 (-63 to +63)
+    TVA_ENV_TIME1_VEL:    { offset: 0x71, size: 1 }, // 1-127 (-63 to +63)
+    TVA_ENV_TIME4_VEL:    { offset: 0x72, size: 1 }, // 1-127 (-63 to +63)
+    TVA_ENV_TIME_KEY:     { offset: 0x73, size: 1 }, // 54-74 (-100 to +100)
+    TVA_ENV_T1:           { offset: 0x74, size: 1 }, // 0-127
+    TVA_ENV_T2:           { offset: 0x75, size: 1 },
+    TVA_ENV_T3:           { offset: 0x76, size: 1 },
+    TVA_ENV_T4:           { offset: 0x77, size: 1 },
+    TVA_ENV_L1:           { offset: 0x78, size: 1 }, // 0-127
+    TVA_ENV_L2:           { offset: 0x79, size: 1 },
+    TVA_ENV_L3:           { offset: 0x7A, size: 1 },
+    // LFO 1
+    LFO1_FORM:            { offset: 0x8A, size: 1 }, // 0-9
+    LFO1_RATE:            { offset: 0x8B, size: 1 }, // 0-127
+    LFO1_TEMPO_SYNC:      { offset: 0x8D, size: 1 }, // 0-1 (OFF, ON)
+    LFO1_FADE_MODE:       { offset: 0x8E, size: 1 }, // 0-3 (ON-IN, ON-OUT, OFF-IN, OFF-OUT)
+    LFO1_DELAY_TIME:      { offset: 0x8F, size: 1 }, // 0-127
+    LFO1_FADE_TIME:       { offset: 0x90, size: 1 }, // 0-127
+    LFO1_OFFSET:          { offset: 0x91, size: 1 }, // 0-4 (-100, -50, 0, +50, +100)
+    LFO1_KEY_TRIGGER:     { offset: 0x93, size: 1 }, // 0-1 (OFF, ON)
+    LFO1_PITCH_DEPTH:     { offset: 0x94, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_TVF_DEPTH:       { offset: 0x95, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_TVA_DEPTH:       { offset: 0x96, size: 1 }, // 1-127 (-63 to +63)
+    LFO1_PAN_DEPTH:       { offset: 0x97, size: 1 }, // 1-127 (-63 to +63)
+    // LFO 2
+    LFO2_FORM:            { offset: 0xFA, size: 1 }, // 0-9
+    LFO2_RATE:            { offset: 0xFB, size: 1 }, // 0-127
+    LFO2_TEMPO_SYNC:      { offset: 0xFD, size: 1 }, // 0-1 (OFF, ON)
+    LFO2_FADE_MODE:       { offset: 0xFE, size: 1 }, // 0-3
+    LFO2_DELAY_TIME:      { offset: 0xFF, size: 1 }, // 0-127
+    LFO2_FADE_TIME:       { offset: 0x0100, size: 1 }, // 0-127
+    LFO2_OFFSET:          { offset: 0x0101, size: 1 }, // 0-4
+    LFO2_KEY_TRIGGER:     { offset: 0x0104, size: 1 }, // 0-1
+    LFO2_PITCH_DEPTH:     { offset: 0x0105, size: 1 }, // 1-127 (-63 to +63)
+    LFO2_TVF_DEPTH:       { offset: 0x0106, size: 1 }, // 1-127 (-63 to +63)
+    LFO2_TVA_DEPTH:       { offset: 0x0107, size: 1 }, // 1-127 (-63 to +63)
+    LFO2_PAN_DEPTH:       { offset: 0x0108, size: 1 }, // 1-127 (-63 to +63)
   },
 };
 
