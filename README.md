@@ -78,19 +78,19 @@ A lightweight, high-performance Web MIDI editor for the XV-5050 synthesizer modu
 
 ---
 
-## Running Locally
+## 100% Client-Side / Running in Browser
 
-Because this application uses standard ES Modules, serve the folder with any static web browser or local static server:
+This application is **strictly client-side** with **zero server dependencies**. There is no backend, server process, or local server required.
 
-```bash
-# Python (built-in)
-python -m http.server 8000
+To use the editor:
+1. Open `index.html` directly in your browser (or double-click from your file manager) using any browser supporting the Web MIDI API:
+   - Google Chrome
+   - Microsoft Edge
+   - Opera
+2. When prompted, grant MIDI permission with System Exclusive (`sysex: true`) access.
+3. Select your MIDI interface Input and Output ports, set your Device ID (default `17` / `0x10`), and click **Connect**.
 
-# or Node.js npx
-npx serve .
-```
-
-Open `http://localhost:8000` in Google Chrome, Microsoft Edge, or Opera (browsers supporting Web MIDI with SysEx).
+All SysEx encoding, checksum calculations, tone generation parameters, real-time SVG curve renderings, and `.syx` librarian operations execute 100% client-side within the browser.
 
 ---
 
