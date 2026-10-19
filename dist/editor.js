@@ -191,21 +191,24 @@
      * @param {string} outputId
      * @returns {boolean} True if successfully connected
      */
-    connect(inputId, outputId) {
+    async connect(inputId, outputId) {
       if (!this._midiAccess) return false;
-      this.disconnect();
+      await this.disconnect();
       const input = this._midiAccess.inputs.get(inputId);
       const output = this._midiAccess.outputs.get(outputId);
       if (!input || !output) {
         console.error("Specified MIDI input or output device not found");
         return false;
       }
+      try {
+        if (input.open) await input.open();
+        if (output.open) await output.open();
+      } catch (err) {
+        console.warn("Port open warning:", err);
+      }
       this._input = input;
       this._output = output;
       this._input.onmidimessage = this._handleMidiMessage;
-      if (this._input.addEventListener) {
-        this._input.addEventListener("midimessage", this._handleMidiMessage);
-      }
       this._connected = true;
       try {
         this.sendRaw([240, 126, 127, 6, 1, 247]);
@@ -216,15 +219,22 @@
     /**
      * Disconnect current MIDI input and output ports.
      */
-    disconnect() {
+    async disconnect() {
       if (this._input) {
         this._input.onmidimessage = null;
-        if (this._input.removeEventListener) {
-          this._input.removeEventListener("midimessage", this._handleMidiMessage);
+        try {
+          if (this._input.close) await this._input.close();
+        } catch (_) {
         }
         this._input = null;
       }
-      this._output = null;
+      if (this._output) {
+        try {
+          if (this._output.close) await this._output.close();
+        } catch (_) {
+        }
+        this._output = null;
+      }
       this._connected = false;
     }
     /**
@@ -306,6 +316,11 @@
      * @returns {Promise<object>} Complete parsed SysEx response
      */
     sendAndReceive(message, timeout = 3e3) {
+      if (this._midiAccess && !this._midiAccess.sysexEnabled) {
+        return Promise.reject(new Error(
+          'SysEx permission is blocked by browser! If opened via file://, run "npm start" and open http://localhost:3000 to enable SysEx.'
+        ));
+      }
       return new Promise((resolve, reject) => {
         const isRq1 = message && message[0] === 240 && message[5] === 17 && message.length >= 14;
         let reqAddr = null;
@@ -3963,14 +3978,49 @@
     const el = $("patchPartSelect");
     return el ? parseInt(el.value, 10) : 1;
   }
+  function updateSysexNoticeBanner() {
+    const banner = $("sysexNoticeBanner");
+    if (!banner) return;
+    if (typeof window !== "undefined" && window.location.protocol === "file:") {
+      banner.className = "callout-banner callout-banner-warning";
+      banner.style.display = "flex";
+      banner.innerHTML = `
+      <span style="font-size:1.5rem; flex-shrink:0;">\u26A0\uFE0F</span>
+      <div>
+        <strong>Local File Detected (<code>file://</code>)</strong>:
+        Browsers strictly block MIDI System Exclusive (SysEx) messages on <code>file://</code> URLs, which prevents reading and writing parameters with your XV-5050 synthesizer.<br>
+        To enable SysEx, run <code>npm start</code> in your terminal and open <a href="http://localhost:3000" target="_blank" rel="noopener"><strong>http://localhost:3000</strong></a> in Chrome or Edge.
+      </div>
+    `;
+      return;
+    }
+    if (midi._midiAccess && !midi.sysexEnabled) {
+      banner.className = "callout-banner callout-banner-danger";
+      banner.style.display = "flex";
+      banner.innerHTML = `
+      <span style="font-size:1.5rem; flex-shrink:0;">\u{1F512}</span>
+      <div>
+        <strong>SysEx Permission Required</strong>:
+        Web MIDI SysEx permission was not granted by your browser. Without SysEx, XV-5050 parameters cannot be dumped or synchronized.<br>
+        Click the page settings / tune icon next to the address bar, enable <em>"MIDI devices / System Exclusive"</em>, and reload this page.
+      </div>
+    `;
+      return;
+    }
+    banner.style.display = "none";
+  }
   async function initMidi() {
     const hasAccess = await midi.requestAccess();
     if (!hasAccess) {
       setStatus("Web MIDI not available \u2014 use Chrome, Edge, or Opera with MIDI devices");
+      updateSysexNoticeBanner();
       return;
     }
     refreshDeviceList();
-    if (!midi.sysexEnabled) {
+    updateSysexNoticeBanner();
+    if (typeof window !== "undefined" && window.location.protocol === "file:") {
+      setStatus('\u26A0\uFE0F Running via file:// URL. Chrome blocks SysEx on file:// URLs! Please run "npm start" and open http://localhost:3000 to enable SysEx communication.');
+    } else if (!midi.sysexEnabled) {
       console.warn("Web MIDI SysEx is not enabled in this browser session");
       setStatus('\u26A0\uFE0F SysEx permission is not granted! Click the site settings icon in the browser address bar and enable "System exclusive messages" for this page.');
     } else {
@@ -4002,7 +4052,12 @@
     }
     setStatus(`Found ${inputs.length} input(s), ${outputs.length} output(s)`);
   }
-  function connectMidi() {
+  async function connectMidi() {
+    if (typeof window !== "undefined" && window.location.protocol === "file:") {
+      alert("SysEx communication is blocked by Google Chrome on file:// URLs!\n\nPlease open http://localhost:3000 to enable SysEx communication with your XV-5050 synthesizer.");
+      setStatus("\u26A0\uFE0F SysEx blocked on file:// URL \u2014 open http://localhost:3000");
+      return;
+    }
     const inputId = $("midiInput").value;
     const outputId = $("midiOutput").value;
     if (!inputId || !outputId) {
@@ -4010,14 +4065,15 @@
       return;
     }
     if (midi.isConnected) {
-      midi.disconnect();
+      await midi.disconnect();
       setConnectionStatus(false);
       $("connectBtn").textContent = "Connect";
       $("statusDeviceInfo").textContent = "";
       setStatus("Disconnected");
       return;
     }
-    const success = midi.connect(inputId, outputId);
+    setStatus("Opening MIDI ports...");
+    const success = await midi.connect(inputId, outputId);
     if (success) {
       setConnectionStatus(true, `${midi.inputName}`);
       $("connectBtn").textContent = "Disconnect";
@@ -5377,7 +5433,26 @@
       }
     });
   }
-  function handleSyncWithUnit() {
+  async function handleSyncWithUnit() {
+    if (typeof window !== "undefined" && window.location.protocol === "file:") {
+      alert("SysEx communication is blocked by Google Chrome on file:// URLs!\n\nPlease open http://localhost:3000 to enable SysEx communication with your XV-5050 synthesizer.");
+      setStatus("\u26A0\uFE0F SysEx blocked on file:// URL \u2014 open http://localhost:3000");
+      return;
+    }
+    if (!midi.isConnected) {
+      const inputId = $("midiInput")?.value;
+      const outputId = $("midiOutput")?.value;
+      if (inputId && outputId) {
+        setStatus("Auto-connecting to selected XV-5050 MIDI ports...");
+        const success = await midi.connect(inputId, outputId);
+        if (success) {
+          setConnectionStatus(true, `${midi.inputName}`);
+          $("connectBtn").textContent = "Disconnect";
+          $("statusDeviceInfo").textContent = `${midi.inputName} \u2194 ${midi.outputName}`;
+          midi.onSysEx(handleIncomingSysEx);
+        }
+      }
+    }
     if (!midi.isConnected) {
       setStatus("Cannot sync: XV-5050 is not connected. Connect MIDI first.");
       return;
@@ -5603,6 +5678,11 @@
     }
   }
   async function handleAutoDetectId() {
+    if (typeof window !== "undefined" && window.location.protocol === "file:") {
+      alert("SysEx communication is blocked by Google Chrome on file:// URLs!\n\nPlease open http://localhost:3000 to enable SysEx communication with your XV-5050 synthesizer.");
+      setStatus("\u26A0\uFE0F SysEx blocked on file:// URL \u2014 open http://localhost:3000");
+      return;
+    }
     if (!midi.isConnected) {
       setStatus("Cannot detect ID: Connect MIDI ports first.");
       return;
@@ -5618,6 +5698,11 @@
     }
   }
   async function executeHardwareDiagnostics() {
+    if (typeof window !== "undefined" && window.location.protocol === "file:") {
+      alert("SysEx communication is blocked by Google Chrome on file:// URLs!\n\nPlease open http://localhost:3000 to enable SysEx communication with your XV-5050 synthesizer.");
+      setStatus("\u26A0\uFE0F SysEx blocked on file:// URL \u2014 open http://localhost:3000");
+      return;
+    }
     if (!midi.isConnected) {
       setStatus("Cannot run diagnostics: XV-5050 is not connected. Connect MIDI first.");
       return;

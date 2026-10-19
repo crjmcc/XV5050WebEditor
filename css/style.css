@@ -1191,4 +1191,47 @@ input[type="range"]::-moz-range-thumb {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Callout & Warning Banners */
+.callout-banner {
+  margin: var(--space-md) var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  border: 1px solid transparent;
+  animation: slideDown var(--transition-normal);
+}
+
+.callout-banner-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.callout-banner-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.callout-banner a {
+  color: #38bdf8;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.warning-callout {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-sm);
+  color: #fca5a5;
+  margin: 12px 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
 

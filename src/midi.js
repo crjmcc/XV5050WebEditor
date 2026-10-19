@@ -114,10 +114,10 @@ export class MidiManager {
    * @param {string} outputId
    * @returns {boolean} True if successfully connected
    */
-  connect(inputId, outputId) {
+  async connect(inputId, outputId) {
     if (!this._midiAccess) return false;
 
-    this.disconnect();
+    await this.disconnect();
 
     const input = this._midiAccess.inputs.get(inputId);
     const output = this._midiAccess.outputs.get(outputId);
@@ -127,12 +127,16 @@ export class MidiManager {
       return false;
     }
 
+    try {
+      if (input.open) await input.open();
+      if (output.open) await output.open();
+    } catch (err) {
+      console.warn('Port open warning:', err);
+    }
+
     this._input = input;
     this._output = output;
     this._input.onmidimessage = this._handleMidiMessage;
-    if (this._input.addEventListener) {
-      this._input.addEventListener('midimessage', this._handleMidiMessage);
-    }
     this._connected = true;
 
     // Send warm-up identity request ping to wake USB MIDI stream endpoint
@@ -146,15 +150,16 @@ export class MidiManager {
   /**
    * Disconnect current MIDI input and output ports.
    */
-  disconnect() {
+  async disconnect() {
     if (this._input) {
       this._input.onmidimessage = null;
-      if (this._input.removeEventListener) {
-        this._input.removeEventListener('midimessage', this._handleMidiMessage);
-      }
+      try { if (this._input.close) await this._input.close(); } catch (_) {}
       this._input = null;
     }
-    this._output = null;
+    if (this._output) {
+      try { if (this._output.close) await this._output.close(); } catch (_) {}
+      this._output = null;
+    }
     this._connected = false;
   }
 
@@ -246,6 +251,12 @@ export class MidiManager {
    * @returns {Promise<object>} Complete parsed SysEx response
    */
   sendAndReceive(message, timeout = 3000) {
+    if (this._midiAccess && !this._midiAccess.sysexEnabled) {
+      return Promise.reject(new Error(
+        'SysEx permission is blocked by browser! If opened via file://, run "npm start" and open http://localhost:3000 to enable SysEx.'
+      ));
+    }
+
     return new Promise((resolve, reject) => {
       // Check if message is an RQ1 data request
       const isRq1 = message && message[0] === 0xF0 && message[5] === 0x11 && message.length >= 14;
