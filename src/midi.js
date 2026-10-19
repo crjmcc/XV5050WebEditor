@@ -114,10 +114,10 @@ export class MidiManager {
    * @param {string} outputId
    * @returns {boolean} True if successfully connected
    */
-  async connect(inputId, outputId) {
+  connect(inputId, outputId) {
     if (!this._midiAccess) return false;
 
-    await this.disconnect();
+    this.disconnect();
 
     const input = this._midiAccess.inputs.get(inputId);
     const output = this._midiAccess.outputs.get(outputId);
@@ -127,22 +127,17 @@ export class MidiManager {
       return false;
     }
 
-    try {
-      if (input.open) await input.open();
-      if (output.open) await output.open();
-    } catch (err) {
-      console.warn('Port open warning:', err);
-    }
-
     this._input = input;
     this._output = output;
-    this._input.onmidimessage = this._handleMidiMessage;
-    this._connected = true;
 
-    // Send warm-up identity request ping to wake USB MIDI stream endpoint
-    try {
-      this.sendRaw([0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]);
-    } catch (_) {}
+    // Attach both onmidimessage and addEventListener for maximum browser compatibility
+    this._input.onmidimessage = this._handleMidiMessage;
+    if (this._input.addEventListener) {
+      this._input.addEventListener('midimessage', this._handleMidiMessage);
+    }
+
+    this._connected = true;
+    console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}"`);
 
     return true;
   }
@@ -150,16 +145,15 @@ export class MidiManager {
   /**
    * Disconnect current MIDI input and output ports.
    */
-  async disconnect() {
+  disconnect() {
     if (this._input) {
       this._input.onmidimessage = null;
-      try { if (this._input.close) await this._input.close(); } catch (_) {}
+      if (this._input.removeEventListener) {
+        this._input.removeEventListener('midimessage', this._handleMidiMessage);
+      }
       this._input = null;
     }
-    if (this._output) {
-      try { if (this._output.close) await this._output.close(); } catch (_) {}
-      this._output = null;
-    }
+    this._output = null;
     this._connected = false;
   }
 
@@ -186,11 +180,12 @@ export class MidiManager {
     if (this._onTraffic) {
       this._onTraffic('TX', arr, Date.now());
     }
+    console.log('[MIDI TX]', arr.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '));
     try {
-      this._output.send(uint8);
-    } catch (err) {
-      console.warn('Output send failed with Uint8Array, falling back to array:', err);
       this._output.send(arr);
+    } catch (err) {
+      console.warn('Output send with Array failed, trying Uint8Array:', err);
+      this._output.send(uint8);
     }
   }
 
@@ -251,10 +246,8 @@ export class MidiManager {
    * @returns {Promise<object>} Complete parsed SysEx response
    */
   sendAndReceive(message, timeout = 3000) {
-    if (this._midiAccess && !this._midiAccess.sysexEnabled) {
-      return Promise.reject(new Error(
-        'SysEx permission is blocked by browser! If opened via file://, run "npm start" and open http://localhost:3000 to enable SysEx.'
-      ));
+    if (!this.isConnected) {
+      return Promise.reject(new Error('MIDI ports are not connected.'));
     }
 
     return new Promise((resolve, reject) => {
@@ -370,12 +363,22 @@ export class MidiManager {
   // -- Internal handlers --
 
   _handleMidiMessage(event) {
+    if (event === this._lastMidiEvent) return;
+    this._lastMidiEvent = event;
+
     const data = event.data;
     if (!data || data.length === 0) return;
 
-    if (this._onTraffic) {
-      this._onTraffic('RX', Array.from(data), Date.now());
+    // Filter out standalone real-time MIDI bytes (0xFE Active Sensing, 0xF8 Clock)
+    if (data.length === 1 && (data[0] === 0xFE || data[0] === 0xF8)) {
+      return;
     }
+
+    const dataArr = Array.from(data);
+    if (this._onTraffic) {
+      this._onTraffic('RX', dataArr, Date.now());
+    }
+    console.log('[MIDI RX]', dataArr.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '));
 
     // Reassemble fragmented SysEx chunks if delivered in pieces
     if (!this._sysexBuffer && data[0] === 0xF0) {
@@ -391,6 +394,9 @@ export class MidiManager {
 
     if (this._sysexBuffer) {
       for (let i = 0; i < data.length; i++) {
+        // Skip interleaved real-time clock/sense bytes
+        if (data[i] === 0xFE || data[i] === 0xF8) continue;
+
         this._sysexBuffer.push(data[i]);
         if (data[i] === 0xF7) {
           const complete = new Uint8Array(this._sysexBuffer);
@@ -410,6 +416,7 @@ export class MidiManager {
 
   _dispatchSysEx(data) {
     const parsed = parseSysEx(data);
+    console.log('[SysEx RX Parsed]', parsed);
     if (this._onMessage) {
       this._onMessage(parsed);
     }
