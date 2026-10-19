@@ -49,6 +49,98 @@ export class MidiManager {
   }
 
   /**
+   * Request Web MIDI access from the browser with SysEx support.
+   * @returns {Promise<boolean>} True if access granted, false otherwise.
+   */
+  async requestAccess() {
+    if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) {
+      console.warn('Web MIDI API is not supported in this environment.');
+      return false;
+    }
+    try {
+      this._midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+      this._midiAccess.onstatechange = this._handleStateChange;
+      return true;
+    } catch (err) {
+      console.error('Failed to get Web MIDI access:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Get list of available MIDI input devices.
+   * @returns {MidiDevice[]}
+   */
+  getInputs() {
+    if (!this._midiAccess) return [];
+    const devices = [];
+    for (const [id, input] of this._midiAccess.inputs) {
+      devices.push({
+        id,
+        name: input.name || `MIDI Input (${id})`,
+        manufacturer: input.manufacturer || '',
+      });
+    }
+    return devices;
+  }
+
+  /**
+   * Get list of available MIDI output devices.
+   * @returns {MidiDevice[]}
+   */
+  getOutputs() {
+    if (!this._midiAccess) return [];
+    const devices = [];
+    for (const [id, output] of this._midiAccess.outputs) {
+      devices.push({
+        id,
+        name: output.name || `MIDI Output (${id})`,
+        manufacturer: output.manufacturer || '',
+      });
+    }
+    return devices;
+  }
+
+  /**
+   * Connect to specified input and output MIDI ports.
+   * @param {string} inputId
+   * @param {string} outputId
+   * @returns {boolean} True if successfully connected
+   */
+  connect(inputId, outputId) {
+    if (!this._midiAccess) return false;
+
+    this.disconnect();
+
+    const input = this._midiAccess.inputs.get(inputId);
+    const output = this._midiAccess.outputs.get(outputId);
+
+    if (!input || !output) {
+      console.error('Specified MIDI input or output device not found');
+      return false;
+    }
+
+    this._input = input;
+    this._output = output;
+    this._input.onmidimessage = this._handleMidiMessage;
+    this._connected = true;
+
+    return true;
+  }
+
+  /**
+   * Disconnect current MIDI input and output ports.
+   */
+  disconnect() {
+    if (this._input) {
+      this._input.onmidimessage = null;
+      this._input = null;
+    }
+    this._output = null;
+    this._connected = false;
+  }
+
+  /**
    * Subscribe to raw MIDI traffic for monitoring (direction: 'TX' | 'RX', bytes: Uint8Array|number[]).
    * @param {Function} callback - (direction, bytes, timestamp) => void
    */
