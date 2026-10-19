@@ -56,21 +56,28 @@ A lightweight, high-performance Web MIDI editor for the XV-5050 synthesizer modu
 ```
 ├── css/
 │   └── style.css          # Dark synth-inspired design system with CSS custom properties
+├── dist/
+│   └── editor.js          # Standalone client-side bundle (allows direct file:/// execution)
 ├── src/
 │   ├── addresses.js       # Complete 7-bit parameter address map conforming to official specification
 │   ├── app.js             # Application controller and UI event wiring
+│   ├── librarian.js       # Binary .syx export/import & memory snapshot manager
 │   ├── midi.js            # Web MIDI connection manager with traffic logging and panic
 │   ├── parameters.js      # Parameter metadata, ranges, enum labels, and formatters
-│   ├── patch.js           # Patch Common, TMT, and Tone data managers
+│   ├── patch.js           # Patch Common, TMT, Matrix Control & Tone data managers
 │   ├── performance.js     # Performance Common, Effects, and Parts data managers
 │   ├── state.js           # Central observable store
-│   └── sysex.js           # Checksum calculation, DT1/RQ1 builders, and SysEx parser
+│   ├── sysex.js           # Checksum calculation, DT1/RQ1 builders, and SysEx parser
+│   └── visuals.js         # Real-time dynamic SVG envelope, filter, and LFO curve renderer
 ├── tests/
 │   ├── addresses.test.js  # Address layout and 7-bit math tests
+│   ├── librarian.test.js  # .syx file export/import and binary SysEx tests
 │   ├── midi_implementation_deep.test.js # Exhaustive boundary and multi-part stepping tests
 │   ├── midi_integration.test.js         # End-to-end simulated hardware request/response flows
 │   ├── parameters.test.js # Value formatting and parsing tests
-│   └── sysex.test.js      # SysEx message builders, parsers, and checksum tests
+│   ├── stage2_features.test.js          # Modulation matrix, TMT zones, envelopes & effects tests
+│   ├── sysex.test.js      # SysEx message builders, parsers, and checksum tests
+│   └── visuals.test.js    # SVG path math and generator tests
 ├── index.html             # Application entry point
 ├── package.json           # Project manifest and test runner
 └── README.md

@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Client-side Web MIDI editor for XV-5050 synthesizer module",
   "scripts": {
-    "build": "esbuild src/app.js --bundle --outfile=dist/editor.js",
+    "build": "npx esbuild src/app.js --bundle --outfile=dist/editor.js",
     "test": "node --test tests/*.test.js"
   },
   "keywords": [
