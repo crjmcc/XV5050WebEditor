@@ -60,6 +60,8 @@
         <select id="midiOutput"><option value="">— Select MIDI Output —</option></select>
         <button class="btn btn-primary" id="connectBtn">Connect</button>
         <button class="btn" id="refreshBtn">↻ Refresh</button>
+        <button class="btn btn-secondary btn-sm" id="btnAutoDetectId" title="Scan and auto-detect XV-5050 Device ID">🔍 Detect ID</button>
+        <button class="btn btn-secondary btn-sm" id="btnRunDiagnostics" title="Run comprehensive USB hardware diagnostic tests">⚡ USB Diagnostics</button>
         <button class="btn btn-sync" id="syncWithUnitBtn" title="Read all parameters from XV-5050 and synchronize the entire web editor">⇄ Sync with Unit</button>
       </div>
     </div>
@@ -81,10 +83,14 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title"><span class="icon">⬡</span> Performance Common & Routing</span>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <select id="userPerfSelect" style="max-width:230px; padding:4px 8px; font-size:0.82rem;" title="Select from synced hardware User Performances">
+              <option value="">— User Performances (1-64) —</option>
+            </select>
             <button class="btn btn-primary btn-sm" id="loadEntirePerfBtn">★ Load Entire Performance</button>
             <button class="btn btn-secondary btn-sm" id="loadPerfBtn">↓ Common</button>
             <button class="btn btn-secondary btn-sm" id="loadPerfFxBtn">↓ Chorus/Reverb</button>
+            <button class="btn btn-secondary btn-sm" id="btnWritePerfSlot" title="Write current performance into a hardware User Performance slot (1-64)">⬆ Write to Slot...</button>
           </div>
         </div>
 
@@ -279,7 +285,7 @@
       <!-- Part Selector Toolbar -->
       <div class="card" style="margin-bottom: var(--space-md);">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-          <div style="display:flex; align-items:center; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
             <label for="patchPartSelect" style="font-weight:600; color:var(--text-accent);">Target Patch Area:</label>
             <select id="patchPartSelect" style="font-size:0.95rem; font-weight:600; padding:6px 12px;">
               <option value="1">Part 1 (Base: 11 00 00 00)</option>
@@ -300,11 +306,15 @@
               <option value="16">Part 16 (Base: 14 60 00 00)</option>
               <option value="0">Single Patch Mode (Base: 1F 00 00 00)</option>
             </select>
+            <select id="userPatchSelect" style="max-width:230px; padding:6px 10px; font-size:0.85rem;" title="Select from synced hardware User Patches">
+              <option value="">— User Patches (1-128) —</option>
+            </select>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-primary btn-sm" id="loadEntirePatchBtn">★ Load Entire Patch (All Tones & Waves)</button>
             <button class="btn btn-secondary btn-sm" id="loadPatchBtn">↓ Common & TMT</button>
             <button class="btn btn-secondary btn-sm" id="loadTonesBtn">↓ 4 Tones</button>
+            <button class="btn btn-secondary btn-sm" id="btnWritePatchSlot" title="Write current patch into a hardware User Patch slot (1-128)">⬆ Write to Slot...</button>
           </div>
         </div>
       </div>
@@ -1004,7 +1014,8 @@
           <span class="card-title"><span class="icon">📁</span> System Exclusive (.SYX) File Management</span>
         </div>
 
-        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom: var(--space-lg);">
+        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom: var(--space-lg); align-items:center;">
+          <button class="btn btn-sync" id="btnExportFullBackupSyx">⤓ Download Full Unit Backup (.SYX)</button>
           <button class="btn btn-primary" id="btnExportPatchSyx">⤓ Export Active Patch (.SYX)</button>
           <button class="btn btn-secondary" id="btnExportPerfSyx">⤓ Export Active Performance (.SYX)</button>
         </div>
@@ -1016,12 +1027,76 @@
             Drag & Drop .SYX File Here, or Click to Browse
           </div>
           <div style="font-size:0.85rem; color:var(--text-secondary);">
-            Supports standard SysEx files containing Patch Common, TMT, Performance, or Sound Dumps
+            Supports standard SysEx files containing Full Unit Backup, Patch Common, TMT, Performance, or Sound Dumps
           </div>
           <input type="file" id="syxFileInput" accept=".syx,.bin,.mid" style="display:none;">
         </div>
 
         <div id="syxImportStatus" style="font-size:0.9rem; font-weight:500; min-height:24px;"></div>
+      </div>
+
+      <!-- Synced Hardware Inventory (64 User Performances & 128 User Patches) -->
+      <div class="card" id="hardwareInventoryCard">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">⬡</span> Synced Hardware Inventory (64 User Performances & 128 User Patches)</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-sm btn-sync" id="refreshInventoryBtn">⇄ Re-Sync Unit</button>
+          </div>
+        </div>
+
+        <!-- Sub Tabs for Performances vs Patches -->
+        <div class="sub-tab-bar" style="margin-bottom:var(--space-md);">
+          <button class="sub-tab-btn active" id="btnInvPerfs" data-inv="perfs">User Performances (64)</button>
+          <button class="sub-tab-btn" id="btnInvPatches" data-inv="patches">User Patches (128)</button>
+        </div>
+
+        <!-- Performances Inventory Pane -->
+        <div id="invPerfsPane">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-sm); flex-wrap:wrap; gap:8px;">
+            <input type="text" id="perfSearchInput" placeholder="Filter Performances..." style="max-width:260px; padding:6px 12px; font-size:0.85rem;">
+            <span style="font-size:0.8rem; color:var(--text-secondary);" id="perfCountBadge">64 Performances</span>
+          </div>
+          <div class="log-table-wrapper" style="max-height: 380px;">
+            <table class="parts-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="width:70px;">Slot</th>
+                  <th>Performance Name</th>
+                  <th style="width:110px;">Solo Part</th>
+                  <th style="width:120px;">MFX Source</th>
+                  <th style="width:90px; text-align:center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="userPerfsTableBody">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:20px;">Click "Sync with Unit" to load all 64 User Performances from hardware.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Patches Inventory Pane -->
+        <div id="invPatchesPane" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-sm); flex-wrap:wrap; gap:8px;">
+            <input type="text" id="patchSearchInput" placeholder="Filter Patches..." style="max-width:260px; padding:6px 12px; font-size:0.85rem;">
+            <span style="font-size:0.8rem; color:var(--text-secondary);" id="patchCountBadge">128 Patches</span>
+          </div>
+          <div class="log-table-wrapper" style="max-height: 380px;">
+            <table class="parts-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="width:70px;">Slot</th>
+                  <th>Patch Name</th>
+                  <th style="width:140px;">Category</th>
+                  <th style="width:80px;">Level</th>
+                  <th style="width:90px; text-align:center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="userPatchesTableBody">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:20px;">Click "Sync with Unit" to load all 128 User Patches from hardware.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- In-Browser User Patch Library -->
@@ -1109,6 +1184,55 @@
       <div class="sync-status-detail" id="syncProgressDetail">Connecting...</div>
       <div class="sync-progress-bar">
         <div class="sync-progress-fill" id="syncProgressBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USB Hardware Diagnostics Modal -->
+  <div id="diagnosticsModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="max-width: 680px; width: 90%;">
+      <div class="modal-header">
+        <span class="modal-icon">⚡</span>
+        <h3>XV-5050 USB Hardware Diagnostics</h3>
+      </div>
+      <div class="modal-body">
+        <div id="diagSummaryBanner" style="padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25);">
+          <div style="font-weight: 600; font-size: 0.95rem;" id="diagSummaryText">Ready to run hardware test suite</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;" id="diagSummarySub">Exercises bi-directional SysEx communication over USB</div>
+        </div>
+
+        <div id="diagStepsContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto;">
+          <!-- Step cards will be generated dynamically -->
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <button class="btn btn-secondary" id="closeDiagBtn">Close</button>
+        <button class="btn btn-primary" id="runDiagAgainBtn">▶ Run Diagnostics Suite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Write to User Memory Slot Modal -->
+  <div id="writeSlotModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="max-width: 480px; width: 90%;">
+      <div class="modal-header">
+        <span class="modal-icon">⬆</span>
+        <h3 id="writeSlotTitle">Write to Hardware Slot</h3>
+      </div>
+      <div class="modal-body">
+        <p id="writeSlotPrompt">Select destination slot on XV-5050:</p>
+        <div class="param-group" style="margin: 16px 0;">
+          <label class="param-label" for="targetSlotSelect">Destination Memory Slot</label>
+          <select id="targetSlotSelect" style="width: 100%; padding: 8px 12px; font-size: 0.9rem;">
+          </select>
+        </div>
+        <div class="warning-callout" style="font-size: 0.85rem;">
+          ⚠️ This will overwrite the selected user memory slot on your XV-5050 synthesizer.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelWriteSlotBtn">Cancel</button>
+        <button class="btn btn-primary" id="confirmWriteSlotBtn">Write to Synthesizer</button>
       </div>
     </div>
   </div>

@@ -8,6 +8,27 @@
  */
 
 // =============================================================================
+// 1-1 Setup Area (Base: 01 00 00 00)
+// =============================================================================
+export const SETUP = {
+  BASE: [0x01, 0x00, 0x00, 0x00],
+  SIZE: [0x00, 0x00, 0x00, 0x0F], // 15 bytes
+  params: {
+    PERF_BANK_MSB:    { offset: 0x00, size: 1 }, // 0-127
+    PERF_BANK_LSB:    { offset: 0x01, size: 1 }, // 0-127
+    PERF_PROGRAM_NUM: { offset: 0x02, size: 1 }, // 0-127
+    PATCH_BANK_MSB:   { offset: 0x03, size: 1 }, // 0-127
+    PATCH_BANK_LSB:   { offset: 0x04, size: 1 }, // 0-127
+    PATCH_PROGRAM_NUM:{ offset: 0x05, size: 1 }, // 0-127
+    MFX_SWITCH:       { offset: 0x0A, size: 1 }, // 0-1 (BYPASS, ON)
+    CHORUS_SWITCH:    { offset: 0x0B, size: 1 }, // 0-1 (OFF, ON)
+    REVERB_SWITCH:    { offset: 0x0C, size: 1 }, // 0-1 (OFF, ON)
+    TRANSPOSE:        { offset: 0x0D, size: 1 }, // 59-70 (-5 to +6)
+    OCTAVE_SHIFT:     { offset: 0x0E, size: 1 }, // 61-67 (-3 to +3)
+  },
+};
+
+// =============================================================================
 // 1-2 System Area
 // =============================================================================
 export const SYSTEM = {
@@ -32,6 +53,29 @@ export const SYSTEM = {
       CLOCK_SOURCE:       { offset: 0x1E, size: 1 }, // 0-2 (INT, MIDI, USB)
       SYSTEM_TEMPO_MSB:   { offset: 0x1F, size: 1 }, // 20-250 BPM (nibble split)
       SYSTEM_TEMPO_LSB:   { offset: 0x20, size: 1 },
+    },
+  },
+  EQ: {
+    BASE: [0x02, 0x00, 0x02, 0x00],
+    SIZE: [0x00, 0x00, 0x00, 0x11], // 17 bytes
+    params: {
+      EQ_SWITCH:          { offset: 0x00, size: 1 }, // 0-1 (BYPASS, ON)
+      EQ1_LOW_FREQ:       { offset: 0x01, size: 1 }, // 0-1 (200, 400 Hz)
+      EQ1_LOW_GAIN:       { offset: 0x02, size: 1 }, // 0-30 (-15 to +15 dB, 15=0)
+      EQ1_HIGH_FREQ:      { offset: 0x03, size: 1 }, // 0-2 (2000, 4000, 8000 Hz)
+      EQ1_HIGH_GAIN:      { offset: 0x04, size: 1 }, // 0-30 (-15 to +15 dB, 15=0)
+      EQ2_LOW_FREQ:       { offset: 0x05, size: 1 },
+      EQ2_LOW_GAIN:       { offset: 0x06, size: 1 },
+      EQ2_HIGH_FREQ:      { offset: 0x07, size: 1 },
+      EQ2_HIGH_GAIN:      { offset: 0x08, size: 1 },
+      EQ3_LOW_FREQ:       { offset: 0x09, size: 1 },
+      EQ3_LOW_GAIN:       { offset: 0x0A, size: 1 },
+      EQ3_HIGH_FREQ:      { offset: 0x0B, size: 1 },
+      EQ3_HIGH_GAIN:      { offset: 0x0C, size: 1 },
+      EQ4_LOW_FREQ:       { offset: 0x0D, size: 1 },
+      EQ4_LOW_GAIN:       { offset: 0x0E, size: 1 },
+      EQ4_HIGH_FREQ:      { offset: 0x0F, size: 1 },
+      EQ4_HIGH_GAIN:      { offset: 0x10, size: 1 },
     },
   },
 };
@@ -606,3 +650,47 @@ export function addOffset(base, offset) {
 
   return result;
 }
+
+// =============================================================================
+// User Bank Addressing Helpers
+// =============================================================================
+
+/**
+ * Get 4-byte base address for a User Performance (1-64).
+ * Base: 20 xx 00 00 where xx = 00 to 3F (0 to 63).
+ * @param {number} perfNumber - Performance number (1-64)
+ * @returns {number[]} 4-byte address
+ */
+export function getUserPerformanceAddress(perfNumber) {
+  if (perfNumber < 1 || perfNumber > 64) {
+    throw new Error(`User Performance number must be 1-64, got ${perfNumber}`);
+  }
+  return [0x20, perfNumber - 1, 0x00, 0x00];
+}
+
+/**
+ * Get 4-byte base address for a User Patch (1-128).
+ * Base: 30 xx 00 00 where xx = 00 to 7F (0 to 127).
+ * @param {number} patchNumber - Patch number (1-128)
+ * @returns {number[]} 4-byte address
+ */
+export function getUserPatchAddress(patchNumber) {
+  if (patchNumber < 1 || patchNumber > 128) {
+    throw new Error(`User Patch number must be 1-128, got ${patchNumber}`);
+  }
+  return [0x30, patchNumber - 1, 0x00, 0x00];
+}
+
+/**
+ * Get 4-byte base address for a User Rhythm Set (1-4).
+ * Base: 40 xx 00 00 where xx = 00, 10, 20, 30.
+ * @param {number} rhythmNumber - Rhythm set number (1-4)
+ * @returns {number[]} 4-byte address
+ */
+export function getUserRhythmAddress(rhythmNumber) {
+  if (rhythmNumber < 1 || rhythmNumber > 4) {
+    throw new Error(`User Rhythm number must be 1-4, got ${rhythmNumber}`);
+  }
+  return [0x40, (rhythmNumber - 1) * 0x10, 0x00, 0x00];
+}
+

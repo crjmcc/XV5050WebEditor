@@ -67,6 +67,21 @@ import {
   createPatchSyxDump,
   createPerformanceSyxDump,
 } from './librarian.js';
+import {
+  syncEntireUnit,
+  exportFullUnitBackup,
+  importFullUnitBackup,
+  requestUserPerformanceHeader,
+  requestUserPatchHeader,
+} from './unit_sync.js';
+import {
+  detectDeviceId,
+  runHardwareDiagnostics,
+  requestEntireUserPerformance,
+  sendEntireUserPerformance,
+  requestEntireUserPatch,
+  sendEntireUserPatch,
+} from './usb_hardware.js';
 
 // =============================================================================
 // Initialization
@@ -1798,6 +1813,328 @@ function handleSyncWithUnit() {
   executeSyncWithUnit();
 }
 
+// =============================================================================
+// Full Unit Sync & Hardware Inventory State
+// =============================================================================
+
+let syncedUnitDb = null;
+const activePartPatchesCache = {};
+
+function populateUserBankSelectors() {
+  const perfSelect = $('userPerfSelect');
+  if (perfSelect && syncedUnitDb?.userPerformances) {
+    perfSelect.innerHTML = '<option value="">— User Performances (1-64) —</option>';
+    syncedUnitDb.userPerformances.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.index;
+      opt.textContent = `User ${String(p.index).padStart(2, '0')}: ${p.name}`;
+      perfSelect.appendChild(opt);
+    });
+  }
+
+  const patchSelect = $('userPatchSelect');
+  if (patchSelect && syncedUnitDb?.userPatches) {
+    patchSelect.innerHTML = '<option value="">— User Patches (1-128) —</option>';
+    syncedUnitDb.userPatches.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.index;
+      opt.textContent = `User ${String(p.index).padStart(3, '0')}: ${p.name}`;
+      patchSelect.appendChild(opt);
+    });
+  }
+}
+
+function renderUserPerfsTable(filter = '') {
+  const tbody = $('userPerfsTableBody');
+  if (!tbody) return;
+  if (!syncedUnitDb?.userPerformances?.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:20px;">Click "Sync with Unit" to load all 64 User Performances from hardware.</td></tr>';
+    return;
+  }
+
+  const q = filter.trim().toLowerCase();
+  const list = syncedUnitDb.userPerformances.filter(p => !q || p.name.toLowerCase().includes(q) || String(p.index).includes(q));
+
+  const badge = $('perfCountBadge');
+  if (badge) badge.textContent = `${list.length} of 64 Performances`;
+
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td style="font-family:var(--font-mono); font-weight:600; color:var(--text-accent);">User ${String(p.index).padStart(2, '0')}</td>
+      <td style="font-weight:600; color:var(--text-primary);">${p.name}</td>
+      <td>${p.soloPart ? `Part ${p.soloPart}` : 'OFF'}</td>
+      <td>${p.mfxSource === 0 ? 'PERFORM' : `Part ${p.mfxSource}`}</td>
+      <td style="text-align:center;">
+        <button class="btn btn-sm btn-secondary" onclick="window.loadSyncedUserPerf(${p.index})">Load</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderUserPatchesTable(filter = '') {
+  const tbody = $('userPatchesTableBody');
+  if (!tbody) return;
+  if (!syncedUnitDb?.userPatches?.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:20px;">Click "Sync with Unit" to load all 128 User Patches from hardware.</td></tr>';
+    return;
+  }
+
+  const q = filter.trim().toLowerCase();
+  const list = syncedUnitDb.userPatches.filter(p => !q || p.name.toLowerCase().includes(q) || String(p.index).includes(q));
+
+  const badge = $('patchCountBadge');
+  if (badge) badge.textContent = `${list.length} of 128 Patches`;
+
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td style="font-family:var(--font-mono); font-weight:600; color:var(--text-accent);">User ${String(p.index).padStart(3, '0')}</td>
+      <td style="font-weight:600; color:var(--text-primary);">${p.name}</td>
+      <td>${p.category || 'General'}</td>
+      <td>${p.level ?? 127}</td>
+      <td style="text-align:center;">
+        <button class="btn btn-sm btn-secondary" onclick="window.loadSyncedUserPatch(${p.index})">Load</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.loadSyncedUserPerf = async function(index) {
+  switchToTab('performance');
+  if (midi.isConnected) {
+    try {
+      setStatus(`Reading complete User Performance ${index} from XV-5050 hardware...`);
+      const fullPerf = await requestEntireUserPerformance(midi, index, getDeviceId());
+      if (fullPerf.common) updatePerformanceCommonUI(fullPerf.common);
+      if (fullPerf.chorus) updatePerformanceChorusUI(fullPerf.chorus);
+      if (fullPerf.reverb) updatePerformanceReverbUI(fullPerf.reverb);
+      if (Array.isArray(fullPerf.parts)) {
+        fullPerf.parts.forEach((p, idx) => updatePartUI(idx + 1, p));
+      }
+      clearEdited();
+      setStatus(`Loaded complete User Performance ${index}: "${fullPerf.common?.name || ''}" from hardware`);
+      return;
+    } catch (err) {
+      console.warn('Hardware read failed, falling back to cached db:', err);
+    }
+  }
+
+  if (!syncedUnitDb) return;
+  const perf = syncedUnitDb.userPerformances.find(p => p.index === index);
+  if (!perf) return;
+  if (perf.raw) {
+    const common = parsePerformanceCommon(perf.raw);
+    updatePerformanceCommonUI(common);
+    setStatus(`Loaded cached User Performance ${index}: "${perf.name}" into editor`);
+  }
+};
+
+window.loadSyncedUserPatch = async function(index) {
+  switchToTab('patch');
+  if (midi.isConnected) {
+    try {
+      setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
+      const fullPatch = await requestEntireUserPatch(midi, index, getDeviceId());
+      if (fullPatch.common) updatePatchCommonUI(fullPatch.common);
+      if (fullPatch.tmt) updatePatchTMTUI(fullPatch.tmt);
+      if (Array.isArray(fullPatch.tones)) {
+        fullPatch.tones.forEach((toneData, tIdx) => {
+          currentToneCache[tIdx] = toneData;
+        });
+        const activeTone = currentToneCache[currentToneIndex - 1];
+        if (activeTone) updateToneUI(activeTone);
+      }
+      clearEdited();
+      setStatus(`Loaded complete User Patch ${index}: "${fullPatch.common?.name || ''}" from hardware`);
+      return;
+    } catch (err) {
+      console.warn('Hardware read failed, falling back to cached db:', err);
+    }
+  }
+
+  if (!syncedUnitDb) return;
+  const patch = syncedUnitDb.userPatches.find(p => p.index === index);
+  if (!patch) return;
+  if (patch.raw) {
+    const common = parsePatchCommon(patch.raw);
+    updatePatchCommonUI(common);
+    setStatus(`Loaded cached User Patch ${index}: "${patch.name}" into editor`);
+  }
+};
+
+function openWriteSlotModal(type) {
+  if (!midi.isConnected) {
+    setStatus('Cannot write: XV-5050 is not connected. Connect MIDI first.');
+    return;
+  }
+  const modal = $('writeSlotModal');
+  const title = $('writeSlotTitle');
+  const prompt = $('writeSlotPrompt');
+  const select = $('targetSlotSelect');
+  if (!modal || !select) return;
+
+  modal.dataset.type = type;
+  select.innerHTML = '';
+
+  if (type === 'performance') {
+    title.textContent = '⬆ Write Performance to Hardware User Slot';
+    prompt.textContent = 'Select destination User Performance slot (1-64) on your XV-5050:';
+    for (let i = 1; i <= 64; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      const cached = syncedUnitDb?.userPerformances?.find(p => p.index === i);
+      opt.textContent = `User Perf ${String(i).padStart(2, '0')}${cached ? `: ${cached.name}` : ''}`;
+      select.appendChild(opt);
+    }
+  } else {
+    title.textContent = '⬆ Write Patch to Hardware User Slot';
+    prompt.textContent = 'Select destination User Patch slot (1-128) on your XV-5050:';
+    for (let i = 1; i <= 128; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      const cached = syncedUnitDb?.userPatches?.find(p => p.index === i);
+      opt.textContent = `User Patch ${String(i).padStart(3, '0')}${cached ? `: ${cached.name}` : ''}`;
+      select.appendChild(opt);
+    }
+  }
+
+  modal.style.display = 'flex';
+}
+
+async function handleConfirmWriteSlot() {
+  const modal = $('writeSlotModal');
+  const select = $('targetSlotSelect');
+  if (!modal || !select) return;
+  const slot = parseInt(select.value, 10);
+  const type = modal.dataset.type;
+  modal.style.display = 'none';
+
+  if (!slot) return;
+
+  if (type === 'performance') {
+    try {
+      setStatus(`Writing performance to User Performance slot ${slot}...`);
+      const name = ($('perfName')?.value || 'USER PERF').padEnd(12, ' ').slice(0, 12);
+      const commonRaw = new Array(53).fill(0);
+      const encName = encodeName(name);
+      for (let i = 0; i < 12; i++) commonRaw[i] = encName[i];
+
+      const perfData = {
+        common: { raw: commonRaw },
+      };
+      await sendEntireUserPerformance(midi, slot, perfData, getDeviceId());
+      setStatus(`Successfully wrote performance "${name.trim()}" to User Slot ${slot}`);
+    } catch (err) {
+      setStatus(`Failed to write performance to slot ${slot}: ${err.message}`);
+    }
+  } else {
+    try {
+      setStatus(`Writing patch to User Patch slot ${slot}...`);
+      const name = ($('patchName')?.value || 'USER PATCH').padEnd(12, ' ').slice(0, 12);
+      const commonRaw = new Array(79).fill(0);
+      const encName = encodeName(name);
+      for (let i = 0; i < 12; i++) commonRaw[i] = encName[i];
+      commonRaw[0x0E] = parseInt($('patchLevel')?.value, 10) || 127;
+
+      const tmtRaw = new Array(41).fill(0);
+      tmtRaw[0x05] = 1; // Tone 1 ON
+
+      const patchData = {
+        common: { raw: commonRaw },
+        tmt: { raw: tmtRaw },
+      };
+      await sendEntireUserPatch(midi, slot, patchData, getDeviceId());
+      setStatus(`Successfully wrote patch "${name.trim()}" to User Slot ${slot}`);
+    } catch (err) {
+      setStatus(`Failed to write patch to slot ${slot}: ${err.message}`);
+    }
+  }
+}
+
+async function handleAutoDetectId() {
+  if (!midi.isConnected) {
+    setStatus('Cannot detect ID: Connect MIDI ports first.');
+    return;
+  }
+  setStatus('Scanning Device IDs 0x10 to 0x1F...');
+  try {
+    const detected = await detectDeviceId(midi);
+    const sel = $('deviceId');
+    if (sel) sel.value = String(detected);
+    setStatus(`Auto-detected XV-5050 Device ID: 0x${detected.toString(16).toUpperCase()} (${detected + 1})`);
+  } catch (err) {
+    setStatus(`Device ID detection failed: ${err.message}`);
+  }
+}
+
+async function executeHardwareDiagnostics() {
+  if (!midi.isConnected) {
+    setStatus('Cannot run diagnostics: XV-5050 is not connected. Connect MIDI first.');
+    return;
+  }
+  const modal = $('diagnosticsModal');
+  const container = $('diagStepsContainer');
+  const bannerText = $('diagSummaryText');
+  const bannerSub = $('diagSummarySub');
+  if (!modal || !container) return;
+
+  modal.style.display = 'flex';
+  bannerText.textContent = 'Running Hardware Diagnostics...';
+  bannerSub.textContent = `Testing XV-5050 on Device ID 0x${getDeviceId().toString(16).toUpperCase()}`;
+
+  const stepNames = [
+    'Device ID Handshake',
+    'System & Setup Parameters',
+    'Temporary Performance Common & Effects',
+    'Temporary Patch & Tone Engine',
+    'User Performance Bank Sample',
+    'User Patch Bank Sample',
+  ];
+
+  container.innerHTML = stepNames.map((name, i) => `
+    <div id="diagStepRow_${i}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:6px; background:var(--bg-elevated); border:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="diagStepIcon_${i}" style="font-size:1.1rem;">⏳</span>
+        <div>
+          <div style="font-weight:600; font-size:0.88rem;">${name}</div>
+          <div id="diagStepDetail_${i}" style="font-size:0.75rem; color:var(--text-dim);">Waiting to run...</div>
+        </div>
+      </div>
+      <div id="diagStepLatency_${i}" style="font-size:0.8rem; font-family:monospace; color:var(--text-muted);">—</div>
+    </div>
+  `).join('');
+
+  const report = await runHardwareDiagnostics(midi, getDeviceId(), (prog) => {
+    const idx = stepNames.indexOf(prog.name);
+    if (idx < 0) return;
+    const icon = $(`diagStepIcon_${idx}`);
+    const detail = $(`diagStepDetail_${idx}`);
+    const lat = $(`diagStepLatency_${idx}`);
+
+    if (prog.status === 'running') {
+      if (icon) icon.textContent = '🔄';
+      if (detail) detail.textContent = 'Communicating with hardware...';
+    } else if (prog.status === 'passed') {
+      if (icon) icon.textContent = '✅';
+      if (detail) detail.textContent = 'Passed — Valid SysEx response received';
+      if (lat) lat.textContent = `${prog.latencyMs} ms`;
+    } else if (prog.status === 'failed') {
+      if (icon) icon.textContent = '❌';
+      if (detail) detail.textContent = `Failed: ${prog.error}`;
+      if (lat) lat.textContent = 'ERR';
+    }
+  });
+
+  if (report.overallSuccess) {
+    bannerText.innerHTML = '<span style="color:var(--success);">✔ All Diagnostics Passed!</span>';
+    bannerSub.textContent = `XV-5050 USB link verified healthy (${report.steps.length} checks passed).`;
+    setStatus('XV-5050 USB Hardware Diagnostics: All 6 tests passed successfully.');
+  } else {
+    bannerText.innerHTML = '<span style="color:var(--danger);">✖ Diagnostics Encountered Issues</span>';
+    bannerSub.textContent = 'One or more hardware SysEx checks failed. Check connection or Device ID.';
+    setStatus('XV-5050 USB Hardware Diagnostics: Issues detected.');
+  }
+}
+
 async function executeSyncWithUnit() {
   const modal = $('confirmSyncModal');
   if (modal) modal.style.display = 'none';
@@ -1813,79 +2150,82 @@ async function executeSyncWithUnit() {
   };
 
   if (progModal) progModal.style.display = 'flex';
-  setProgress(5, 'Connecting to XV-5050...');
+  setProgress(2, 'Connecting to XV-5050...');
 
   try {
     const devId = getDeviceId();
 
-    // 1. Performance Common
-    setProgress(15, 'Reading Performance Common & Routing...');
-    const common = await requestPerformanceCommon(midi, devId);
-    updatePerformanceCommonUI(common);
-    store.set('performance.common', common);
-    await new Promise(r => setTimeout(r, 20));
-
-    // 2. Performance Chorus & Reverb
-    setProgress(25, 'Reading Performance Chorus & Reverb...');
-    const chorus = await requestPerformanceChorus(midi, devId);
-    updatePerformanceChorusUI(chorus);
-    store.set('performance.effects.chorus', chorus);
-
-    const reverb = await requestPerformanceReverb(midi, devId);
-    updatePerformanceReverbUI(reverb);
-    store.set('performance.effects.reverb', reverb);
-    await new Promise(r => setTimeout(r, 20));
-
-    // 3. Performance Parts (All 16 parts with sound names)
-    setProgress(35, 'Reading all 16 Parts & Sound names...');
-    const parts = await requestAllParts(midi, devId, (done, total, partData) => {
-      const pct = 35 + Math.round((done / total) * 35);
-      setProgress(pct, `Part ${done}/${total}: "${partData?.patchName || ''}"`);
-      if (partData) updatePartRow(done, partData);
+    // Execute complete 6-stage entire unit sync
+    const unitDb = await syncEntireUnit(midi, devId, (pct, statusText, stage) => {
+      setProgress(pct, statusText);
     });
-    store.set('performance.parts', parts);
-    await new Promise(r => setTimeout(r, 20));
 
-    // 4. Active Part Patch Common & TMT
-    const part = getSelectedPart();
-    setProgress(72, `Reading Part ${part} Patch Common & Structure...`);
-    const patchCommon = await requestPatchCommon(midi, part, devId);
-    updatePatchCommonUI(patchCommon);
-    store.set('patch.common', patchCommon);
+    syncedUnitDb = unitDb;
 
-    const patchTmt = await requestPatchTMT(midi, part, devId);
-    updatePatchTMTUI(patchTmt);
-    store.set('patch.tmt', patchTmt);
-    await new Promise(r => setTimeout(r, 20));
-
-    // 5. Active Part All 4 Tones & Wave Data
-    for (let t = 1; t <= 4; t++) {
-      const pct = 75 + (t * 6);
-      setProgress(pct, `Reading Tone ${t}/4 (Wave, Filter, TVA, Envelopes)...`);
-      const toneData = await requestPatchTone(midi, part, t, devId);
-      store.set(`patch.tones.${t - 1}`, toneData);
-      currentToneCache[t - 1] = toneData;
-      if (currentToneIndex === t) {
-        updateToneUI(toneData);
-      }
-      await new Promise(r => setTimeout(r, 20));
+    // 1. Update Performance UI
+    if (unitDb.currentPerformance?.common) {
+      updatePerformanceCommonUI(unitDb.currentPerformance.common);
+      store.set('performance.common', unitDb.currentPerformance.common);
+    }
+    if (unitDb.currentPerformance?.chorus) {
+      updatePerformanceChorusUI(unitDb.currentPerformance.chorus);
+      store.set('performance.effects.chorus', unitDb.currentPerformance.chorus);
+    }
+    if (unitDb.currentPerformance?.reverb) {
+      updatePerformanceReverbUI(unitDb.currentPerformance.reverb);
+      store.set('performance.effects.reverb', unitDb.currentPerformance.reverb);
+    }
+    if (Array.isArray(unitDb.currentPerformance?.parts)) {
+      unitDb.currentPerformance.parts.forEach((p, idx) => {
+        updatePartRow(idx + 1, p);
+      });
+      store.set('performance.parts', unitDb.currentPerformance.parts);
     }
 
-    const activeTone = currentToneCache[currentToneIndex - 1];
-    if (activeTone) updateToneUI(activeTone);
+    // 2. Cache & Update Active Patches for All 16 Parts
+    if (Array.isArray(unitDb.activePatches)) {
+      unitDb.activePatches.forEach(ap => {
+        activePartPatchesCache[ap.part] = ap;
+      });
+      const activePart = getSelectedPart();
+      const currentPatch = activePartPatchesCache[activePart] || unitDb.activePatches[0];
+      if (currentPatch) {
+        if (currentPatch.common) {
+          updatePatchCommonUI(currentPatch.common);
+          store.set('patch.common', currentPatch.common);
+        }
+        if (currentPatch.tmt) {
+          updatePatchTMTUI(currentPatch.tmt);
+          store.set('patch.tmt', currentPatch.tmt);
+        }
+        if (Array.isArray(currentPatch.tones)) {
+          currentPatch.tones.forEach((toneData, tIdx) => {
+            store.set(`patch.tones.${tIdx}`, toneData);
+            currentToneCache[tIdx] = toneData;
+          });
+          const activeTone = currentToneCache[currentToneIndex - 1];
+          if (activeTone) updateToneUI(activeTone);
+        }
+      }
+    }
 
-    setProgress(100, 'Sync Complete!');
+    // 3. Populate User Bank Selectors and Inventory Tables
+    populateUserBankSelectors();
+    renderUserPerfsTable();
+    renderUserPatchesTable();
+
+    setProgress(100, 'Entire Unit Sync Complete!');
     clearEdited();
-    setStatus('✓ Successfully synchronized all performance, parts, patch, and wave data from XV-5050');
+    setStatus('✓ Successfully synchronized entire XV-5050 unit: Setup, System, Current Performance, 64 User Performances, 128 User Patches, 4 User Rhythm Sets');
 
     setTimeout(() => {
       if (progModal) progModal.style.display = 'none';
-    }, 450);
+    }, 600);
 
   } catch (err) {
     if (progModal) progModal.style.display = 'none';
     setStatus(`Sync failed: ${err.message}`);
-    console.error('Sync failed:', err);
+    console.error('Entire Unit Sync failed:', err);
   }
 }
 
@@ -1927,6 +2267,143 @@ function init() {
   $('loadPerfBtn').addEventListener('click', loadPerformanceCommon);
   $('loadPerfFxBtn').addEventListener('click', loadPerformanceFx);
   $('loadAllPartsBtn').addEventListener('click', loadAllPartsData);
+
+  // User Bank dropdown quick selectors
+  const userPerfSelect = $('userPerfSelect');
+  if (userPerfSelect) {
+    userPerfSelect.addEventListener('change', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (val) window.loadSyncedUserPerf(val);
+    });
+  }
+
+  const userPatchSelect = $('userPatchSelect');
+  if (userPatchSelect) {
+    userPatchSelect.addEventListener('change', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (val) window.loadSyncedUserPatch(val);
+    });
+  }
+
+  // Part selector change updates patch view from cached active patches
+  const patchPartSelect = $('patchPartSelect');
+  if (patchPartSelect) {
+    patchPartSelect.addEventListener('change', () => {
+      const part = getSelectedPart();
+      const cached = activePartPatchesCache[part];
+      if (cached) {
+        if (cached.common) updatePatchCommonUI(cached.common);
+        if (cached.tmt) updatePatchTMTUI(cached.tmt);
+        if (Array.isArray(cached.tones)) {
+          cached.tones.forEach((toneData, tIdx) => {
+            currentToneCache[tIdx] = toneData;
+          });
+          const activeTone = currentToneCache[currentToneIndex - 1];
+          if (activeTone) updateToneUI(activeTone);
+        }
+        setStatus(`Switched to synced Part ${part} Patch (${cached.common?.name || ''})`);
+      }
+    });
+  }
+
+  // Full Unit Backup & Hardware Inventory
+  const btnExportFullBackup = $('btnExportFullBackupSyx');
+  if (btnExportFullBackup) {
+    btnExportFullBackup.addEventListener('click', () => {
+      if (!syncedUnitDb) {
+        setStatus('Please click "Sync with Unit" first to dump the unit data before exporting full backup.');
+        return;
+      }
+      const bytes = exportFullUnitBackup(syncedUnitDb, getDeviceId());
+      const blob = new Blob([bytes], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `XV5050_Full_Unit_Backup_${new Date().toISOString().slice(0, 10)}.syx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus(`Downloaded full unit backup (${bytes.length} bytes, 64 User Perfs, 128 User Patches)`);
+    });
+  }
+
+  const btnInvPerfs = $('btnInvPerfs');
+  const btnInvPatches = $('btnInvPatches');
+  const invPerfsPane = $('invPerfsPane');
+  const invPatchesPane = $('invPatchesPane');
+
+  if (btnInvPerfs && btnInvPatches && invPerfsPane && invPatchesPane) {
+    btnInvPerfs.addEventListener('click', () => {
+      btnInvPerfs.classList.add('active');
+      btnInvPatches.classList.remove('active');
+      invPerfsPane.style.display = 'block';
+      invPatchesPane.style.display = 'none';
+    });
+    btnInvPatches.addEventListener('click', () => {
+      btnInvPatches.classList.add('active');
+      btnInvPerfs.classList.remove('active');
+      invPerfsPane.style.display = 'none';
+      invPatchesPane.style.display = 'block';
+    });
+  }
+
+  const perfSearchInput = $('perfSearchInput');
+  if (perfSearchInput) {
+    perfSearchInput.addEventListener('input', (e) => renderUserPerfsTable(e.target.value));
+  }
+
+  const patchSearchInput = $('patchSearchInput');
+  if (patchSearchInput) {
+    patchSearchInput.addEventListener('input', (e) => renderUserPatchesTable(e.target.value));
+  }
+
+  const refreshInvBtn = $('refreshInventoryBtn');
+  if (refreshInvBtn) {
+    refreshInvBtn.addEventListener('click', handleSyncWithUnit);
+  }
+
+  // Auto-Detect Device ID
+  const btnAutoDetect = $('btnAutoDetectId');
+  if (btnAutoDetect) {
+    btnAutoDetect.addEventListener('click', handleAutoDetectId);
+  }
+
+  // USB Hardware Diagnostics
+  const btnRunDiag = $('btnRunDiagnostics');
+  if (btnRunDiag) {
+    btnRunDiag.addEventListener('click', executeHardwareDiagnostics);
+  }
+  const runDiagAgain = $('runDiagAgainBtn');
+  if (runDiagAgain) {
+    runDiagAgain.addEventListener('click', executeHardwareDiagnostics);
+  }
+  const closeDiag = $('closeDiagBtn');
+  if (closeDiag) {
+    closeDiag.addEventListener('click', () => {
+      const modal = $('diagnosticsModal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+
+  // Write to User Memory Slot Modals
+  const btnWritePerf = $('btnWritePerfSlot');
+  if (btnWritePerf) {
+    btnWritePerf.addEventListener('click', () => openWriteSlotModal('performance'));
+  }
+  const btnWritePatch = $('btnWritePatchSlot');
+  if (btnWritePatch) {
+    btnWritePatch.addEventListener('click', () => openWriteSlotModal('patch'));
+  }
+  const cancelWriteSlot = $('cancelWriteSlotBtn');
+  if (cancelWriteSlot) {
+    cancelWriteSlot.addEventListener('click', () => {
+      const modal = $('writeSlotModal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+  const confirmWriteSlot = $('confirmWriteSlotBtn');
+  if (confirmWriteSlot) {
+    confirmWriteSlot.addEventListener('click', handleConfirmWriteSlot);
+  }
 
   // MIDI port hotplug
   midi.onStateChange((info) => {
