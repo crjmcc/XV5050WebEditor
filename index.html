@@ -44,13 +44,24 @@
       </div>
     </header>
 
+    <!-- Top Hardware & Telemetry Info Bar -->
+    <div class="status-bar info-bar" id="infoBar">
+      <div class="info-bar-left">
+        <span class="info-bar-prompt">STATUS</span>
+        <span class="status-message" id="statusMessage">Ready — select MIDI ports and click Connect</span>
+      </div>
+      <div class="info-bar-right">
+        <span id="statusDeviceInfo" class="status-device-info"></span>
+      </div>
+    </div>
+
     <!-- Collapsible Roll-Up System & Connection Drawer -->
     <div class="card system-drawer" id="systemDrawer">
       <div class="card-header system-drawer-header">
         <div class="system-drawer-title">
           <span class="icon">⚙</span>
           <span>MIDI Hardware Interface & System Setup</span>
-          <span id="statusDeviceInfo" class="device-info-badge"></span>
+          <span id="drawerDeviceInfo" class="device-info-badge"></span>
         </div>
         <div class="system-drawer-actions">
           <button class="btn btn-xs btn-outline" id="btnCloseSystemDrawer" title="Roll up setup drawer">▲ Roll Up</button>
@@ -1177,12 +1188,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Status Bar -->
-    <footer class="status-bar">
-      <span class="status-message" id="statusMessage">Ready — select MIDI ports and click Connect</span>
-      <span id="statusDeviceInfo"></span>
-    </footer>
 
   </div>
 

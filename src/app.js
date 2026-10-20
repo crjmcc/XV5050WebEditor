@@ -117,6 +117,13 @@ function setStatus(message) {
   if (el) el.textContent = message;
 }
 
+function setDeviceInfo(text) {
+  const el = $('statusDeviceInfo');
+  if (el) el.textContent = text;
+  const drawerEl = $('drawerDeviceInfo');
+  if (drawerEl) drawerEl.textContent = text;
+}
+
 function setConnectionStatus(connected, label) {
   const dot = $('statusDot');
   const text = $('statusText');
@@ -263,7 +270,7 @@ async function connectMidi() {
     midi.disconnect();
     setConnectionStatus(false);
     $('connectBtn').textContent = 'Connect';
-    $('statusDeviceInfo').textContent = '';
+    setDeviceInfo('');
     setStatus('Disconnected');
     return;
   }
@@ -273,7 +280,7 @@ async function connectMidi() {
   if (success) {
     setConnectionStatus(true, `${midi.inputName}`);
     $('connectBtn').textContent = 'Disconnect';
-    $('statusDeviceInfo').textContent = `${midi.inputName} ↔ ${midi.outputName}`;
+    setDeviceInfo(`${midi.inputName} ↔ ${midi.outputName}`);
     setStatus('Connected — ready to communicate');
     midi.onSysEx(handleIncomingSysEx);
     toggleSystemDrawer(false); // Roll up drawer once connected to maximize studio workspace
@@ -2045,7 +2052,7 @@ async function handleSyncWithUnit() {
       if (success) {
         setConnectionStatus(true, `${midi.inputName}`);
         $('connectBtn').textContent = 'Disconnect';
-        $('statusDeviceInfo').textContent = `${midi.inputName} ↔ ${midi.outputName}`;
+        setDeviceInfo(`${midi.inputName} ↔ ${midi.outputName}`);
         midi.onSysEx(handleIncomingSysEx);
       }
     }

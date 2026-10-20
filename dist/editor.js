@@ -3985,6 +3985,12 @@
     const el = $("statusMessage");
     if (el) el.textContent = message;
   }
+  function setDeviceInfo(text) {
+    const el = $("statusDeviceInfo");
+    if (el) el.textContent = text;
+    const drawerEl = $("drawerDeviceInfo");
+    if (drawerEl) drawerEl.textContent = text;
+  }
   function setConnectionStatus(connected, label) {
     const dot = $("statusDot");
     const text = $("statusText");
@@ -4106,7 +4112,7 @@
       midi.disconnect();
       setConnectionStatus(false);
       $("connectBtn").textContent = "Connect";
-      $("statusDeviceInfo").textContent = "";
+      setDeviceInfo("");
       setStatus("Disconnected");
       return;
     }
@@ -4115,7 +4121,7 @@
     if (success) {
       setConnectionStatus(true, `${midi.inputName}`);
       $("connectBtn").textContent = "Disconnect";
-      $("statusDeviceInfo").textContent = `${midi.inputName} \u2194 ${midi.outputName}`;
+      setDeviceInfo(`${midi.inputName} \u2194 ${midi.outputName}`);
       setStatus("Connected \u2014 ready to communicate");
       midi.onSysEx(handleIncomingSysEx);
       toggleSystemDrawer(false);
@@ -5636,7 +5642,7 @@
         if (success) {
           setConnectionStatus(true, `${midi.inputName}`);
           $("connectBtn").textContent = "Disconnect";
-          $("statusDeviceInfo").textContent = `${midi.inputName} \u2194 ${midi.outputName}`;
+          setDeviceInfo(`${midi.inputName} \u2194 ${midi.outputName}`);
           midi.onSysEx(handleIncomingSysEx);
         }
       }
