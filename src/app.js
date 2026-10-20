@@ -769,6 +769,8 @@ function updatePartRow(part, data) {
   }
 }
 
+const updatePartUI = updatePartRow;
+
 // =============================================================================
 // Patch & Tones UI
 // =============================================================================
@@ -2164,6 +2166,9 @@ function renderUserPatchesTable(filter = '') {
 
 window.loadSyncedUserPerf = async function(index) {
   switchToTab('performance');
+  const sel = $('userPerfSelect');
+  if (sel && sel.value !== String(index)) sel.value = String(index);
+
   if (midi.isConnected) {
     try {
       setStatus(`Reading complete User Performance ${index} from XV-5050 hardware...`);
@@ -2172,7 +2177,7 @@ window.loadSyncedUserPerf = async function(index) {
       if (fullPerf.chorus) updatePerformanceChorusUI(fullPerf.chorus);
       if (fullPerf.reverb) updatePerformanceReverbUI(fullPerf.reverb);
       if (Array.isArray(fullPerf.parts)) {
-        fullPerf.parts.forEach((p, idx) => updatePartUI(idx + 1, p));
+        fullPerf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
       }
       clearEdited();
       setStatus(`Loaded complete User Performance ${index}: "${fullPerf.common?.name || ''}" from hardware`);
@@ -2194,6 +2199,9 @@ window.loadSyncedUserPerf = async function(index) {
 
 window.loadSyncedUserPatch = async function(index) {
   switchToTab('patch');
+  const sel = $('userPatchSelect');
+  if (sel && sel.value !== String(index)) sel.value = String(index);
+
   if (midi.isConnected) {
     try {
       setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
