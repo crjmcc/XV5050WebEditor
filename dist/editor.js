@@ -2906,6 +2906,52 @@
     const response = await midi2.sendAndReceive(msg);
     return response.data?.[0] ?? 2;
   }
+  function sendActivePerformanceSelection(midi2, perfIndex, deviceId = 16, perfCtrlCh = null) {
+    if (perfIndex < 1 || perfIndex > 64) {
+      throw new Error(`User Performance index must be 1-64, got ${perfIndex}`);
+    }
+    const pc = perfIndex - 1 & 127;
+    const setupAddress = [1, 0, 0, 4];
+    const dt1Msg = buildDT1(setupAddress, [85, 0, pc], deviceId);
+    midi2.send(dt1Msg);
+    const channels = /* @__PURE__ */ new Set([15, 0]);
+    if (typeof perfCtrlCh === "number" && perfCtrlCh >= 0 && perfCtrlCh <= 15) {
+      channels.add(perfCtrlCh);
+    }
+    for (const ch of channels) {
+      midi2.send([176 | ch, 0, 85]);
+      midi2.send([176 | ch, 32, 0]);
+      midi2.send([192 | ch, pc]);
+    }
+  }
+  function sendActivePatchSelection(midi2, patchIndex, deviceId = 16) {
+    if (patchIndex < 1 || patchIndex > 128) {
+      throw new Error(`User Patch index must be 1-128, got ${patchIndex}`);
+    }
+    const pc = patchIndex - 1 & 127;
+    const setupAddress = [1, 0, 0, 7];
+    const dt1Msg = buildDT1(setupAddress, [87, 0, pc], deviceId);
+    midi2.send(dt1Msg);
+    midi2.send([176, 0, 87]);
+    midi2.send([176, 32, 0]);
+    midi2.send([192, pc]);
+  }
+  function sendPartPatchSelection(midi2, part, patchIndex, deviceId = 16) {
+    if (part < 1 || part > 16) {
+      throw new Error(`Part number must be 1-16, got ${part}`);
+    }
+    if (patchIndex < 1 || patchIndex > 128) {
+      throw new Error(`User Patch index must be 1-128, got ${patchIndex}`);
+    }
+    const pc = patchIndex - 1 & 127;
+    const partAddr = [16, 0, 32 + (part - 1), 4];
+    const dt1Msg = buildDT1(partAddr, [87, 0, pc], deviceId);
+    midi2.send(dt1Msg);
+    const ch = part - 1 & 15;
+    midi2.send([176 | ch, 0, 87]);
+    midi2.send([176 | ch, 32, 0]);
+    midi2.send([192 | ch, pc]);
+  }
 
   // src/patch.js
   async function requestPatchCommon(midi2, part, deviceId) {
@@ -5653,6 +5699,14 @@
     document.querySelectorAll(".tab-content").forEach((c) => {
       c.classList.toggle("active", c.id === `${target}Tab`);
     });
+    if ((target === "performance" || target === "patch") && midi.isConnected) {
+      requestSoundMode(midi, getDeviceId()).then((detectedMode) => {
+        if (detectedMode && detectedMode !== currentSoundMode) {
+          setSynthesizerMode(detectedMode, false);
+        }
+      }).catch(() => {
+      });
+    }
   }
   function initTabs() {
     document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -5814,6 +5868,12 @@
     if (sel && sel.value !== String(index)) sel.value = String(index);
     if (midi.isConnected) {
       try {
+        setSynthesizerMode(2, true);
+        await new Promise((r) => setTimeout(r, 50));
+        setStatus(`Switching XV-5050 hardware to User Performance ${index}...`);
+        const perfCtrlCh = syncedUnitDb?.systemCommon?.perfCtrlChannel;
+        sendActivePerformanceSelection(midi, index, getDeviceId(), perfCtrlCh);
+        await new Promise((r) => setTimeout(r, 120));
         setStatus(`Reading complete User Performance ${index} from XV-5050 hardware...`);
         const fullPerf = await requestEntireUserPerformance(midi, index, getDeviceId());
         if (fullPerf.common) updatePerformanceCommonUI(fullPerf.common);
@@ -5823,7 +5883,7 @@
           fullPerf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
         }
         clearEdited();
-        setStatus(`Loaded complete User Performance ${index}: "${fullPerf.common?.name || ""}" from hardware`);
+        setStatus(`Switched XV-5050 to User Performance ${index}: "${fullPerf.common?.name || ""}"`);
         return;
       } catch (err) {
         console.warn("Hardware read failed, falling back to cached db:", err);
@@ -5844,6 +5904,15 @@
     if (sel && sel.value !== String(index)) sel.value = String(index);
     if (midi.isConnected) {
       try {
+        if (currentSoundMode === 1) {
+          setStatus(`Switching XV-5050 hardware to User Patch ${index}...`);
+          sendActivePatchSelection(midi, index, getDeviceId());
+        } else {
+          const activePart = getEffectivePatchPart() || 1;
+          setStatus(`Assigning User Patch ${index} to Part ${activePart} on XV-5050...`);
+          sendPartPatchSelection(midi, activePart, index, getDeviceId());
+        }
+        await new Promise((r) => setTimeout(r, 120));
         setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
         const fullPatch = await requestEntireUserPatch(midi, index, getDeviceId());
         if (fullPatch.common) updatePatchCommonUI(fullPatch.common);
@@ -5856,7 +5925,7 @@
           if (activeTone) updateToneUI(activeTone);
         }
         clearEdited();
-        setStatus(`Loaded complete User Patch ${index}: "${fullPatch.common?.name || ""}" from hardware`);
+        setStatus(`Switched XV-5050 to User Patch ${index}: "${fullPatch.common?.name || ""}"`);
         return;
       } catch (err) {
         console.warn("Hardware read failed, falling back to cached db:", err);
@@ -6330,6 +6399,16 @@ Click to cycle to: ${nextTheme.name}`;
         setStatus(`Device disconnected: ${info.name}`);
       }
       refreshDeviceList();
+    });
+    window.addEventListener("focus", () => {
+      if (midi.isConnected) {
+        requestSoundMode(midi, getDeviceId()).then((detectedMode) => {
+          if (detectedMode && detectedMode !== currentSoundMode) {
+            setSynthesizerMode(detectedMode, false);
+          }
+        }).catch(() => {
+        });
+      }
     });
     initThemeManager();
     initMidi();

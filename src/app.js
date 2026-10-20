@@ -36,6 +36,9 @@ import {
   sendPartParam,
   sendSoundMode,
   requestSoundMode,
+  sendActivePerformanceSelection,
+  sendActivePatchSelection,
+  sendPartPatchSelection,
   parsePerformanceCommon,
   parsePerformanceChorus,
   parsePerformanceReverb,
@@ -1985,6 +1988,15 @@ function switchToTab(target) {
   document.querySelectorAll('.tab-content').forEach(c => {
     c.classList.toggle('active', c.id === `${target}Tab`);
   });
+
+  // Query hardware sound mode when switching tabs to stay in sync with physical unit
+  if ((target === 'performance' || target === 'patch') && midi.isConnected) {
+    requestSoundMode(midi, getDeviceId()).then(detectedMode => {
+      if (detectedMode && detectedMode !== currentSoundMode) {
+        setSynthesizerMode(detectedMode, false);
+      }
+    }).catch(() => {});
+  }
 }
 
 function initTabs() {
@@ -2179,6 +2191,21 @@ window.loadSyncedUserPerf = async function(index) {
 
   if (midi.isConnected) {
     try {
+      // 1. Ensure synthesizer software state, UI badges, and hardware unit are in Performance Mode
+      setSynthesizerMode(2, true);
+
+      // Allow hardware CPU 50ms to switch modes before receiving selection commands
+      await new Promise(r => setTimeout(r, 50));
+
+      // 2. Command the physical XV-5050 hardware to switch its active Performance
+      setStatus(`Switching XV-5050 hardware to User Performance ${index}...`);
+      const perfCtrlCh = syncedUnitDb?.systemCommon?.perfCtrlChannel;
+      sendActivePerformanceSelection(midi, index, getDeviceId(), perfCtrlCh);
+
+      // 3. Allow hardware CPU to switch active performance buffers
+      await new Promise(r => setTimeout(r, 120));
+
+      // 4. Request complete performance data from hardware to update editor UI
       setStatus(`Reading complete User Performance ${index} from XV-5050 hardware...`);
       const fullPerf = await requestEntireUserPerformance(midi, index, getDeviceId());
       if (fullPerf.common) updatePerformanceCommonUI(fullPerf.common);
@@ -2188,7 +2215,7 @@ window.loadSyncedUserPerf = async function(index) {
         fullPerf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
       }
       clearEdited();
-      setStatus(`Loaded complete User Performance ${index}: "${fullPerf.common?.name || ''}" from hardware`);
+      setStatus(`Switched XV-5050 to User Performance ${index}: "${fullPerf.common?.name || ''}"`);
       return;
     } catch (err) {
       console.warn('Hardware read failed, falling back to cached db:', err);
@@ -2212,6 +2239,19 @@ window.loadSyncedUserPatch = async function(index) {
 
   if (midi.isConnected) {
     try {
+      if (currentSoundMode === 1) {
+        // Single Patch Mode: Command hardware to switch its active Patch
+        setStatus(`Switching XV-5050 hardware to User Patch ${index}...`);
+        sendActivePatchSelection(midi, index, getDeviceId());
+      } else {
+        // Performance Mode: Assign User Patch to the active Part on the hardware
+        const activePart = getEffectivePatchPart() || 1;
+        setStatus(`Assigning User Patch ${index} to Part ${activePart} on XV-5050...`);
+        sendPartPatchSelection(midi, activePart, index, getDeviceId());
+      }
+
+      await new Promise(r => setTimeout(r, 120));
+
       setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
       const fullPatch = await requestEntireUserPatch(midi, index, getDeviceId());
       if (fullPatch.common) updatePatchCommonUI(fullPatch.common);
@@ -2224,7 +2264,7 @@ window.loadSyncedUserPatch = async function(index) {
         if (activeTone) updateToneUI(activeTone);
       }
       clearEdited();
-      setStatus(`Loaded complete User Patch ${index}: "${fullPatch.common?.name || ''}" from hardware`);
+      setStatus(`Switched XV-5050 to User Patch ${index}: "${fullPatch.common?.name || ''}"`);
       return;
     } catch (err) {
       console.warn('Hardware read failed, falling back to cached db:', err);
@@ -2780,6 +2820,17 @@ function init() {
       setStatus(`Device disconnected: ${info.name}`);
     }
     refreshDeviceList();
+  });
+
+  // Resync sound mode when window gains focus in case user changed mode on the physical XV-5050 front panel
+  window.addEventListener('focus', () => {
+    if (midi.isConnected) {
+      requestSoundMode(midi, getDeviceId()).then(detectedMode => {
+        if (detectedMode && detectedMode !== currentSoundMode) {
+          setSynthesizerMode(detectedMode, false);
+        }
+      }).catch(() => {});
+    }
   });
 
   initThemeManager();

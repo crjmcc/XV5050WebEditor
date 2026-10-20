@@ -379,4 +379,91 @@ export async function requestSoundMode(midi, deviceId) {
   return response.data?.[0] ?? 2;
 }
 
+/**
+ * Command the physical XV-5050 hardware to switch its active Performance.
+ * Writes to Setup Area (01 00 00 04: MSB=85, LSB=0, PC=perfIndex-1)
+ * and transmits Bank Select & Program Change to hardware.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} perfIndex - 1-based User Performance number (1-64)
+ * @param {number} [deviceId] - Roland Device ID
+ */
+export function sendActivePerformanceSelection(midi, perfIndex, deviceId = 0x10, perfCtrlCh = null) {
+  if (perfIndex < 1 || perfIndex > 64) {
+    throw new Error(`User Performance index must be 1-64, got ${perfIndex}`);
+  }
+  const pc = (perfIndex - 1) & 0x7F;
+  // 1. SysEx DT1 to Setup Area: PERF_BANK_MSB, PERF_BANK_LSB, PERF_PROGRAM_NUM
+  // Address: 01 00 00 04, Data: 0x55 (85 = User Perf Bank), 0x00, pc
+  const setupAddress = [0x01, 0x00, 0x00, 0x04];
+  const dt1Msg = buildDT1(setupAddress, [0x55, 0x00, pc], deviceId);
+  midi.send(dt1Msg);
+
+  // 2. Standard MIDI Bank Select + Program Change
+  // Default Performance Control Channel is Channel 16 (0-indexed: 15) and Channel 1 (0-indexed: 0)
+  const channels = new Set([15, 0]);
+  if (typeof perfCtrlCh === 'number' && perfCtrlCh >= 0 && perfCtrlCh <= 15) {
+    channels.add(perfCtrlCh);
+  }
+  for (const ch of channels) {
+    midi.send([0xB0 | ch, 0x00, 0x55]); // Bank Select MSB (85 = User Performance)
+    midi.send([0xB0 | ch, 0x20, 0x00]); // Bank Select LSB (0)
+    midi.send([0xC0 | ch, pc]);         // Program Change
+  }
+}
+
+/**
+ * Command the physical XV-5050 hardware to switch its active Patch in Single Patch Mode.
+ * Writes to Setup Area (01 00 00 07: MSB=87, LSB=0, PC=patchIndex-1)
+ * and transmits Bank Select & Program Change to Channel 1.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} patchIndex - 1-based User Patch number (1-128)
+ * @param {number} [deviceId] - Roland Device ID
+ */
+export function sendActivePatchSelection(midi, patchIndex, deviceId = 0x10) {
+  if (patchIndex < 1 || patchIndex > 128) {
+    throw new Error(`User Patch index must be 1-128, got ${patchIndex}`);
+  }
+  const pc = (patchIndex - 1) & 0x7F;
+  // 1. SysEx DT1 to Setup Area: PATCH_BANK_MSB, PATCH_BANK_LSB, PATCH_PROGRAM_NUM
+  // Address: 01 00 00 07, Data: 0x57 (87 = User Patch Bank), 0x00, pc
+  const setupAddress = [0x01, 0x00, 0x00, 0x07];
+  const dt1Msg = buildDT1(setupAddress, [0x57, 0x00, pc], deviceId);
+  midi.send(dt1Msg);
+
+  // 2. Standard MIDI Bank Select + Program Change on Channel 1
+  midi.send([0xB0, 0x00, 0x57]); // Bank Select MSB (87 = User Patch Bank)
+  midi.send([0xB0, 0x20, 0x00]); // Bank Select LSB (0)
+  midi.send([0xC0, pc]);         // Program Change
+}
+
+/**
+ * Assign a User Patch to a specific Performance Part (1-16) on the hardware.
+ * Writes to Part's parameters (10 00 2x 04: MSB=87, LSB=0, PC=patchIndex-1).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16)
+ * @param {number} patchIndex - 1-based User Patch number (1-128)
+ * @param {number} [deviceId] - Roland Device ID
+ */
+export function sendPartPatchSelection(midi, part, patchIndex, deviceId = 0x10) {
+  if (part < 1 || part > 16) {
+    throw new Error(`Part number must be 1-16, got ${part}`);
+  }
+  if (patchIndex < 1 || patchIndex > 128) {
+    throw new Error(`User Patch index must be 1-128, got ${patchIndex}`);
+  }
+  const pc = (patchIndex - 1) & 0x7F;
+  const partAddr = [0x10, 0x00, 0x20 + (part - 1), 0x04];
+  const dt1Msg = buildDT1(partAddr, [0x57, 0x00, pc], deviceId);
+  midi.send(dt1Msg);
+
+  // Also send Channel Bank Select and Program Change on that Part's channel
+  const ch = (part - 1) & 0x0F;
+  midi.send([0xB0 | ch, 0x00, 0x57]);
+  midi.send([0xB0 | ch, 0x20, 0x00]);
+  midi.send([0xC0 | ch, pc]);
+}
+
 
