@@ -1,4 +1,9 @@
 import { chromium } from 'playwright';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function run() {
   console.log('--- Launching Chrome for End-to-End Hardware Test ---');
@@ -29,8 +34,9 @@ async function run() {
     console.error(`[PAGE ERROR]`, err);
   });
 
-  console.log('1. Loading file:///c:/chris2026/XV5050WebEditor/index.html...');
-  await page.goto('file:///c:/chris2026/XV5050WebEditor/index.html');
+  const indexUrl = pathToFileURL(path.resolve(__dirname, '../index.html')).href;
+  console.log(`1. Loading ${indexUrl}...`);
+  await page.goto(indexUrl);
 
   // Wait for Web MIDI discovery & dropdown population
   await new Promise(r => setTimeout(r, 1500));

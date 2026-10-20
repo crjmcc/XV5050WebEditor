@@ -117,6 +117,17 @@ The test suite validates:
 - Temporary patch address layouts across all 16 parts (`11 00 00 00` through `14 60 00 00`) and single mode (`1F 00 00 00`)
 - Full simulation of hardware RQ1 read requests and DT1 write updates
 - Formatting for bipolar pan (`L64`–`C`–`R63`), signed semitones/cents, and enum lookups
+- Full unit master sync (all 6 stages), hardware diagnostic tests, and patch librarians (104 / 104 tests passing)
+
+---
+
+## Recent Fixes & Improvements
+
+- **Asynchronous Port Open & Buffer Settling**: Added a settling delay after Web MIDI port opening to ensure the Windows MIDI subsystem and driver threads are fully armed before communication begins.
+- **SysEx Permission Detection**: Automatically validates `midi.sysexEnabled` and guides the user to grant System Exclusive site permissions in Chrome / Edge.
+- **Single-Listener Event Pipeline**: Removed redundant listener bindings preventing duplicate SysEx message dispatch.
+- **Clean Stream Reassembly**: SysEx parser resets on incoming `0xF0` and dispatches complete packets cleanly.
+- **Adaptive Retry & Backoff**: Hardware queries automatically retry with exponential backoff (`100ms * attempt`) if the synthesizer is busy processing prior operations.
 
 ---
 

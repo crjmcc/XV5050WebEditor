@@ -51,7 +51,9 @@ export async function sendAndReceiveWithRetry(
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
-      if (throttleMs > 0) {
+      if (attempt > 1) {
+        await sleep(100 * attempt);
+      } else if (throttleMs > 0) {
         await sleep(throttleMs);
       }
 

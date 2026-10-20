@@ -1803,11 +1803,30 @@ function initEditTracking() {
 }
 
 async function handleSyncWithUnit() {
+  if (!midi.sysexEnabled) {
+    const hasAccess = await midi.requestAccess();
+    if (hasAccess) refreshDeviceList();
+    if (!midi.sysexEnabled) {
+      setStatus('⚠️ SysEx permission required. Allow MIDI and SysEx in browser site permissions.');
+      alert('SysEx permission is required to read from the XV-5050 synthesizer. Please allow SysEx permission in Chrome (click the site settings / tune icon in the address bar to allow "System exclusive messages").');
+      return;
+    }
+  }
+
   if (!midi.isConnected) {
-    const inputId = $('midiInput')?.value;
-    const outputId = $('midiOutput')?.value;
+    let inputId = $('midiInput')?.value;
+    let outputId = $('midiOutput')?.value;
+    if (!inputId) {
+      const dev = midi.getInputs().find(d => d.name.includes('XV-5050'));
+      if (dev) inputId = dev.id;
+    }
+    if (!outputId) {
+      const dev = midi.getOutputs().find(d => d.name.includes('XV-5050'));
+      if (dev) outputId = dev.id;
+    }
+
     if (inputId && outputId) {
-      setStatus('Auto-connecting to selected XV-5050 MIDI ports...');
+      setStatus('Connecting to XV-5050 MIDI ports...');
       const success = await midi.connect(inputId, outputId);
       if (success) {
         setConnectionStatus(true, `${midi.inputName}`);

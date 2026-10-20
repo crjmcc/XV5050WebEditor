@@ -127,6 +127,12 @@ export class MidiManager {
       return false;
     }
 
+    this._input = input;
+    this._output = output;
+
+    // Attach listener before open so no incoming event is missed
+    this._input.onmidimessage = this._handleMidiMessage;
+
     try {
       if (input.open && input.connection !== 'open') {
         await input.open();
@@ -134,17 +140,10 @@ export class MidiManager {
       if (output.open && output.connection !== 'open') {
         await output.open();
       }
+      // Windows WinMM settling delay so driver thread & buffers are fully armed
+      await new Promise(resolve => setTimeout(resolve, 400));
     } catch (err) {
       console.warn('Port open warning:', err);
-    }
-
-    this._input = input;
-    this._output = output;
-
-    // Attach both onmidimessage and addEventListener for maximum browser compatibility
-    this._input.onmidimessage = this._handleMidiMessage;
-    if (this._input.addEventListener) {
-      this._input.addEventListener('midimessage', this._handleMidiMessage);
     }
 
     this._connected = true;
@@ -159,13 +158,11 @@ export class MidiManager {
   disconnect() {
     if (this._input) {
       this._input.onmidimessage = null;
-      if (this._input.removeEventListener) {
-        this._input.removeEventListener('midimessage', this._handleMidiMessage);
-      }
       this._input = null;
     }
     this._output = null;
     this._connected = false;
+    this._sysexBuffer = null;
   }
 
   /**
@@ -284,6 +281,7 @@ export class MidiManager {
       const cleanup = () => {
         if (timer) clearTimeout(timer);
         this._onMessage = previousHandler;
+        this._sysexBuffer = null;
       };
 
       timer = setTimeout(() => {
@@ -374,9 +372,6 @@ export class MidiManager {
   // -- Internal handlers --
 
   _handleMidiMessage(event) {
-    if (event === this._lastMidiEvent) return;
-    this._lastMidiEvent = event;
-
     const data = event.data;
     if (!data || data.length === 0) return;
 
@@ -391,8 +386,9 @@ export class MidiManager {
     }
     console.log('[MIDI RX]', dataArr.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '));
 
-    // Reassemble fragmented SysEx chunks if delivered in pieces
-    if (!this._sysexBuffer && data[0] === 0xF0) {
+    // SysEx handling: if data starts with 0xF0, reset any uncompleted buffer and start fresh
+    if (data[0] === 0xF0) {
+      this._sysexBuffer = null;
       if (data[data.length - 1] === 0xF7) {
         // Complete SysEx in single event
         this._dispatchSysEx(data);
@@ -417,11 +413,6 @@ export class MidiManager {
         }
       }
       return;
-    }
-
-    // Single message complete check
-    if (data[0] === 0xF0) {
-      this._dispatchSysEx(data);
     }
   }
 

@@ -200,6 +200,9 @@
         console.error("Specified MIDI input or output device not found");
         return false;
       }
+      this._input = input;
+      this._output = output;
+      this._input.onmidimessage = this._handleMidiMessage;
       try {
         if (input.open && input.connection !== "open") {
           await input.open();
@@ -207,14 +210,9 @@
         if (output.open && output.connection !== "open") {
           await output.open();
         }
+        await new Promise((resolve) => setTimeout(resolve, 400));
       } catch (err) {
         console.warn("Port open warning:", err);
-      }
-      this._input = input;
-      this._output = output;
-      this._input.onmidimessage = this._handleMidiMessage;
-      if (this._input.addEventListener) {
-        this._input.addEventListener("midimessage", this._handleMidiMessage);
       }
       this._connected = true;
       console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}" (In: ${this._input.connection}, Out: ${this._output.connection})`);
@@ -226,13 +224,11 @@
     disconnect() {
       if (this._input) {
         this._input.onmidimessage = null;
-        if (this._input.removeEventListener) {
-          this._input.removeEventListener("midimessage", this._handleMidiMessage);
-        }
         this._input = null;
       }
       this._output = null;
       this._connected = false;
+      this._sysexBuffer = null;
     }
     /**
      * Subscribe to raw MIDI traffic for monitoring (direction: 'TX' | 'RX', bytes: Uint8Array|number[]).
@@ -334,6 +330,7 @@
         const cleanup = () => {
           if (timer) clearTimeout(timer);
           this._onMessage = previousHandler;
+          this._sysexBuffer = null;
         };
         timer = setTimeout(() => {
           cleanup();
@@ -407,8 +404,6 @@
     }
     // -- Internal handlers --
     _handleMidiMessage(event) {
-      if (event === this._lastMidiEvent) return;
-      this._lastMidiEvent = event;
       const data = event.data;
       if (!data || data.length === 0) return;
       if (data.length === 1 && (data[0] === 254 || data[0] === 248)) {
@@ -419,7 +414,8 @@
         this._onTraffic("RX", dataArr, Date.now());
       }
       console.log("[MIDI RX]", dataArr.map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join(" "));
-      if (!this._sysexBuffer && data[0] === 240) {
+      if (data[0] === 240) {
+        this._sysexBuffer = null;
         if (data[data.length - 1] === 247) {
           this._dispatchSysEx(data);
           return;
@@ -439,9 +435,6 @@
           }
         }
         return;
-      }
-      if (data[0] === 240) {
-        this._dispatchSysEx(data);
       }
     }
     _dispatchSysEx(data) {
@@ -3423,7 +3416,9 @@
     let lastError = null;
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
-        if (throttleMs > 0) {
+        if (attempt > 1) {
+          await sleep(100 * attempt);
+        } else if (throttleMs > 0) {
           await sleep(throttleMs);
         }
         const response = await midiManager.sendAndReceive(requestBytes, timeoutMs);
@@ -5399,11 +5394,28 @@
     });
   }
   async function handleSyncWithUnit() {
+    if (!midi.sysexEnabled) {
+      const hasAccess = await midi.requestAccess();
+      if (hasAccess) refreshDeviceList();
+      if (!midi.sysexEnabled) {
+        setStatus("\u26A0\uFE0F SysEx permission required. Allow MIDI and SysEx in browser site permissions.");
+        alert('SysEx permission is required to read from the XV-5050 synthesizer. Please allow SysEx permission in Chrome (click the site settings / tune icon in the address bar to allow "System exclusive messages").');
+        return;
+      }
+    }
     if (!midi.isConnected) {
-      const inputId = $("midiInput")?.value;
-      const outputId = $("midiOutput")?.value;
+      let inputId = $("midiInput")?.value;
+      let outputId = $("midiOutput")?.value;
+      if (!inputId) {
+        const dev = midi.getInputs().find((d) => d.name.includes("XV-5050"));
+        if (dev) inputId = dev.id;
+      }
+      if (!outputId) {
+        const dev = midi.getOutputs().find((d) => d.name.includes("XV-5050"));
+        if (dev) outputId = dev.id;
+      }
       if (inputId && outputId) {
-        setStatus("Auto-connecting to selected XV-5050 MIDI ports...");
+        setStatus("Connecting to XV-5050 MIDI ports...");
         const success = await midi.connect(inputId, outputId);
         if (success) {
           setConnectionStatus(true, `${midi.inputName}`);
