@@ -14,12 +14,13 @@ export const SETUP = {
   BASE: [0x01, 0x00, 0x00, 0x00],
   SIZE: [0x00, 0x00, 0x00, 0x0F], // 15 bytes
   params: {
-    PERF_BANK_MSB:    { offset: 0x00, size: 1 }, // 0-127
-    PERF_BANK_LSB:    { offset: 0x01, size: 1 }, // 0-127
-    PERF_PROGRAM_NUM: { offset: 0x02, size: 1 }, // 0-127
-    PATCH_BANK_MSB:   { offset: 0x03, size: 1 }, // 0-127
-    PATCH_BANK_LSB:   { offset: 0x04, size: 1 }, // 0-127
-    PATCH_PROGRAM_NUM:{ offset: 0x05, size: 1 }, // 0-127
+    SOUND_MODE:       { offset: 0x00, size: 1 }, // 1=PATCH, 2=PERFORM, 3=GM1, 4=GM2, 5=GS
+    PERF_BANK_MSB:    { offset: 0x04, size: 1 }, // 0-127
+    PERF_BANK_LSB:    { offset: 0x05, size: 1 }, // 0-127
+    PERF_PROGRAM_NUM: { offset: 0x06, size: 1 }, // 0-127
+    PATCH_BANK_MSB:   { offset: 0x07, size: 1 }, // 0-127
+    PATCH_BANK_LSB:   { offset: 0x08, size: 1 }, // 0-127
+    PATCH_PROGRAM_NUM:{ offset: 0x09, size: 1 }, // 0-127
     MFX_SWITCH:       { offset: 0x0A, size: 1 }, // 0-1 (BYPASS, ON)
     CHORUS_SWITCH:    { offset: 0x0B, size: 1 }, // 0-1 (OFF, ON)
     REVERB_SWITCH:    { offset: 0x0C, size: 1 }, // 0-1 (OFF, ON)

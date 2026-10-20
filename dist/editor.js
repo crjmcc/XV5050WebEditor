@@ -1937,17 +1937,19 @@
     SIZE: [0, 0, 0, 15],
     // 15 bytes
     params: {
-      PERF_BANK_MSB: { offset: 0, size: 1 },
+      SOUND_MODE: { offset: 0, size: 1 },
+      // 1=PATCH, 2=PERFORM, 3=GM1, 4=GM2, 5=GS
+      PERF_BANK_MSB: { offset: 4, size: 1 },
       // 0-127
-      PERF_BANK_LSB: { offset: 1, size: 1 },
+      PERF_BANK_LSB: { offset: 5, size: 1 },
       // 0-127
-      PERF_PROGRAM_NUM: { offset: 2, size: 1 },
+      PERF_PROGRAM_NUM: { offset: 6, size: 1 },
       // 0-127
-      PATCH_BANK_MSB: { offset: 3, size: 1 },
+      PATCH_BANK_MSB: { offset: 7, size: 1 },
       // 0-127
-      PATCH_BANK_LSB: { offset: 4, size: 1 },
+      PATCH_BANK_LSB: { offset: 8, size: 1 },
       // 0-127
-      PATCH_PROGRAM_NUM: { offset: 5, size: 1 },
+      PATCH_PROGRAM_NUM: { offset: 9, size: 1 },
       // 0-127
       MFX_SWITCH: { offset: 10, size: 1 },
       // 0-1 (BYPASS, ON)
@@ -2825,6 +2827,16 @@
       decayTimeOffset: data[33] ?? 64
     };
   }
+  function sendSoundMode(midi2, mode, deviceId) {
+    const address = SETUP.BASE;
+    const msg = buildDT1(address, [mode & 127], deviceId);
+    midi2.send(msg);
+  }
+  async function requestSoundMode(midi2, deviceId) {
+    const msg = buildRQ1(SETUP.BASE, [0, 0, 0, 1], deviceId);
+    const response = await midi2.sendAndReceive(msg);
+    return response.data?.[0] ?? 2;
+  }
 
   // src/patch.js
   async function requestPatchCommon(midi2, part, deviceId) {
@@ -3672,12 +3684,13 @@
     if (!data || data.length < 15) return {};
     return {
       raw: data,
-      perfBankMsb: data[0],
-      perfBankLsb: data[1],
-      perfProgramNum: data[2],
-      patchBankMsb: data[3],
-      patchBankLsb: data[4],
-      patchProgramNum: data[5],
+      soundMode: data[0],
+      perfBankMsb: data[4] !== void 0 && data[4] !== 0 ? data[4] : data[0],
+      perfBankLsb: data[5] !== void 0 ? data[5] : data[1],
+      perfProgramNum: data[6] !== void 0 ? data[6] : data[2],
+      patchBankMsb: data[7] !== void 0 ? data[7] : data[3],
+      patchBankLsb: data[8] !== void 0 ? data[8] : data[4],
+      patchProgramNum: data[9] !== void 0 ? data[9] : data[5],
       mfxSwitch: data[10],
       chorusSwitch: data[11],
       reverbSwitch: data[12],
@@ -3956,6 +3969,18 @@
   var $ = (id) => document.getElementById(id);
   var currentToneIndex = 1;
   var activeAuditionTimeout = null;
+  var currentSoundMode = 2;
+  var sendTimers = /* @__PURE__ */ new Map();
+  function sendThrottled(key, fn, delay = 25) {
+    if (sendTimers.has(key)) {
+      clearTimeout(sendTimers.get(key));
+    }
+    const timer = setTimeout(() => {
+      sendTimers.delete(key);
+      fn();
+    }, delay);
+    sendTimers.set(key, timer);
+  }
   function setStatus(message) {
     const el = $("statusMessage");
     if (el) el.textContent = message;
@@ -3977,6 +4002,59 @@
   function getSelectedPart() {
     const el = $("patchPartSelect");
     return el ? parseInt(el.value, 10) : 1;
+  }
+  function getEffectivePatchPart() {
+    if (currentSoundMode === 1) {
+      return 0;
+    }
+    const el = $("patchPartSelect");
+    const val = el ? parseInt(el.value, 10) : 1;
+    return val >= 0 && val <= 16 ? val : 1;
+  }
+  function setSynthesizerMode(mode, sendToHardware = true) {
+    currentSoundMode = mode;
+    const btnPerform = $("modeBtnPerform");
+    const btnPatch = $("modeBtnPatch");
+    const badge = $("modeActiveBadge");
+    const partSelect = $("patchPartSelect");
+    if (mode === 1) {
+      if (btnPatch) btnPatch.classList.add("active");
+      if (btnPerform) btnPerform.classList.remove("active");
+      if (badge) {
+        badge.textContent = "PATCH MODE";
+        badge.className = "mode-active-indicator mode-patch";
+      }
+      if (partSelect) partSelect.value = "0";
+      if (sendToHardware && midi.isConnected) {
+        sendSoundMode(midi, 1, getDeviceId());
+        setStatus("XV-5050 switched to PATCH Mode (Base: 1F 00 00 00)");
+      }
+    } else {
+      if (btnPerform) btnPerform.classList.add("active");
+      if (btnPatch) btnPatch.classList.remove("active");
+      if (badge) {
+        badge.textContent = "PERFORM MODE";
+        badge.className = "mode-active-indicator mode-perform";
+      }
+      if (partSelect && partSelect.value === "0") partSelect.value = "1";
+      if (sendToHardware && midi.isConnected) {
+        sendSoundMode(midi, 2, getDeviceId());
+        setStatus("XV-5050 switched to PERFORMANCE Mode (16 Parts)");
+      }
+    }
+  }
+  function toggleSystemDrawer(expand) {
+    const drawer = $("systemDrawer");
+    const arrow = $("drawerToggleIcon");
+    if (!drawer) return;
+    const shouldOpen = expand !== void 0 ? expand : drawer.classList.contains("collapsed");
+    if (shouldOpen) {
+      drawer.classList.remove("collapsed");
+      if (arrow) arrow.textContent = "\u25B4";
+    } else {
+      drawer.classList.add("collapsed");
+      if (arrow) arrow.textContent = "\u25BE";
+    }
   }
   async function initMidi() {
     const hasAccess = await midi.requestAccess();
@@ -4040,6 +4118,14 @@
       $("statusDeviceInfo").textContent = `${midi.inputName} \u2194 ${midi.outputName}`;
       setStatus("Connected \u2014 ready to communicate");
       midi.onSysEx(handleIncomingSysEx);
+      toggleSystemDrawer(false);
+      requestSoundMode(midi, getDeviceId()).then((mode) => {
+        if (mode === 1 || mode === 2) {
+          setSynthesizerMode(mode, false);
+          setStatus(`Connected to XV-5050 (${mode === 1 ? "PATCH Mode" : "PERFORMANCE Mode"})`);
+        }
+      }).catch(() => {
+      });
     } else {
       setStatus("Connection failed \u2014 verify device selection");
     }
@@ -4054,11 +4140,11 @@
       setStatus("Connect MIDI first to audition");
       return;
     }
-    const part = getSelectedPart();
-    const channel = part >= 1 && part <= 16 ? part - 1 : 0;
+    const part = getEffectivePatchPart();
+    const channel = currentSoundMode === 1 || part === 0 ? 0 : part >= 1 && part <= 16 ? part - 1 : 0;
     if (activeAuditionTimeout) clearTimeout(activeAuditionTimeout);
     midi.sendNoteOn(channel, 60, 100);
-    setStatus(`Audition Note On: C4 (Part ${part}, Ch ${channel + 1})`);
+    setStatus(`Audition Note On: C4 (${currentSoundMode === 1 ? "Patch Mode" : `Part ${part}`}, Ch ${channel + 1})`);
     activeAuditionTimeout = setTimeout(() => {
       midi.sendNoteOff(channel, 60);
       activeAuditionTimeout = null;
@@ -4203,7 +4289,13 @@
       const val = parseInt($("perfChorusLevel").value, 10);
       $("perfChorusLevelVal").textContent = val;
       if (!midi.isConnected) return;
-      sendPerformanceChorusParam(midi, "CHORUS_LEVEL", val, getDeviceId());
+      sendThrottled("perfChorusLevel", () => {
+        sendPerformanceChorusParam(midi, "CHORUS_LEVEL", val, getDeviceId());
+      });
+    });
+    $("perfChorusLevel").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendPerformanceChorusParam(midi, "CHORUS_LEVEL", parseInt($("perfChorusLevel").value, 10), getDeviceId());
     });
     $("perfChorusOutputAssign").addEventListener("change", () => {
       if (!midi.isConnected) return;
@@ -4217,7 +4309,13 @@
       const val = parseInt($("perfReverbLevel").value, 10);
       $("perfReverbLevelVal").textContent = val;
       if (!midi.isConnected) return;
-      sendPerformanceReverbParam(midi, "REVERB_LEVEL", val, getDeviceId());
+      sendThrottled("perfReverbLevel", () => {
+        sendPerformanceReverbParam(midi, "REVERB_LEVEL", val, getDeviceId());
+      });
+    });
+    $("perfReverbLevel").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendPerformanceReverbParam(midi, "REVERB_LEVEL", parseInt($("perfReverbLevel").value, 10), getDeviceId());
     });
     $("perfReverbOutputAssign").addEventListener("change", () => {
       if (!midi.isConnected) return;
@@ -4318,25 +4416,49 @@
       const val = parseInt($(`partLevel${part}`).value, 10);
       $(`partLevelVal${part}`).textContent = val;
       if (!midi.isConnected) return;
-      sendPartParam(midi, part, "PART_LEVEL", val, getDeviceId());
+      sendThrottled(`partLevel_${part}`, () => {
+        sendPartParam(midi, part, "PART_LEVEL", val, getDeviceId());
+      });
+    });
+    $(`partLevel${part}`).addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendPartParam(midi, part, "PART_LEVEL", parseInt($(`partLevel${part}`).value, 10), getDeviceId());
     });
     $(`partPan${part}`).addEventListener("input", () => {
       const val = parseInt($(`partPan${part}`).value, 10);
       $(`partPanVal${part}`).textContent = panDisplay(val);
       if (!midi.isConnected) return;
-      sendPartParam(midi, part, "PART_PAN", val, getDeviceId());
+      sendThrottled(`partPan_${part}`, () => {
+        sendPartParam(midi, part, "PART_PAN", val, getDeviceId());
+      });
+    });
+    $(`partPan${part}`).addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendPartParam(midi, part, "PART_PAN", parseInt($(`partPan${part}`).value, 10), getDeviceId());
     });
     $(`partCoarse${part}`).addEventListener("input", () => {
       const val = parseInt($(`partCoarse${part}`).value, 10);
       $(`partCoarseVal${part}`).textContent = val - 64;
       if (!midi.isConnected) return;
-      sendPartParam(midi, part, "COARSE_TUNE", val, getDeviceId());
+      sendThrottled(`partCoarse_${part}`, () => {
+        sendPartParam(midi, part, "COARSE_TUNE", val, getDeviceId());
+      });
+    });
+    $(`partCoarse${part}`).addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendPartParam(midi, part, "COARSE_TUNE", parseInt($(`partCoarse${part}`).value, 10), getDeviceId());
     });
     $(`partFine${part}`).addEventListener("input", () => {
       const val = parseInt($(`partFine${part}`).value, 10);
       $(`partFineVal${part}`).textContent = val - 64;
       if (!midi.isConnected) return;
-      sendPartParam(midi, part, "FINE_TUNE", val, getDeviceId());
+      sendThrottled(`partFine_${part}`, () => {
+        sendPartParam(midi, part, "FINE_TUNE", val, getDeviceId());
+      });
+    });
+    $(`partFine${part}`).addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendPartParam(midi, part, "FINE_TUNE", parseInt($(`partFine${part}`).value, 10), getDeviceId());
     });
     $(`partChorus${part}`).addEventListener("change", () => {
       if (!midi.isConnected) return;
@@ -4681,7 +4803,7 @@
     }
   }
   function bindPatchControls() {
-    const currentPart = () => getSelectedPart();
+    const currentPart = () => getEffectivePatchPart();
     populateMatrixDropdowns();
     populateWaveDropdowns();
     $("patchName").addEventListener("change", () => {
@@ -4701,6 +4823,13 @@
       $(s.el).addEventListener("input", () => {
         const val = parseInt($(s.el).value, 10);
         $(s.valEl).textContent = s.format(val);
+        if (!midi.isConnected) return;
+        sendThrottled(`patch_common_${s.param}`, () => {
+          sendPatchCommonParam(midi, currentPart(), s.param, val, getDeviceId());
+        });
+      });
+      $(s.el).addEventListener("change", () => {
+        const val = parseInt($(s.el).value, 10);
         if (!midi.isConnected) return;
         sendPatchCommonParam(midi, currentPart(), s.param, val, getDeviceId());
       });
@@ -4756,6 +4885,13 @@
         $(`matrixSens${d}Val`).textContent = val - 64;
         if (currentPatchCommonData) currentPatchCommonData[`matrix${currentMatrixIndex}Sens${d}`] = val;
         if (!midi.isConnected) return;
+        sendThrottled(`matrixSens_${currentMatrixIndex}_${d}`, () => {
+          sendMatrixControlParam(midi, currentPart(), currentMatrixIndex, `SENS_${d}`, val, getDeviceId());
+        });
+      });
+      $(`matrixSens${d}`).addEventListener("change", () => {
+        const val = parseInt($(`matrixSens${d}`).value, 10);
+        if (!midi.isConnected) return;
         sendMatrixControlParam(midi, currentPart(), currentMatrixIndex, `SENS_${d}`, val, getDeviceId());
       });
     }
@@ -4783,25 +4919,49 @@
       const val = parseInt($("tmtKeyLower").value, 10);
       $("tmtKeyLowerVal").textContent = formatKeyNote(val);
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_LOWER", val, getDeviceId());
+      sendThrottled(`tmtKeyLower_${currentToneIndex}`, () => {
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_LOWER", val, getDeviceId());
+      });
+    });
+    $("tmtKeyLower").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_LOWER", parseInt($("tmtKeyLower").value, 10), getDeviceId());
     });
     $("tmtKeyUpper").addEventListener("input", () => {
       const val = parseInt($("tmtKeyUpper").value, 10);
       $("tmtKeyUpperVal").textContent = formatKeyNote(val);
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_UPPER", val, getDeviceId());
+      sendThrottled(`tmtKeyUpper_${currentToneIndex}`, () => {
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_UPPER", val, getDeviceId());
+      });
+    });
+    $("tmtKeyUpper").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_UPPER", parseInt($("tmtKeyUpper").value, 10), getDeviceId());
     });
     $("tmtVelLower").addEventListener("input", () => {
       const val = parseInt($("tmtVelLower").value, 10);
       $("tmtVelLowerVal").textContent = val;
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_LOWER", val, getDeviceId());
+      sendThrottled(`tmtVelLower_${currentToneIndex}`, () => {
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_LOWER", val, getDeviceId());
+      });
+    });
+    $("tmtVelLower").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_LOWER", parseInt($("tmtVelLower").value, 10), getDeviceId());
     });
     $("tmtVelUpper").addEventListener("input", () => {
       const val = parseInt($("tmtVelUpper").value, 10);
       $("tmtVelUpperVal").textContent = val;
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_UPPER", val, getDeviceId());
+      sendThrottled(`tmtVelUpper_${currentToneIndex}`, () => {
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_UPPER", val, getDeviceId());
+      });
+    });
+    $("tmtVelUpper").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_UPPER", parseInt($("tmtVelUpper").value, 10), getDeviceId());
     });
     for (let t = 1; t <= 4; t++) {
       $(`tone${t}Switch`).addEventListener("change", () => {
@@ -4839,6 +4999,14 @@
       $(s.el).addEventListener("input", () => {
         const val = parseInt($(s.el).value, 10);
         $(s.valEl).textContent = s.format(val);
+        if (s.onUpdate) s.onUpdate();
+        if (!midi.isConnected) return;
+        sendThrottled(`tone_${currentToneIndex}_${s.param}`, () => {
+          sendPatchToneParam(midi, currentPart(), currentToneIndex, s.param, val, getDeviceId());
+        });
+      });
+      $(s.el).addEventListener("change", () => {
+        const val = parseInt($(s.el).value, 10);
         if (s.onUpdate) s.onUpdate();
         if (!midi.isConnected) return;
         sendPatchToneParam(midi, currentPart(), currentToneIndex, s.param, val, getDeviceId());
@@ -4897,7 +5065,14 @@
         $(p.valEl).textContent = p.format(val);
         redrawPitchEnvCurve();
         if (!midi.isConnected) return;
-        sendPatchToneParam(midi, currentPart(), currentToneIndex, p.param, val, getDeviceId());
+        sendThrottled(`pitchEnv_${currentToneIndex}_${p.param}`, () => {
+          sendPatchToneParam(midi, currentPart(), currentToneIndex, p.param, val, getDeviceId());
+        });
+      });
+      $(p.el).addEventListener("change", () => {
+        redrawPitchEnvCurve();
+        if (!midi.isConnected) return;
+        sendPatchToneParam(midi, currentPart(), currentToneIndex, p.param, parseInt($(p.el).value, 10), getDeviceId());
       });
     }
     $("toneFilterType").addEventListener("change", () => {
@@ -4910,21 +5085,42 @@
       $("tvfEnvDepthVal").textContent = val - 64;
       redrawFilterCurves();
       if (!midi.isConnected) return;
-      sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_DEPTH", val, getDeviceId());
+      sendThrottled(`tvfEnvDepth_${currentToneIndex}`, () => {
+        sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_DEPTH", val, getDeviceId());
+      });
+    });
+    $("tvfEnvDepth").addEventListener("change", () => {
+      redrawFilterCurves();
+      if (!midi.isConnected) return;
+      sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_DEPTH", parseInt($("tvfEnvDepth").value, 10), getDeviceId());
     });
     $("tvfEnvT1").addEventListener("input", () => {
       const val = parseInt($("tvfEnvT1").value, 10);
       $("tvfEnvT1Val").textContent = val;
       redrawFilterCurves();
       if (!midi.isConnected) return;
-      sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_T1", val, getDeviceId());
+      sendThrottled(`tvfEnvT1_${currentToneIndex}`, () => {
+        sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_T1", val, getDeviceId());
+      });
+    });
+    $("tvfEnvT1").addEventListener("change", () => {
+      redrawFilterCurves();
+      if (!midi.isConnected) return;
+      sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_T1", parseInt($("tvfEnvT1").value, 10), getDeviceId());
     });
     $("tvfEnvT4").addEventListener("input", () => {
       const val = parseInt($("tvfEnvT4").value, 10);
       $("tvfEnvT4Val").textContent = val;
       redrawFilterCurves();
       if (!midi.isConnected) return;
-      sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_T4", val, getDeviceId());
+      sendThrottled(`tvfEnvT4_${currentToneIndex}`, () => {
+        sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_T4", val, getDeviceId());
+      });
+    });
+    $("tvfEnvT4").addEventListener("change", () => {
+      redrawFilterCurves();
+      if (!midi.isConnected) return;
+      sendPatchToneParam(midi, currentPart(), currentToneIndex, "TVF_ENV_T4", parseInt($("tvfEnvT4").value, 10), getDeviceId());
     });
     const tvaInputs = [
       { el: "tvaEnvT1", valEl: "tvaEnvT1Val", param: "TVA_ENV_T1" },
@@ -4939,7 +5135,14 @@
         $(t.valEl).textContent = val;
         redrawTVAEnvCurve();
         if (!midi.isConnected) return;
-        sendPatchToneParam(midi, currentPart(), currentToneIndex, t.param, val, getDeviceId());
+        sendThrottled(`tvaEnv_${currentToneIndex}_${t.param}`, () => {
+          sendPatchToneParam(midi, currentPart(), currentToneIndex, t.param, val, getDeviceId());
+        });
+      });
+      $(t.el).addEventListener("change", () => {
+        redrawTVAEnvCurve();
+        if (!midi.isConnected) return;
+        sendPatchToneParam(midi, currentPart(), currentToneIndex, t.param, parseInt($(t.el).value, 10), getDeviceId());
       });
     }
     $("btnLfo1").addEventListener("click", () => {
@@ -4965,7 +5168,14 @@
       $("lfoRateVal").textContent = val;
       redrawLFOCurve();
       if (!midi.isConnected) return;
-      sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, "RATE", val, getDeviceId());
+      sendThrottled(`lfoRate_${currentToneIndex}_${currentLfoIndex}`, () => {
+        sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, "RATE", val, getDeviceId());
+      });
+    });
+    $("lfoRate").addEventListener("change", () => {
+      redrawLFOCurve();
+      if (!midi.isConnected) return;
+      sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, "RATE", parseInt($("lfoRate").value, 10), getDeviceId());
     });
     const lfoDepths = [
       { el: "lfoPitchDepth", valEl: "lfoPitchDepthVal", param: "PITCH_DEPTH" },
@@ -4978,7 +5188,13 @@
         const val = parseInt($(d.el).value, 10);
         $(d.valEl).textContent = val - 64;
         if (!midi.isConnected) return;
-        sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, d.param, val, getDeviceId());
+        sendThrottled(`lfoDepth_${currentToneIndex}_${currentLfoIndex}_${d.param}`, () => {
+          sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, d.param, val, getDeviceId());
+        });
+      });
+      $(d.el).addEventListener("change", () => {
+        if (!midi.isConnected) return;
+        sendToneLFOParam(midi, currentPart(), currentToneIndex, currentLfoIndex, d.param, parseInt($(d.el).value, 10), getDeviceId());
       });
     }
     const entirePatchBtn = $("loadEntirePatchBtn");
@@ -5815,6 +6031,25 @@
     $("panicBtn").addEventListener("click", handlePanic);
     $("auditionBtn").addEventListener("click", handleAudition);
     $("clearLogBtn").addEventListener("click", clearLog);
+    const btnModePerform = $("modeBtnPerform");
+    if (btnModePerform) {
+      btnModePerform.addEventListener("click", () => setSynthesizerMode(2, true));
+    }
+    const btnModePatch = $("modeBtnPatch");
+    if (btnModePatch) {
+      btnModePatch.addEventListener("click", () => {
+        setSynthesizerMode(1, true);
+        switchToTab("patch");
+      });
+    }
+    const btnToggleDrawer = $("btnToggleSystemDrawer");
+    if (btnToggleDrawer) {
+      btnToggleDrawer.addEventListener("click", () => toggleSystemDrawer());
+    }
+    const btnCloseDrawer = $("btnCloseSystemDrawer");
+    if (btnCloseDrawer) {
+      btnCloseDrawer.addEventListener("click", () => toggleSystemDrawer(false));
+    }
     const syncBtn = $("syncWithUnitBtn");
     if (syncBtn) syncBtn.addEventListener("click", handleSyncWithUnit);
     const cancelSync = $("cancelSyncBtn");
@@ -5845,7 +6080,12 @@
     const patchPartSelect = $("patchPartSelect");
     if (patchPartSelect) {
       patchPartSelect.addEventListener("change", () => {
-        const part = getSelectedPart();
+        const part = parseInt(patchPartSelect.value, 10);
+        if (part === 0) {
+          setSynthesizerMode(1, true);
+        } else if (currentSoundMode === 1) {
+          setSynthesizerMode(2, true);
+        }
         const cached = activePartPatchesCache[part];
         if (cached) {
           if (cached.common) updatePatchCommonUI(cached.common);
@@ -5857,7 +6097,7 @@
             const activeTone = currentToneCache[currentToneIndex - 1];
             if (activeTone) updateToneUI(activeTone);
           }
-          setStatus(`Switched to synced Part ${part} Patch (${cached.common?.name || ""})`);
+          setStatus(`Switched to synced ${part === 0 ? "Single Patch" : `Part ${part} Patch`} (${cached.common?.name || ""})`);
         }
       });
     }

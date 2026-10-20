@@ -9,6 +9,7 @@ import { buildDT1, buildRQ1 } from './sysex.js';
 import {
   PERF_TEMP,
   PERF_PART,
+  SETUP,
   getPartAddress,
   getPatchTempAddress,
   addOffset,
@@ -351,3 +352,31 @@ export function parsePerformancePart(data) {
     decayTimeOffset: data[0x21] ?? 64,
   };
 }
+
+/**
+ * Switch synthesizer Sound Mode (Patch mode vs Performance mode).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} mode - 1 = PATCH, 2 = PERFORM, 3 = GM1, 4 = GM2, 5 = GS
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendSoundMode(midi, mode, deviceId) {
+  const address = SETUP.BASE; // 01 00 00 00
+  const msg = buildDT1(address, [mode & 0x7F], deviceId);
+  midi.send(msg);
+}
+
+/**
+ * Request current synthesizer Sound Mode from Setup area (01 00 00 00).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} [deviceId] - Device ID
+ * @returns {Promise<number>} Sound Mode (1=PATCH, 2=PERFORM, etc.)
+ */
+export async function requestSoundMode(midi, deviceId) {
+  const msg = buildRQ1(SETUP.BASE, [0x00, 0x00, 0x00, 0x01], deviceId);
+  const response = await midi.sendAndReceive(msg);
+  return response.data?.[0] ?? 2;
+}
+
+

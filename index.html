@@ -10,59 +10,90 @@
 <body>
   <div id="app">
 
-    <!-- Header -->
-    <header class="app-header">
+    <!-- Compact Synth Rack Header -->
+    <header class="app-header rack-header">
       <div class="app-title">
-        <h1>XV-5050 Editor</h1>
-        <span class="subtitle">Web MIDI Client</span>
+        <div class="rack-badge">XV-5050</div>
+        <div class="title-meta">
+          <span class="brand-title">SYNTHESIZER EDITOR</span>
+          <span class="engine-tag">USB 64-BYTE BURST</span>
+        </div>
       </div>
+
+      <!-- Hardware Mode Switcher (Patch vs Performance) -->
+      <div class="mode-switcher-container">
+        <div class="mode-switcher-pill" role="radiogroup" aria-label="Synthesizer Sound Mode">
+          <button type="button" class="mode-btn active" id="modeBtnPerform" title="Switch XV-5050 hardware to Multi-Timbral Performance Mode (16 Parts)">⬡ PERFORM</button>
+          <button type="button" class="mode-btn" id="modeBtnPatch" title="Switch XV-5050 hardware to Single Patch Mode (Base: 1F 00 00 00)">♦ PATCH</button>
+        </div>
+        <span id="modeActiveBadge" class="mode-active-indicator">PERFORM MODE</span>
+      </div>
+
       <div class="header-actions">
-        <span id="dirtyBadge" class="dirty-badge" style="display:none;" title="Editor has unsaved changes that differ from hardware">● Unsaved Edits</span>
-        <button class="btn btn-sm btn-panic" id="panicBtn" title="Send All Sound Off & All Notes Off to all 16 MIDI channels">⚠ All Notes Off</button>
-        <button class="btn btn-sm btn-audition" id="auditionBtn" title="Play test Middle C note on active part">▶ Audition Note</button>
-        <div class="connection-status">
+        <span id="dirtyBadge" class="dirty-badge" style="display:none;" title="Editor has unsaved changes that differ from hardware">● Unsaved</span>
+        <button class="btn btn-sm btn-audition" id="auditionBtn" title="Play test Middle C note on active part/channel">▶ Play</button>
+        <button class="btn btn-sm btn-panic" id="panicBtn" title="Send All Sound Off & All Notes Off to all 16 MIDI channels">⚠ Panic</button>
+        <button class="btn btn-sm btn-sync" id="syncWithUnitBtn" title="Read all parameters from XV-5050 and synchronize the entire web editor">⇄ Sync Unit</button>
+        
+        <!-- Roll Up/Down System Drawer Toggle Button -->
+        <button class="btn btn-sm btn-drawer-toggle" id="btnToggleSystemDrawer" title="Toggle MIDI Connection & Setup Drawer">
           <span class="status-dot" id="statusDot"></span>
           <span id="statusText">Disconnected</span>
-        </div>
+          <span id="drawerToggleIcon" class="drawer-arrow">▾</span>
+        </button>
       </div>
     </header>
 
-    <!-- MIDI Connection Card -->
-    <div class="card" id="midiCard">
-      <div class="card-header">
-        <span class="card-title"><span class="icon">⇌</span> MIDI Connection</span>
-        <div class="device-id-group">
-          <label for="deviceId">Device ID</label>
-          <select id="deviceId">
-            <option value="16" selected>17 (0x10 default)</option>
-            <option value="17">18 (0x11)</option>
-            <option value="18">19 (0x12)</option>
-            <option value="19">20 (0x13)</option>
-            <option value="20">21 (0x14)</option>
-            <option value="21">22 (0x15)</option>
-            <option value="22">23 (0x16)</option>
-            <option value="23">24 (0x17)</option>
-            <option value="24">25 (0x18)</option>
-            <option value="25">26 (0x19)</option>
-            <option value="26">27 (0x1A)</option>
-            <option value="27">28 (0x1B)</option>
-            <option value="28">29 (0x1C)</option>
-            <option value="29">30 (0x1D)</option>
-            <option value="30">31 (0x1E)</option>
-            <option value="31">32 (0x1F)</option>
-          </select>
+    <!-- Collapsible Roll-Up System & Connection Drawer -->
+    <div class="card system-drawer" id="systemDrawer">
+      <div class="card-header system-drawer-header">
+        <div class="system-drawer-title">
+          <span class="icon">⚙</span>
+          <span>MIDI Hardware Interface & System Setup</span>
+          <span id="statusDeviceInfo" class="device-info-badge"></span>
+        </div>
+        <div class="system-drawer-actions">
+          <button class="btn btn-xs btn-outline" id="btnCloseSystemDrawer" title="Roll up setup drawer">▲ Roll Up</button>
         </div>
       </div>
-      <div class="midi-row">
-        <label for="midiInput">Input</label>
-        <select id="midiInput"><option value="">— Select MIDI Input —</option></select>
-        <label for="midiOutput">Output</label>
-        <select id="midiOutput"><option value="">— Select MIDI Output —</option></select>
-        <button class="btn btn-primary" id="connectBtn">Connect</button>
-        <button class="btn" id="refreshBtn">↻ Refresh</button>
-        <button class="btn btn-secondary btn-sm" id="btnAutoDetectId" title="Scan and auto-detect XV-5050 Device ID">🔍 Detect ID</button>
-        <button class="btn btn-secondary btn-sm" id="btnRunDiagnostics" title="Run comprehensive USB hardware diagnostic tests">⚡ USB Diagnostics</button>
-        <button class="btn btn-sync" id="syncWithUnitBtn" title="Read all parameters from XV-5050 and synchronize the entire web editor">⇄ Sync with Unit</button>
+      <div class="system-drawer-body">
+        <div class="system-grid">
+          <div class="system-field">
+            <label for="midiInput">MIDI In</label>
+            <select id="midiInput"><option value="">— Select MIDI Input —</option></select>
+          </div>
+          <div class="system-field">
+            <label for="midiOutput">MIDI Out</label>
+            <select id="midiOutput"><option value="">— Select MIDI Output —</option></select>
+          </div>
+          <div class="system-field system-field-device-id">
+            <label for="deviceId">Device ID</label>
+            <select id="deviceId">
+              <option value="16" selected>17 (0x10 default)</option>
+              <option value="17">18 (0x11)</option>
+              <option value="18">19 (0x12)</option>
+              <option value="19">20 (0x13)</option>
+              <option value="20">21 (0x14)</option>
+              <option value="21">22 (0x15)</option>
+              <option value="22">23 (0x16)</option>
+              <option value="23">24 (0x17)</option>
+              <option value="24">25 (0x18)</option>
+              <option value="25">26 (0x19)</option>
+              <option value="26">27 (0x1A)</option>
+              <option value="27">28 (0x1B)</option>
+              <option value="28">29 (0x1C)</option>
+              <option value="29">30 (0x1D)</option>
+              <option value="30">31 (0x1E)</option>
+              <option value="31">32 (0x1F)</option>
+            </select>
+          </div>
+          <div class="system-btn-group">
+            <button class="btn btn-primary btn-sm" id="connectBtn">Connect</button>
+            <button class="btn btn-sm" id="refreshBtn">↻ Refresh</button>
+            <button class="btn btn-secondary btn-sm" id="btnAutoDetectId" title="Scan and auto-detect XV-5050 Device ID">🔍 Detect ID</button>
+            <button class="btn btn-secondary btn-sm" id="btnRunDiagnostics" title="Run comprehensive USB hardware diagnostic tests">⚡ USB Diagnostics</button>
+          </div>
+        </div>
       </div>
     </div>
 

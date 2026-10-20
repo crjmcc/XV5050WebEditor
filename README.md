@@ -12,6 +12,18 @@ A lightweight, high-performance Web MIDI editor for the XV-5050 synthesizer modu
   - Configurable Device ID (17–32 / `0x10`–`0x1F`, default `17`)
   - Real-time connection status indicator
   - Audition Note trigger (C4) and Emergency Panic (All Sound Off / All Notes Off / Reset Controllers across all 16 MIDI channels)
+- **Compact Synth Rack Header & Mode Switcher**
+  - **Hardware Sound Mode Switching**: Switch physical hardware unit in and out of **Patch Mode** and **Performance Mode** instantly via SysEx DT1 (`01 00 00 00`: `0x01` = Patch, `0x02` = Perform)
+  - Automatic sound mode detection from hardware on connect
+  - Mode indicator pill with active neon status indicator in the top rack bar
+  - **Collapsible System Drawer**: Roll-up / roll-down drawer for MIDI I/O ports, Device ID, and connection status, keeping the interface compact and focused on sound design
+  - Quick Audition Note trigger (C4) and Emergency Panic (All Sound Off / All Notes Off / Reset Controllers across all 16 MIDI channels)
+  - One-click master unit sync button
+- **Real-Time Hardware Parameter Reflection**
+  - **Dynamic Buffer Addressing**: Automatically detects current operating mode via `getEffectivePatchPart()`:
+    - In **Patch Mode**: Routes parameter edits directly to Patch Temporary Area (`1F 00 00 00`)
+    - In **Performance Mode**: Routes parameter edits to the selected Part's Temporary Area (`11 xx 00 00`)
+  - **Throttled Live Streaming**: Sliders and controls transmit live SysEx DT1 messages on user drag (`input` event throttled to 25ms) and commit on release (`change` event), providing instant audible feedback on the physical synthesizer without flooding the MIDI buffer
 - **Performance Editor**
   - Performance Common parameters: Performance Name (12 characters), Solo Part Select, MFX Control Channel, MFX-A Source, Chorus Source, Reverb Source
   - Performance Chorus processor: Type (OFF, CHORUS, DELAY, GM2 CHORUS), Level (0–127), Output Assign, Output Select
@@ -123,6 +135,10 @@ The test suite validates:
 
 ## Recent Fixes & Improvements
 
+- **Hardware Sound Mode Switching (`01 00 00 00`)**: Added direct mode switching between Single Patch Mode (`0x01`) and 16-Part Performance Mode (`0x02`), updating the front panel of the physical unit in real time.
+- **Physical Parameter Reflection in Patch & Performance Modes**: Solved the issue where editing patch parameters did not alter the physical synth's sound when in Patch Mode. Parameter edits now dynamically route to `1F 00 00 00` (Patch Mode) or `11 xx 00 00` (Performance Mode Parts 1–16).
+- **Throttled Live Slider SysEx Streaming**: Sliders now broadcast on `input` throttled to 25ms, allowing smooth filter cutoff sweeps, resonance adjustments, envelope shaping, and level balancing directly on the XV-5050 hardware without lag or buffer overruns.
+- **Slick Compact Synth Rack UI**: Redesigned header into a 48px hardware rack bar with mode switcher buttons, audition trigger, panic, and a collapsible roll-up/roll-down system drawer for connection settings.
 - **Asynchronous Port Open & Buffer Settling**: Added a settling delay after Web MIDI port opening to ensure the Windows MIDI subsystem and driver threads are fully armed before communication begins.
 - **SysEx Permission Detection**: Automatically validates `midi.sysexEnabled` and guides the user to grant System Exclusive site permissions in Chrome / Edge.
 - **Single-Listener Event Pipeline**: Removed redundant listener bindings preventing duplicate SysEx message dispatch.

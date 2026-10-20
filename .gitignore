@@ -17,6 +17,7 @@ pnpm-debug.log*
 XV-5050_OM.html
 XV-5050_OM.pdf
 midi_implementation_extracted.txt
+tests/*.png
 
 # Editor and OS
 .vscode/*
