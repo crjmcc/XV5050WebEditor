@@ -190,6 +190,34 @@
             </select>
           </div>
           <div class="param-group">
+            <label class="param-label" for="perfMfxBSource">MFX-B Source</label>
+            <select id="perfMfxBSource">
+              <option value="0">PERFORM</option>
+              <option value="1">Part 1</option><option value="2">Part 2</option>
+              <option value="3">Part 3</option><option value="4">Part 4</option>
+              <option value="5">Part 5</option><option value="6">Part 6</option>
+              <option value="7">Part 7</option><option value="8">Part 8</option>
+              <option value="9">Part 9</option><option value="10">Part 10</option>
+              <option value="11">Part 11</option><option value="12">Part 12</option>
+              <option value="13">Part 13</option><option value="14">Part 14</option>
+              <option value="15">Part 15</option><option value="16">Part 16</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label class="param-label" for="perfMfxCSource">MFX-C Source</label>
+            <select id="perfMfxCSource">
+              <option value="0">PERFORM</option>
+              <option value="1">Part 1</option><option value="2">Part 2</option>
+              <option value="3">Part 3</option><option value="4">Part 4</option>
+              <option value="5">Part 5</option><option value="6">Part 6</option>
+              <option value="7">Part 7</option><option value="8">Part 8</option>
+              <option value="9">Part 9</option><option value="10">Part 10</option>
+              <option value="11">Part 11</option><option value="12">Part 12</option>
+              <option value="13">Part 13</option><option value="14">Part 14</option>
+              <option value="15">Part 15</option><option value="16">Part 16</option>
+            </select>
+          </div>
+          <div class="param-group">
             <label class="param-label" for="perfChorusSource">Chorus Source</label>
             <select id="perfChorusSource">
               <option value="0">PERFORM</option>
@@ -219,7 +247,7 @@
           </div>
         </div>
 
-        <!-- Performance Effects Sub-section -->
+        <!-- Performance Effects & System EQ Sub-section -->
         <div class="effects-grid" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--border);">
           <!-- Chorus Block -->
           <div class="fx-panel">
@@ -247,6 +275,27 @@
                   <option value="0">A</option><option value="1">B</option>
                   <option value="2">C</option><option value="3">D</option>
                 </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfChorusRate">Rate</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfChorusRate" min="0" max="127" value="32">
+                  <span class="param-value" id="perfChorusRateVal">32</span>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfChorusDepth">Depth</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfChorusDepth" min="0" max="127" value="64">
+                  <span class="param-value" id="perfChorusDepthVal">64</span>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfChorusRevSend">Rev Send</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfChorusRevSend" min="0" max="127" value="0">
+                  <span class="param-value" id="perfChorusRevSendVal">0</span>
+                </div>
               </div>
             </div>
           </div>
@@ -279,6 +328,340 @@
                   <option value="0">A</option><option value="1">B</option>
                   <option value="2">C</option><option value="3">D</option>
                 </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfReverbTime">Time</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfReverbTime" min="0" max="127" value="64">
+                  <span class="param-value" id="perfReverbTimeVal">64</span>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="perfReverbHfDamp">HF Damp</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="perfReverbHfDamp" min="0" max="17" value="17">
+                  <span class="param-value" id="perfReverbHfDampVal">BYPASS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System 2-Band Output EQ Block -->
+          <div class="fx-panel">
+            <div class="fx-panel-title">System 2-Band Output EQ</div>
+            <div class="param-grid">
+              <div class="param-group">
+                <label class="param-label" for="sysEqBassFreq">Bass Freq</label>
+                <select id="sysEqBassFreq">
+                  <option value="0">200 Hz</option>
+                  <option value="1">400 Hz</option>
+                </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="sysEqBassGain">Bass Gain</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="sysEqBassGain" min="0" max="30" value="15">
+                  <span class="param-value" id="sysEqBassGainVal">0 dB</span>
+                </div>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="sysEqTrebleFreq">Treble Freq</label>
+                <select id="sysEqTrebleFreq">
+                  <option value="0">2000 Hz</option>
+                  <option value="1">4000 Hz</option>
+                  <option value="2">8000 Hz</option>
+                </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="sysEqTrebleGain">Treble Gain</label>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="range" id="sysEqTrebleGain" min="0" max="30" value="15">
+                  <span class="param-value" id="sysEqTrebleGainVal">0 dB</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- Roll-Up 3-MFX Multi-Effects Architecture (MFX-A, MFX-B, MFX-C)        -->
+      <!-- ===================================================================== -->
+      <div class="card rollup-card mfx-card" id="perfMfxRollup">
+        <div class="card-header rollup-header" id="perfMfxRollupHeader" title="Click header or button to roll up / expand MFX section">
+          <div class="rollup-title-cluster">
+            <span class="card-title"><span class="icon">🎛️</span> 3-MFX Multi-Effects Processors</span>
+            <div class="mfx-summary-badges">
+              <span class="mfx-summary-chip chip-a" id="summaryMfxA">MFX-A: 01: Stereo EQ</span>
+              <span class="mfx-summary-chip chip-b" id="summaryMfxB">MFX-B: 01: Stereo EQ</span>
+              <span class="mfx-summary-chip chip-c" id="summaryMfxC">MFX-C: 01: Stereo EQ</span>
+            </div>
+          </div>
+          <div class="rollup-actions">
+            <button class="btn btn-secondary btn-xs" id="btnSyncActiveMfx" title="Read active MFX slot settings from physical XV-5050">↓ Read Slot</button>
+            <button class="btn btn-sm btn-drawer-toggle" id="btnTogglePerfMfx" title="Toggle Roll Up / Down">
+              <span id="perfMfxRollupText">▲ Roll Up</span>
+              <span id="perfMfxArrow" class="drawer-arrow">▴</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="rollup-body" id="perfMfxRollupBody">
+          <!-- 3 MFX Processor Slot Tabs -->
+          <div class="mfx-slot-bar">
+            <div class="mfx-slot-pills" role="tablist" aria-label="MFX Processor Selection">
+              <button type="button" class="mfx-slot-btn active" data-slot="A" id="btnSlotMfxA" title="Select MFX Processor A">
+                <span class="slot-letter">A</span>
+                <span class="slot-meta">
+                  <span class="slot-name">MFX-A</span>
+                  <span class="slot-algo-badge" id="slotBadgeA">01: Stereo EQ</span>
+                </span>
+              </button>
+              <button type="button" class="mfx-slot-btn" data-slot="B" id="btnSlotMfxB" title="Select MFX Processor B">
+                <span class="slot-letter">B</span>
+                <span class="slot-meta">
+                  <span class="slot-name">MFX-B</span>
+                  <span class="slot-algo-badge" id="slotBadgeB">01: Stereo EQ</span>
+                </span>
+              </button>
+              <button type="button" class="mfx-slot-btn" data-slot="C" id="btnSlotMfxC" title="Select MFX Processor C">
+                <span class="slot-letter">C</span>
+                <span class="slot-meta">
+                  <span class="slot-name">MFX-C</span>
+                  <span class="slot-algo-badge" id="slotBadgeC">01: Stereo EQ</span>
+                </span>
+              </button>
+            </div>
+            <span class="mfx-active-slot-indicator" id="activeSlotIndicator">Editing MFX-A (SysEx 10 00 02 00)</span>
+          </div>
+
+          <!-- Active MFX Slot Global & Routing Bar -->
+          <div class="mfx-common-bar">
+            <div class="param-group mfx-type-group">
+              <label class="param-label" for="perfMfxType">Algorithm (90 Roland COSM / Multi-Effects)</label>
+              <select id="perfMfxType" class="mfx-algo-select" title="Select from all 90 Roland XV-5050 MFX Algorithms">
+                <!-- Dynamically populated from MFX_CATALOG -->
+              </select>
+            </div>
+            <div class="compact-param-box">
+              <span class="param-label">Dry Level</span>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxDryLevel" min="0" max="127" value="127">
+                <span class="param-value" id="perfMfxDryLevelVal">127</span>
+              </div>
+            </div>
+            <div class="compact-param-box">
+              <span class="param-label">Chorus Send</span>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxChorusSend" min="0" max="127" value="0">
+                <span class="param-value" id="perfMfxChorusSendVal">0</span>
+              </div>
+            </div>
+            <div class="compact-param-box">
+              <span class="param-label">Reverb Send</span>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxReverbSend" min="0" max="127" value="0">
+                <span class="param-value" id="perfMfxReverbSendVal">0</span>
+              </div>
+            </div>
+            <div class="param-group" style="min-width: 90px;">
+              <label class="param-label" for="perfMfxOutputAssign">Output Assign</label>
+              <select id="perfMfxOutputAssign">
+                <option value="0">A</option><option value="1">B</option>
+                <option value="2">C</option><option value="3">D</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic 12-Parameter Grid for Selected Algorithm -->
+          <div class="mfx-section-subtitle">
+            <span>Algorithm Parameters (SysEx 4-Nibble Precision)</span>
+            <span class="algo-param-count-badge" id="algoParamCountBadge">12 Parameters</span>
+          </div>
+          <div class="mfx-params-grid" id="perfMfxParamsGrid">
+            <!-- 12 Parameter Blocks -->
+            <div class="mfx-param-box" id="perfMfxParamBox1">
+              <label class="param-label" id="perfMfxParamLabel1">Param 1</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam1" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal1">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox2">
+              <label class="param-label" id="perfMfxParamLabel2">Param 2</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam2" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal2">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox3">
+              <label class="param-label" id="perfMfxParamLabel3">Param 3</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam3" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal3">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox4">
+              <label class="param-label" id="perfMfxParamLabel4">Param 4</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam4" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal4">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox5">
+              <label class="param-label" id="perfMfxParamLabel5">Param 5</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam5" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal5">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox6">
+              <label class="param-label" id="perfMfxParamLabel6">Param 6</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam6" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal6">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox7">
+              <label class="param-label" id="perfMfxParamLabel7">Param 7</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam7" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal7">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox8">
+              <label class="param-label" id="perfMfxParamLabel8">Param 8</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam8" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal8">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox9">
+              <label class="param-label" id="perfMfxParamLabel9">Param 9</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam9" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal9">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox10">
+              <label class="param-label" id="perfMfxParamLabel10">Param 10</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam10" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal10">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox11">
+              <label class="param-label" id="perfMfxParamLabel11">Param 11</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam11" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal11">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="perfMfxParamBox12">
+              <label class="param-label" id="perfMfxParamLabel12">Param 12</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="perfMfxParam12" min="0" max="127" value="64">
+                <span class="param-value" id="perfMfxParamVal12">64</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MFX Modulation Matrix (4 Controller Channels) -->
+          <div class="mfx-section-subtitle">
+            <span>MFX Control Matrix (Hardware SysEx Table 1-3-2)</span>
+            <span class="algo-param-count-badge">4 Real-Time Controllers</span>
+          </div>
+          <div class="mfx-ctrl-grid">
+            <!-- Ctrl 1 -->
+            <div class="mfx-ctrl-box">
+              <div class="ctrl-slot-header">
+                <span class="ctrl-badge">CTRL 1</span>
+              </div>
+              <div class="ctrl-fields-row">
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Src</span>
+                  <select id="perfMfxCtrl1Source" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Sens</span>
+                  <div class="slider-val-wrap" style="flex:1;">
+                    <input type="range" id="perfMfxCtrl1Sens" min="-63" max="63" value="0">
+                    <span class="param-value" id="perfMfxCtrl1SensVal">0</span>
+                  </div>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Dest</span>
+                  <select id="perfMfxCtrl1Assign" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+              </div>
+            </div>
+            <!-- Ctrl 2 -->
+            <div class="mfx-ctrl-box">
+              <div class="ctrl-slot-header">
+                <span class="ctrl-badge">CTRL 2</span>
+              </div>
+              <div class="ctrl-fields-row">
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Src</span>
+                  <select id="perfMfxCtrl2Source" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Sens</span>
+                  <div class="slider-val-wrap" style="flex:1;">
+                    <input type="range" id="perfMfxCtrl2Sens" min="-63" max="63" value="0">
+                    <span class="param-value" id="perfMfxCtrl2SensVal">0</span>
+                  </div>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Dest</span>
+                  <select id="perfMfxCtrl2Assign" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+              </div>
+            </div>
+            <!-- Ctrl 3 -->
+            <div class="mfx-ctrl-box">
+              <div class="ctrl-slot-header">
+                <span class="ctrl-badge">CTRL 3</span>
+              </div>
+              <div class="ctrl-fields-row">
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Src</span>
+                  <select id="perfMfxCtrl3Source" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Sens</span>
+                  <div class="slider-val-wrap" style="flex:1;">
+                    <input type="range" id="perfMfxCtrl3Sens" min="-63" max="63" value="0">
+                    <span class="param-value" id="perfMfxCtrl3SensVal">0</span>
+                  </div>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Dest</span>
+                  <select id="perfMfxCtrl3Assign" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+              </div>
+            </div>
+            <!-- Ctrl 4 -->
+            <div class="mfx-ctrl-box">
+              <div class="ctrl-slot-header">
+                <span class="ctrl-badge">CTRL 4</span>
+              </div>
+              <div class="ctrl-fields-row">
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Src</span>
+                  <select id="perfMfxCtrl4Source" style="flex:1; font-size:0.76rem;"></select>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Sens</span>
+                  <div class="slider-val-wrap" style="flex:1;">
+                    <input type="range" id="perfMfxCtrl4Sens" min="-63" max="63" value="0">
+                    <span class="param-value" id="perfMfxCtrl4SensVal">0</span>
+                  </div>
+                </div>
+                <div class="ctrl-sub-row">
+                  <span class="ctrl-sub-label">Dest</span>
+                  <select id="perfMfxCtrl4Assign" style="flex:1; font-size:0.76rem;"></select>
+                </div>
               </div>
             </div>
           </div>
@@ -542,6 +925,209 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- Patch Multi-Effects & Routing Roll-Up Card                            -->
+      <!-- ===================================================================== -->
+      <div class="card rollup-card mfx-card" id="patchEffectsRollup">
+        <div class="card-header rollup-header" id="patchEffectsRollupHeader" title="Click header or button to roll up / expand Patch Effects section">
+          <div class="rollup-title-cluster">
+            <span class="card-title"><span class="icon">🎛️</span> Patch Multi-Effects & Routing (MFX, Chorus, Reverb)</span>
+            <span class="mfx-summary-chip chip-a" id="summaryPatchMfx">MFX: 01: Stereo EQ</span>
+          </div>
+          <div class="rollup-actions">
+            <button class="btn btn-secondary btn-xs" id="btnSyncPatchEffects" title="Read Patch Effects from hardware">↓ Read Effects</button>
+            <button class="btn btn-sm btn-drawer-toggle" id="btnTogglePatchEffects" title="Toggle Roll Up / Down">
+              <span id="patchEffectsRollupText">▲ Roll Up</span>
+              <span id="patchEffectsArrow" class="drawer-arrow">▴</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="rollup-body" id="patchEffectsRollupBody">
+          <!-- Patch MFX Global Bar -->
+          <div class="mfx-common-bar">
+            <div class="param-group mfx-type-group">
+              <label class="param-label" for="patchMfxType">MFX Algorithm (90 Roland COSM / Multi-Effects)</label>
+              <select id="patchMfxType" class="mfx-algo-select" title="Select Patch MFX Algorithm">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <div class="compact-param-box">
+              <span class="param-label">Dry Level</span>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxDryLevel" min="0" max="127" value="127">
+                <span class="param-value" id="patchMfxDryLevelVal">127</span>
+              </div>
+            </div>
+            <div class="compact-param-box">
+              <span class="param-label">Chorus Send</span>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxChorusSend" min="0" max="127" value="0">
+                <span class="param-value" id="patchMfxChorusSendVal">0</span>
+              </div>
+            </div>
+            <div class="compact-param-box">
+              <span class="param-label">Reverb Send</span>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxReverbSend" min="0" max="127" value="0">
+                <span class="param-value" id="patchMfxReverbSendVal">0</span>
+              </div>
+            </div>
+            <div class="param-group" style="min-width: 90px;">
+              <label class="param-label" for="patchMfxOutputAssign">Output Assign</label>
+              <select id="patchMfxOutputAssign">
+                <option value="0">A</option><option value="1">B</option>
+                <option value="2">C</option><option value="3">D</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic 12-Parameter Grid for Patch MFX -->
+          <div class="mfx-section-subtitle">
+            <span>Algorithm Parameters (SysEx 4-Nibble Precision)</span>
+            <span class="algo-param-count-badge" id="patchAlgoParamCountBadge">12 Parameters</span>
+          </div>
+          <div class="mfx-params-grid" id="patchMfxParamsGrid">
+            <!-- 12 Parameter Blocks for Patch MFX -->
+            <div class="mfx-param-box" id="patchMfxParamBox1">
+              <label class="param-label" id="patchMfxParamLabel1">Param 1</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam1" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal1">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox2">
+              <label class="param-label" id="patchMfxParamLabel2">Param 2</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam2" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal2">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox3">
+              <label class="param-label" id="patchMfxParamLabel3">Param 3</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam3" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal3">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox4">
+              <label class="param-label" id="patchMfxParamLabel4">Param 4</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam4" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal4">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox5">
+              <label class="param-label" id="patchMfxParamLabel5">Param 5</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam5" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal5">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox6">
+              <label class="param-label" id="patchMfxParamLabel6">Param 6</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam6" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal6">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox7">
+              <label class="param-label" id="patchMfxParamLabel7">Param 7</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam7" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal7">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox8">
+              <label class="param-label" id="patchMfxParamLabel8">Param 8</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam8" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal8">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox9">
+              <label class="param-label" id="patchMfxParamLabel9">Param 9</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam9" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal9">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox10">
+              <label class="param-label" id="patchMfxParamLabel10">Param 10</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam10" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal10">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox11">
+              <label class="param-label" id="patchMfxParamLabel11">Param 11</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam11" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal11">64</span>
+              </div>
+            </div>
+            <div class="mfx-param-box" id="patchMfxParamBox12">
+              <label class="param-label" id="patchMfxParamLabel12">Param 12</label>
+              <div class="slider-val-wrap">
+                <input type="range" id="patchMfxParam12" min="0" max="127" value="64">
+                <span class="param-value" id="patchMfxParamVal12">64</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Patch Chorus & Reverb Processors -->
+          <div class="mfx-section-subtitle" style="margin-top: 14px;">
+            <span>Patch Dedicated Chorus & Reverb Processors</span>
+          </div>
+          <div class="effects-grid">
+            <div class="fx-panel">
+              <div class="fx-panel-title">Patch Chorus</div>
+              <div class="param-grid">
+                <div class="param-group">
+                  <label class="param-label" for="patchChorusType">Type</label>
+                  <select id="patchChorusType">
+                    <option value="0">OFF</option>
+                    <option value="1">CHORUS</option>
+                    <option value="2">DELAY</option>
+                    <option value="3">GM2 CHORUS</option>
+                  </select>
+                </div>
+                <div class="param-group">
+                  <label class="param-label" for="patchChorusLevel">Level</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="range" id="patchChorusLevel" min="0" max="127" value="64">
+                    <span class="param-value" id="patchChorusLevelVal">64</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fx-panel">
+              <div class="fx-panel-title">Patch Reverb</div>
+              <div class="param-grid">
+                <div class="param-group">
+                  <label class="param-label" for="patchReverbType">Type</label>
+                  <select id="patchReverbType">
+                    <option value="0">OFF</option>
+                    <option value="1">REVERB</option>
+                    <option value="2">SRV ROOM</option>
+                    <option value="3">SRV HALL</option>
+                    <option value="4">SRV PLATE</option>
+                    <option value="5">GM2 REVERB</option>
+                  </select>
+                </div>
+                <div class="param-group">
+                  <label class="param-label" for="patchReverbLevel">Level</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="range" id="patchReverbLevel" min="0" max="127" value="64">
+                    <span class="param-value" id="patchReverbLevelVal">64</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Structure, Booster & TMT Zones (Stage 2 Gap 2) -->

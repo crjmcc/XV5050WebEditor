@@ -25,6 +25,7 @@ import {
   requestPerformanceCommon,
   requestPerformanceChorus,
   requestPerformanceReverb,
+  requestPerformanceMfx,
   requestPerformancePart,
   requestPartPatchName,
   requestAllParts,
@@ -32,6 +33,8 @@ import {
   sendPerformanceCommonParam,
   sendPerformanceChorusParam,
   sendPerformanceReverbParam,
+  sendPerformanceMfxParam,
+  sendSystemEqParam,
   sendPerformanceName,
   sendPartParam,
   sendSoundMode,
@@ -48,10 +51,16 @@ import {
   requestPatchCommon,
   requestPatchTMT,
   requestPatchTone,
+  requestPatchMfx,
+  requestPatchChorus,
+  requestPatchReverb,
   requestEntirePatch,
   sendPatchCommonParam,
   sendPatchTMTParam,
   sendPatchToneParam,
+  sendPatchMfxParam,
+  sendPatchChorusParam,
+  sendPatchReverbParam,
   sendToneSwitch,
   sendPatchName,
   sendMatrixControlParam,
@@ -62,6 +71,11 @@ import {
   parsePatchTMT,
   parsePatchTone,
 } from './patch.js';
+import {
+  MFX_CATALOG,
+  MFX_CTRL_SOURCES,
+  getMfxAlgorithm,
+} from './mfx_data.js';
 import { parseSysEx, formatSysEx, addressToString, buildDT1 } from './sysex.js';
 import {
   generateEnvelopePath,
@@ -464,6 +478,8 @@ function updatePerformanceCommonUI(data) {
   $('perfSoloPart').value = data.soloPartSelect ?? 0;
   $('perfMfxCtrlCh').value = data.mfxCtrlChannel ?? 0;
   $('perfMfxASource').value = data.mfxASource ?? 0;
+  if ($('perfMfxBSource')) $('perfMfxBSource').value = data.mfxBSource ?? 0;
+  if ($('perfMfxCSource')) $('perfMfxCSource').value = data.mfxCSource ?? 0;
   $('perfChorusSource').value = data.chorusSource ?? 0;
   $('perfReverbSource').value = data.reverbSource ?? 0;
 }
@@ -473,6 +489,18 @@ function updatePerformanceChorusUI(data) {
   $('perfChorusLevel').value = data.chorusLevel ?? 64;
   $('perfChorusLevelVal').textContent = data.chorusLevel ?? 64;
   $('perfChorusOutputAssign').value = data.outputAssign ?? 0;
+  if ($('perfChorusRate')) {
+    $('perfChorusRate').value = data.rate ?? 32;
+    $('perfChorusRateVal').textContent = data.rate ?? 32;
+  }
+  if ($('perfChorusDepth')) {
+    $('perfChorusDepth').value = data.depth ?? 64;
+    $('perfChorusDepthVal').textContent = data.depth ?? 64;
+  }
+  if ($('perfChorusRevSend')) {
+    $('perfChorusRevSend').value = data.revSend ?? 0;
+    $('perfChorusRevSendVal').textContent = data.revSend ?? 0;
+  }
 }
 
 function updatePerformanceReverbUI(data) {
@@ -480,6 +508,15 @@ function updatePerformanceReverbUI(data) {
   $('perfReverbLevel').value = data.reverbLevel ?? 64;
   $('perfReverbLevelVal').textContent = data.reverbLevel ?? 64;
   $('perfReverbOutputAssign').value = data.outputAssign ?? 0;
+  if ($('perfReverbTime')) {
+    $('perfReverbTime').value = data.time ?? 64;
+    $('perfReverbTimeVal').textContent = data.time ?? 64;
+  }
+  if ($('perfReverbHfDamp')) {
+    const hf = data.hfDamp ?? 17;
+    $('perfReverbHfDamp').value = hf;
+    $('perfReverbHfDampVal').textContent = hf === 17 ? 'BYPASS' : `${hf}`;
+  }
 }
 
 function bindPerformanceCommonControls() {
@@ -493,15 +530,20 @@ function bindPerformanceCommonControls() {
     { el: 'perfSoloPart', param: 'SOLO_PART_SELECT' },
     { el: 'perfMfxCtrlCh', param: 'MFX_CTRL_CHANNEL' },
     { el: 'perfMfxASource', param: 'MFXA_SOURCE' },
+    { el: 'perfMfxBSource', param: 'MFXB_SOURCE' },
+    { el: 'perfMfxCSource', param: 'MFXC_SOURCE' },
     { el: 'perfChorusSource', param: 'CHORUS_SOURCE' },
     { el: 'perfReverbSource', param: 'REVERB_SOURCE' },
   ];
 
   for (const b of selectBindings) {
-    $(b.el).addEventListener('change', () => {
-      if (!midi.isConnected) return;
-      sendPerformanceCommonParam(midi, b.param, parseInt($(b.el).value, 10), getDeviceId());
-    });
+    const el = $(b.el);
+    if (el) {
+      el.addEventListener('change', () => {
+        if (!midi.isConnected) return;
+        sendPerformanceCommonParam(midi, b.param, parseInt(el.value, 10), getDeviceId());
+      });
+    }
   }
 
   // Chorus controls
@@ -528,6 +570,39 @@ function bindPerformanceCommonControls() {
     sendPerformanceChorusParam(midi, 'OUTPUT_ASSIGN', parseInt($('perfChorusOutputAssign').value, 10), getDeviceId());
   });
 
+  if ($('perfChorusRate')) {
+    $('perfChorusRate').addEventListener('input', () => {
+      const val = parseInt($('perfChorusRate').value, 10);
+      $('perfChorusRateVal').textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled('perfChorusRate', () => {
+        sendPerformanceChorusParam(midi, 'RATE', val, getDeviceId());
+      });
+    });
+  }
+
+  if ($('perfChorusDepth')) {
+    $('perfChorusDepth').addEventListener('input', () => {
+      const val = parseInt($('perfChorusDepth').value, 10);
+      $('perfChorusDepthVal').textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled('perfChorusDepth', () => {
+        sendPerformanceChorusParam(midi, 'DEPTH', val, getDeviceId());
+      });
+    });
+  }
+
+  if ($('perfChorusRevSend')) {
+    $('perfChorusRevSend').addEventListener('input', () => {
+      const val = parseInt($('perfChorusRevSend').value, 10);
+      $('perfChorusRevSendVal').textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled('perfChorusRevSend', () => {
+        sendPerformanceChorusParam(midi, 'REV_SEND', val, getDeviceId());
+      });
+    });
+  }
+
   // Reverb controls
   $('perfReverbType').addEventListener('change', () => {
     if (!midi.isConnected) return;
@@ -551,6 +626,627 @@ function bindPerformanceCommonControls() {
     if (!midi.isConnected) return;
     sendPerformanceReverbParam(midi, 'OUTPUT_ASSIGN', parseInt($('perfReverbOutputAssign').value, 10), getDeviceId());
   });
+
+  if ($('perfReverbTime')) {
+    $('perfReverbTime').addEventListener('input', () => {
+      const val = parseInt($('perfReverbTime').value, 10);
+      $('perfReverbTimeVal').textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled('perfReverbTime', () => {
+        sendPerformanceReverbParam(midi, 'TIME', val, getDeviceId());
+      });
+    });
+  }
+
+  if ($('perfReverbHfDamp')) {
+    $('perfReverbHfDamp').addEventListener('input', () => {
+      const val = parseInt($('perfReverbHfDamp').value, 10);
+      $('perfReverbHfDampVal').textContent = val === 17 ? 'BYPASS' : `${val}`;
+      if (!midi.isConnected) return;
+      sendThrottled('perfReverbHfDamp', () => {
+        sendPerformanceReverbParam(midi, 'HF_DAMP', val, getDeviceId());
+      });
+    });
+  }
+
+  // System 2-Band EQ controls
+  if ($('sysEqBassFreq')) {
+    $('sysEqBassFreq').addEventListener('change', () => {
+      if (!midi.isConnected) return;
+      sendSystemEqParam(midi, 'EQ_LOW_FREQ', parseInt($('sysEqBassFreq').value, 10), getDeviceId());
+    });
+  }
+
+  if ($('sysEqBassGain')) {
+    $('sysEqBassGain').addEventListener('input', () => {
+      const val = parseInt($('sysEqBassGain').value, 10);
+      const db = val - 15;
+      $('sysEqBassGainVal').textContent = (db > 0 ? `+${db}` : `${db}`) + ' dB';
+      if (!midi.isConnected) return;
+      sendThrottled('sysEqBassGain', () => {
+        sendSystemEqParam(midi, 'EQ_LOW_GAIN', val, getDeviceId());
+      });
+    });
+  }
+
+  if ($('sysEqTrebleFreq')) {
+    $('sysEqTrebleFreq').addEventListener('change', () => {
+      if (!midi.isConnected) return;
+      sendSystemEqParam(midi, 'EQ_HIGH_FREQ', parseInt($('sysEqTrebleFreq').value, 10), getDeviceId());
+    });
+  }
+
+  if ($('sysEqTrebleGain')) {
+    $('sysEqTrebleGain').addEventListener('input', () => {
+      const val = parseInt($('sysEqTrebleGain').value, 10);
+      const db = val - 15;
+      $('sysEqTrebleGainVal').textContent = (db > 0 ? `+${db}` : `${db}`) + ' dB';
+      if (!midi.isConnected) return;
+      sendThrottled('sysEqTrebleGain', () => {
+        sendSystemEqParam(midi, 'EQ_HIGH_GAIN', val, getDeviceId());
+      });
+    });
+  }
+}
+
+// =============================================================================
+// Roll-Up 3-MFX Multi-Effects Architecture
+// =============================================================================
+
+let activePerfMfxSlot = 'A';
+const perfMfxCache = { A: null, B: null, C: null };
+
+function togglePerfMfxRollup(expand) {
+  const card = $('perfMfxRollup');
+  const arrow = $('perfMfxArrow');
+  const text = $('perfMfxRollupText');
+  if (!card) return;
+  const shouldOpen = expand !== undefined ? expand : card.classList.contains('collapsed');
+  if (shouldOpen) {
+    card.classList.remove('collapsed');
+    if (arrow) arrow.textContent = '▴';
+    if (text) text.textContent = '▲ Roll Up';
+    localStorage.setItem('xv5050_perf_mfx_collapsed', 'false');
+  } else {
+    card.classList.add('collapsed');
+    if (arrow) arrow.textContent = '▾';
+    if (text) text.textContent = '▼ Expand';
+    localStorage.setItem('xv5050_perf_mfx_collapsed', 'true');
+  }
+}
+
+function togglePatchEffectsRollup(expand) {
+  const card = $('patchEffectsRollup');
+  const arrow = $('patchEffectsArrow');
+  const text = $('patchEffectsRollupText');
+  if (!card) return;
+  const shouldOpen = expand !== undefined ? expand : card.classList.contains('collapsed');
+  if (shouldOpen) {
+    card.classList.remove('collapsed');
+    if (arrow) arrow.textContent = '▴';
+    if (text) text.textContent = '▲ Roll Up';
+    localStorage.setItem('xv5050_patch_effects_collapsed', 'false');
+  } else {
+    card.classList.add('collapsed');
+    if (arrow) arrow.textContent = '▾';
+    if (text) text.textContent = '▼ Expand';
+    localStorage.setItem('xv5050_patch_effects_collapsed', 'true');
+  }
+}
+
+function populateMfxDropdown(selectEl) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '';
+  const categories = {};
+  MFX_CATALOG.forEach(algo => {
+    const cat = algo.category || 'General';
+    if (!categories[cat]) categories[cat] = [];
+    categories[cat].push(algo);
+  });
+
+  for (const [catName, algos] of Object.entries(categories)) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = catName;
+    for (const algo of algos) {
+      const opt = document.createElement('option');
+      opt.value = algo.id;
+      opt.textContent = algo.name;
+      optgroup.appendChild(opt);
+    }
+    selectEl.appendChild(optgroup);
+  }
+}
+
+function populateMfxCtrlSources(selectEl) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '';
+  MFX_CTRL_SOURCES.forEach((name, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = name;
+    selectEl.appendChild(opt);
+  });
+}
+
+function formatMfxParamValue(inputEl, valEl) {
+  if (!inputEl || !valEl) return;
+  const val = parseFloat(inputEl.value);
+  if (inputEl.dataset.enumValues) {
+    try {
+      const enums = JSON.parse(inputEl.dataset.enumValues);
+      valEl.textContent = enums[val] !== undefined ? enums[val] : val;
+      return;
+    } catch (_) {}
+  }
+  const unit = inputEl.dataset.unit || '';
+  if (unit === 'dB') {
+    valEl.textContent = (val > 0 ? `+${val}` : `${val}`) + ' dB';
+  } else if (unit) {
+    valEl.textContent = `${val} ${unit}`;
+  } else {
+    valEl.textContent = `${val}`;
+  }
+}
+
+function updateMfxAlgorithmUI(prefix, typeId) {
+  const algo = getMfxAlgorithm(typeId);
+  const countBadge = $(prefix === 'perfMfx' ? 'algoParamCountBadge' : 'patchAlgoParamCountBadge');
+  if (countBadge) {
+    countBadge.textContent = `${algo.params.length} Parameters`;
+  }
+
+  for (let i = 1; i <= 12; i++) {
+    const box = $(`${prefix}ParamBox${i}`);
+    const label = $(`${prefix}ParamLabel${i}`);
+    const input = $(`${prefix}Param${i}`);
+    const valEl = $(`${prefix}ParamVal${i}`);
+    if (!box || !label || !input) continue;
+
+    const paramDef = algo.params[i - 1];
+    if (paramDef) {
+      box.classList.remove('hidden');
+      label.textContent = paramDef.name;
+      input.min = paramDef.min;
+      input.max = paramDef.max;
+      input.step = paramDef.step || 1;
+      input.dataset.unit = paramDef.unit || '';
+      if (paramDef.type === 'enum' && paramDef.enumValues) {
+        input.dataset.enumValues = JSON.stringify(paramDef.enumValues);
+      } else {
+        delete input.dataset.enumValues;
+      }
+      formatMfxParamValue(input, valEl);
+    } else {
+      box.classList.add('hidden');
+    }
+  }
+
+  if (prefix === 'perfMfx') {
+    for (let c = 1; c <= 4; c++) {
+      const assignSel = $(`perfMfxCtrl${c}Assign`);
+      if (!assignSel) continue;
+      const currentVal = assignSel.value;
+      assignSel.innerHTML = '<option value="0">OFF</option>';
+      algo.params.forEach((p, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx + 1;
+        opt.textContent = `${idx + 1}: ${p.name}`;
+        assignSel.appendChild(opt);
+      });
+      assignSel.value = currentVal <= algo.params.length ? currentVal : 0;
+    }
+  }
+}
+
+function updatePerfMfxBadges(slot, typeId) {
+  const algo = getMfxAlgorithm(typeId);
+  const text = algo.name;
+  const slotBadge = $(`slotBadge${slot}`);
+  if (slotBadge) slotBadge.textContent = text;
+  const summaryChip = $(`summaryMfx${slot}`);
+  if (summaryChip) summaryChip.textContent = `MFX-${slot}: ${text}`;
+}
+
+function applyPerfMfxToUI(data) {
+  if (!data) return;
+  const typeId = data.mfxType ?? 0;
+  if ($('perfMfxType')) $('perfMfxType').value = typeId;
+  if ($('perfMfxDryLevel')) {
+    $('perfMfxDryLevel').value = data.dryLevel ?? 127;
+    $('perfMfxDryLevelVal').textContent = data.dryLevel ?? 127;
+  }
+  if ($('perfMfxChorusSend')) {
+    $('perfMfxChorusSend').value = data.chorusSend ?? 0;
+    $('perfMfxChorusSendVal').textContent = data.chorusSend ?? 0;
+  }
+  if ($('perfMfxReverbSend')) {
+    $('perfMfxReverbSend').value = data.reverbSend ?? 0;
+    $('perfMfxReverbSendVal').textContent = data.reverbSend ?? 0;
+  }
+  if ($('perfMfxOutputAssign')) $('perfMfxOutputAssign').value = data.outputAssign ?? 0;
+
+  updateMfxAlgorithmUI('perfMfx', typeId);
+
+  if (Array.isArray(data.params)) {
+    data.params.forEach((val, idx) => {
+      const input = $(`perfMfxParam${idx + 1}`);
+      const valEl = $(`perfMfxParamVal${idx + 1}`);
+      if (input) {
+        input.value = val;
+        formatMfxParamValue(input, valEl);
+      }
+    });
+  }
+
+  for (let c = 1; c <= 4; c++) {
+    const srcSel = $(`perfMfxCtrl${c}Source`);
+    const sensIn = $(`perfMfxCtrl${c}Sens`);
+    const sensVal = $(`perfMfxCtrl${c}SensVal`);
+    const assSel = $(`perfMfxCtrl${c}Assign`);
+    if (srcSel) srcSel.value = data[`ctrl${c}Source`] ?? 0;
+    if (sensIn) {
+      const s = data[`ctrl${c}Sens`] ?? 0;
+      sensIn.value = s;
+      if (sensVal) sensVal.textContent = s > 0 ? `+${s}` : `${s}`;
+    }
+    if (assSel) assSel.value = data[`ctrl${c}Assign`] ?? 0;
+  }
+
+  updatePerfMfxBadges(activePerfMfxSlot, typeId);
+}
+
+function setActivePerfMfxSlot(slot) {
+  activePerfMfxSlot = slot.toUpperCase();
+  ['A', 'B', 'C'].forEach(s => {
+    const btn = $(`btnSlotMfx${s}`);
+    if (btn) btn.classList.toggle('active', s === activePerfMfxSlot);
+  });
+  const ind = $('activeSlotIndicator');
+  if (ind) {
+    const addr = activePerfMfxSlot === 'A' ? '10 00 02 00' : (activePerfMfxSlot === 'B' ? '10 00 08 00' : '10 00 0A 00');
+    ind.textContent = `Editing MFX-${activePerfMfxSlot} (SysEx ${addr})`;
+  }
+
+  const cached = perfMfxCache[activePerfMfxSlot];
+  if (cached) {
+    applyPerfMfxToUI(cached);
+  } else if (midi.isConnected) {
+    requestPerformanceMfx(midi, activePerfMfxSlot, getDeviceId()).then(data => {
+      perfMfxCache[activePerfMfxSlot] = data;
+      applyPerfMfxToUI(data);
+    }).catch(e => {
+      console.warn(`Could not read MFX-${activePerfMfxSlot}:`, e);
+    });
+  }
+}
+
+function bindPerfMfxControls() {
+  populateMfxDropdown($('perfMfxType'));
+  for (let c = 1; c <= 4; c++) {
+    populateMfxCtrlSources($(`perfMfxCtrl${c}Source`));
+  }
+
+  const isCollapsed = localStorage.getItem('xv5050_perf_mfx_collapsed') === 'true';
+  if (isCollapsed) togglePerfMfxRollup(false);
+
+  const btnToggle = $('btnTogglePerfMfx');
+  if (btnToggle) {
+    btnToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePerfMfxRollup();
+    });
+  }
+  const rollupHeader = $('perfMfxRollupHeader');
+  if (rollupHeader) {
+    rollupHeader.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('select')) return;
+      togglePerfMfxRollup();
+    });
+  }
+
+  ['A', 'B', 'C'].forEach(slot => {
+    const btn = $(`btnSlotMfx${slot}`);
+    if (btn) {
+      btn.addEventListener('click', () => setActivePerfMfxSlot(slot));
+    }
+  });
+
+  const btnSync = $('btnSyncActiveMfx');
+  if (btnSync) {
+    btnSync.addEventListener('click', async () => {
+      if (!midi.isConnected) { setStatus('Not connected'); return; }
+      setStatus(`Reading MFX-${activePerfMfxSlot} from XV-5050...`);
+      try {
+        const data = await requestPerformanceMfx(midi, activePerfMfxSlot, getDeviceId());
+        perfMfxCache[activePerfMfxSlot] = data;
+        applyPerfMfxToUI(data);
+        setStatus(`MFX-${activePerfMfxSlot} successfully read from hardware`);
+      } catch (e) {
+        setStatus(`Failed reading MFX-${activePerfMfxSlot}: ${e.message}`);
+      }
+    });
+  }
+
+  $('perfMfxType').addEventListener('change', () => {
+    const typeId = parseInt($('perfMfxType').value, 10);
+    updateMfxAlgorithmUI('perfMfx', typeId);
+    updatePerfMfxBadges(activePerfMfxSlot, typeId);
+    if (!midi.isConnected) return;
+    sendPerformanceMfxParam(midi, activePerfMfxSlot, 'MFX_TYPE', typeId, getDeviceId());
+    setStatus(`MFX-${activePerfMfxSlot} Algorithm set to ${typeId}`);
+  });
+
+  $('perfMfxDryLevel').addEventListener('input', () => {
+    const val = parseInt($('perfMfxDryLevel').value, 10);
+    $('perfMfxDryLevelVal').textContent = val;
+    if (!midi.isConnected) return;
+    sendThrottled(`perfMfx${activePerfMfxSlot}DryLevel`, () => {
+      sendPerformanceMfxParam(midi, activePerfMfxSlot, 'DRY_LEVEL', val, getDeviceId());
+    });
+  });
+
+  $('perfMfxChorusSend').addEventListener('input', () => {
+    const val = parseInt($('perfMfxChorusSend').value, 10);
+    $('perfMfxChorusSendVal').textContent = val;
+    if (!midi.isConnected) return;
+    sendThrottled(`perfMfx${activePerfMfxSlot}ChorusSend`, () => {
+      sendPerformanceMfxParam(midi, activePerfMfxSlot, 'CHORUS_SEND', val, getDeviceId());
+    });
+  });
+
+  $('perfMfxReverbSend').addEventListener('input', () => {
+    const val = parseInt($('perfMfxReverbSend').value, 10);
+    $('perfMfxReverbSendVal').textContent = val;
+    if (!midi.isConnected) return;
+    sendThrottled(`perfMfx${activePerfMfxSlot}ReverbSend`, () => {
+      sendPerformanceMfxParam(midi, activePerfMfxSlot, 'REVERB_SEND', val, getDeviceId());
+    });
+  });
+
+  $('perfMfxOutputAssign').addEventListener('change', () => {
+    const val = parseInt($('perfMfxOutputAssign').value, 10);
+    if (!midi.isConnected) return;
+    sendPerformanceMfxParam(midi, activePerfMfxSlot, 'OUTPUT_ASSIGN', val, getDeviceId());
+  });
+
+  for (let i = 1; i <= 12; i++) {
+    const input = $(`perfMfxParam${i}`);
+    const valEl = $(`perfMfxParamVal${i}`);
+    if (!input) continue;
+    input.addEventListener('input', () => {
+      formatMfxParamValue(input, valEl);
+      if (!midi.isConnected) return;
+      const val = parseInt(input.value, 10);
+      sendThrottled(`perfMfx${activePerfMfxSlot}Param${i}`, () => {
+        sendPerformanceMfxParam(midi, activePerfMfxSlot, `PARAM_${i}`, val, getDeviceId());
+      });
+    });
+  }
+
+  for (let c = 1; c <= 4; c++) {
+    const srcSel = $(`perfMfxCtrl${c}Source`);
+    const sensIn = $(`perfMfxCtrl${c}Sens`);
+    const sensVal = $(`perfMfxCtrl${c}SensVal`);
+    const assSel = $(`perfMfxCtrl${c}Assign`);
+
+    if (srcSel) {
+      srcSel.addEventListener('change', () => {
+        if (!midi.isConnected) return;
+        sendPerformanceMfxParam(midi, activePerfMfxSlot, `MFX_CTRL_${c}_SOURCE`, parseInt(srcSel.value, 10), getDeviceId());
+      });
+    }
+    if (sensIn) {
+      sensIn.addEventListener('input', () => {
+        const s = parseInt(sensIn.value, 10);
+        if (sensVal) sensVal.textContent = s > 0 ? `+${s}` : `${s}`;
+        if (!midi.isConnected) return;
+        sendThrottled(`perfMfx${activePerfMfxSlot}Ctrl${c}Sens`, () => {
+          sendPerformanceMfxParam(midi, activePerfMfxSlot, `MFX_CTRL_${c}_SENS`, s, getDeviceId());
+        });
+      });
+    }
+    if (assSel) {
+      assSel.addEventListener('change', () => {
+        if (!midi.isConnected) return;
+        sendPerformanceMfxParam(midi, activePerfMfxSlot, `MFX_CTRL_${c}_ASSIGN`, parseInt(assSel.value, 10), getDeviceId());
+      });
+    }
+  }
+
+  updateMfxAlgorithmUI('perfMfx', 1);
+  updatePerfMfxBadges('A', 1);
+  updatePerfMfxBadges('B', 1);
+  updatePerfMfxBadges('C', 1);
+}
+
+function bindPatchEffectsControls() {
+  populateMfxDropdown($('patchMfxType'));
+
+  const isCollapsed = localStorage.getItem('xv5050_patch_effects_collapsed') === 'true';
+  if (isCollapsed) togglePatchEffectsRollup(false);
+
+  const btnToggle = $('btnTogglePatchEffects');
+  if (btnToggle) {
+    btnToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePatchEffectsRollup();
+    });
+  }
+  const rollupHeader = $('patchEffectsRollupHeader');
+  if (rollupHeader) {
+    rollupHeader.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('select')) return;
+      togglePatchEffectsRollup();
+    });
+  }
+
+  const btnSync = $('btnSyncPatchEffects');
+  if (btnSync) {
+    btnSync.addEventListener('click', async () => {
+      if (!midi.isConnected) { setStatus('Not connected'); return; }
+      const part = parseInt($('patchPartSelect')?.value || '0', 10);
+      setStatus('Reading Patch Effects from XV-5050...');
+      try {
+        const [mfxData, choData, revData] = await Promise.all([
+          requestPatchMfx(midi, part, getDeviceId()),
+          requestPatchChorus(midi, part, getDeviceId()),
+          requestPatchReverb(midi, part, getDeviceId()),
+        ]);
+        applyPatchEffectsToUI(mfxData, choData, revData);
+        setStatus('Patch Effects read successfully');
+      } catch (e) {
+        setStatus(`Failed reading Patch Effects: ${e.message}`);
+      }
+    });
+  }
+
+  $('patchMfxType').addEventListener('change', () => {
+    const typeId = parseInt($('patchMfxType').value, 10);
+    updateMfxAlgorithmUI('patchMfx', typeId);
+    const algo = getMfxAlgorithm(typeId);
+    if ($('summaryPatchMfx')) $('summaryPatchMfx').textContent = `MFX: ${String(typeId).padStart(2, '0')}: ${algo.name}`;
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendPatchMfxParam(midi, part, 'MFX_TYPE', typeId, getDeviceId());
+  });
+
+  $('patchMfxDryLevel').addEventListener('input', () => {
+    const val = parseInt($('patchMfxDryLevel').value, 10);
+    $('patchMfxDryLevelVal').textContent = val;
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendThrottled('patchMfxDryLevel', () => {
+      sendPatchMfxParam(midi, part, 'DRY_LEVEL', val, getDeviceId());
+    });
+  });
+
+  $('patchMfxChorusSend').addEventListener('input', () => {
+    const val = parseInt($('patchMfxChorusSend').value, 10);
+    $('patchMfxChorusSendVal').textContent = val;
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendThrottled('patchMfxChorusSend', () => {
+      sendPatchMfxParam(midi, part, 'CHORUS_SEND', val, getDeviceId());
+    });
+  });
+
+  $('patchMfxReverbSend').addEventListener('input', () => {
+    const val = parseInt($('patchMfxReverbSend').value, 10);
+    $('patchMfxReverbSendVal').textContent = val;
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendThrottled('patchMfxReverbSend', () => {
+      sendPatchMfxParam(midi, part, 'REVERB_SEND', val, getDeviceId());
+    });
+  });
+
+  $('patchMfxOutputAssign').addEventListener('change', () => {
+    const val = parseInt($('patchMfxOutputAssign').value, 10);
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendPatchMfxParam(midi, part, 'OUTPUT_ASSIGN', val, getDeviceId());
+  });
+
+  for (let i = 1; i <= 12; i++) {
+    const input = $(`patchMfxParam${i}`);
+    const valEl = $(`patchMfxParamVal${i}`);
+    if (!input) continue;
+    input.addEventListener('input', () => {
+      formatMfxParamValue(input, valEl);
+      if (!midi.isConnected) return;
+      const part = parseInt($('patchPartSelect')?.value || '0', 10);
+      const val = parseInt(input.value, 10);
+      sendThrottled(`patchMfxParam${i}`, () => {
+        sendPatchMfxParam(midi, part, `PARAM_${i}`, val, getDeviceId());
+      });
+    });
+  }
+
+  // Patch Chorus controls
+  $('patchChorusType').addEventListener('change', () => {
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendPatchChorusParam(midi, part, 'CHORUS_TYPE', parseInt($('patchChorusType').value, 10), getDeviceId());
+  });
+
+  $('patchChorusLevel').addEventListener('input', () => {
+    const val = parseInt($('patchChorusLevel').value, 10);
+    $('patchChorusLevelVal').textContent = val;
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendThrottled('patchChorusLevel', () => {
+      sendPatchChorusParam(midi, part, 'CHORUS_LEVEL', val, getDeviceId());
+    });
+  });
+
+  // Patch Reverb controls
+  $('patchReverbType').addEventListener('change', () => {
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendPatchReverbParam(midi, part, 'REVERB_TYPE', parseInt($('patchReverbType').value, 10), getDeviceId());
+  });
+
+  $('patchReverbLevel').addEventListener('input', () => {
+    const val = parseInt($('patchReverbLevel').value, 10);
+    $('patchReverbLevelVal').textContent = val;
+    if (!midi.isConnected) return;
+    const part = parseInt($('patchPartSelect')?.value || '0', 10);
+    sendThrottled('patchReverbLevel', () => {
+      sendPatchReverbParam(midi, part, 'REVERB_LEVEL', val, getDeviceId());
+    });
+  });
+
+  updateMfxAlgorithmUI('patchMfx', 1);
+}
+
+function applyPatchEffectsToUI(mfxData, choData, revData) {
+  if (mfxData) {
+    const typeId = mfxData.mfxType ?? 0;
+    if ($('patchMfxType')) $('patchMfxType').value = typeId;
+    if ($('patchMfxDryLevel')) {
+      $('patchMfxDryLevel').value = mfxData.dryLevel ?? 127;
+      $('patchMfxDryLevelVal').textContent = mfxData.dryLevel ?? 127;
+    }
+    if ($('patchMfxChorusSend')) {
+      $('patchMfxChorusSend').value = mfxData.chorusSend ?? 0;
+      $('patchMfxChorusSendVal').textContent = mfxData.chorusSend ?? 0;
+    }
+    if ($('patchMfxReverbSend')) {
+      $('patchMfxReverbSend').value = mfxData.reverbSend ?? 0;
+      $('patchMfxReverbSendVal').textContent = mfxData.reverbSend ?? 0;
+    }
+    if ($('patchMfxOutputAssign')) $('patchMfxOutputAssign').value = mfxData.outputAssign ?? 0;
+    updateMfxAlgorithmUI('patchMfx', typeId);
+    const algo = getMfxAlgorithm(typeId);
+    if ($('summaryPatchMfx')) $('summaryPatchMfx').textContent = `MFX: ${String(typeId).padStart(2, '0')}: ${algo.name}`;
+
+    if (Array.isArray(mfxData.params)) {
+      mfxData.params.forEach((val, idx) => {
+        const input = $(`patchMfxParam${idx + 1}`);
+        const valEl = $(`patchMfxParamVal${idx + 1}`);
+        if (input) {
+          input.value = val;
+          formatMfxParamValue(input, valEl);
+        }
+      });
+    }
+  }
+
+  if (choData) {
+    if ($('patchChorusType')) $('patchChorusType').value = choData.chorusType ?? 1;
+    if ($('patchChorusLevel')) {
+      $('patchChorusLevel').value = choData.chorusLevel ?? 64;
+      $('patchChorusLevelVal').textContent = choData.chorusLevel ?? 64;
+    }
+  }
+
+  if (revData) {
+    if ($('patchReverbType')) $('patchReverbType').value = revData.reverbType ?? 1;
+    if ($('patchReverbLevel')) {
+      $('patchReverbLevel').value = revData.reverbLevel ?? 64;
+      $('patchReverbLevelVal').textContent = revData.reverbLevel ?? 64;
+    }
+  }
 }
 
 // =============================================================================
@@ -1945,15 +2641,45 @@ async function loadEntirePerformanceData() {
     const perf = await requestEntirePerformance(midi, getDeviceId(), (stage, cur, total, data) => {
       if (progEl) progEl.textContent = `Reading ${stage} (${cur + 1}/${total})...`;
       if (stage === 'common' && data) updatePerformanceCommonUI(data);
+      if (stage === 'mfxA' && data) {
+        perfMfxCache.A = data;
+        updatePerfMfxBadges('A', data.mfxType);
+        if (activePerfMfxSlot === 'A') applyPerfMfxToUI(data);
+      }
+      if (stage === 'mfxB' && data) {
+        perfMfxCache.B = data;
+        updatePerfMfxBadges('B', data.mfxType);
+        if (activePerfMfxSlot === 'B') applyPerfMfxToUI(data);
+      }
+      if (stage === 'mfxC' && data) {
+        perfMfxCache.C = data;
+        updatePerfMfxBadges('C', data.mfxType);
+        if (activePerfMfxSlot === 'C') applyPerfMfxToUI(data);
+      }
       if (stage === 'chorus' && data) updatePerformanceChorusUI(data);
       if (stage === 'reverb' && data) updatePerformanceReverbUI(data);
     });
     updatePerformanceCommonUI(perf.common);
+    if (perf.mfxA) {
+      perfMfxCache.A = perf.mfxA;
+      updatePerfMfxBadges('A', perf.mfxA.mfxType);
+    }
+    if (perf.mfxB) {
+      perfMfxCache.B = perf.mfxB;
+      updatePerfMfxBadges('B', perf.mfxB.mfxType);
+    }
+    if (perf.mfxC) {
+      perfMfxCache.C = perf.mfxC;
+      updatePerfMfxBadges('C', perf.mfxC.mfxType);
+    }
+    if (perfMfxCache[activePerfMfxSlot]) {
+      applyPerfMfxToUI(perfMfxCache[activePerfMfxSlot]);
+    }
     updatePerformanceChorusUI(perf.chorus);
     updatePerformanceReverbUI(perf.reverb);
     perf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
     if (progEl) progEl.textContent = 'Entire performance loaded';
-    setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, Effects, 16 Parts)`);
+    setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, 3-MFX, Chorus, Reverb, 16 Parts)`);
   } catch (e) {
     if (progEl) progEl.textContent = '';
     setStatus(`Failed loading entire performance: ${e.message}`);
@@ -2618,7 +3344,9 @@ function init() {
   initEditTracking();
 
   bindPerformanceCommonControls();
+  bindPerfMfxControls();
   bindPatchControls();
+  bindPatchEffectsControls();
   initLibrarianControls();
 
   // Top header actions

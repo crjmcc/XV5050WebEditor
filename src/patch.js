@@ -10,8 +10,17 @@ import {
   PATCH_COMMON,
   PATCH_TMT,
   PATCH_TONE,
+  PATCH_MFX,
+  PATCH_CHORUS,
+  PATCH_REVERB,
+  MFX_PARAMS,
+  CHORUS_PARAMS,
+  REVERB_PARAMS,
   getPatchTempAddress,
   getPatchTMTAddress,
+  getPatchMFXAddress,
+  getPatchChorusAddress,
+  getPatchReverbAddress,
   getToneAddress,
   addOffset,
 } from './addresses.js';
@@ -66,33 +75,102 @@ export async function requestPatchTone(midi, part, tone, deviceId) {
 }
 
 /**
+ * Request Patch MFX block for a part (or 0 for Single patch mode).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single patch mode)
+ * @param {number} [deviceId] - Device ID
+ * @returns {Promise<object>} Parsed MFX data
+ */
+export async function requestPatchMfx(midi, part = 0, deviceId) {
+  const patchBase = getPatchTempAddress(part);
+  const mfxAddr = getPatchMFXAddress(patchBase);
+  const msg = buildRQ1(mfxAddr, PATCH_MFX.SIZE, deviceId);
+  const response = await midi.sendAndReceive(msg);
+  return parsePatchMfx(response.data);
+}
+
+/**
+ * Request Patch Chorus block for a part.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single patch mode)
+ * @param {number} [deviceId] - Device ID
+ * @returns {Promise<object>} Parsed Chorus data
+ */
+export async function requestPatchChorus(midi, part = 0, deviceId) {
+  const patchBase = getPatchTempAddress(part);
+  const choAddr = getPatchChorusAddress(patchBase);
+  const msg = buildRQ1(choAddr, PATCH_CHORUS.SIZE, deviceId);
+  const response = await midi.sendAndReceive(msg);
+  return parsePatchChorus(response.data);
+}
+
+/**
+ * Request Patch Reverb block for a part.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single patch mode)
+ * @param {number} [deviceId] - Device ID
+ * @returns {Promise<object>} Parsed Reverb data
+ */
+export async function requestPatchReverb(midi, part = 0, deviceId) {
+  const patchBase = getPatchTempAddress(part);
+  const revAddr = getPatchReverbAddress(patchBase);
+  const msg = buildRQ1(revAddr, PATCH_REVERB.SIZE, deviceId);
+  const response = await midi.sendAndReceive(msg);
+  return parsePatchReverb(response.data);
+}
+
+/**
  * Request an entire patch in one coordinated sweep:
- * Patch Common, TMT, and all 4 Tones (including full wave configuration).
+ * Patch Common, MFX, Chorus, Reverb, TMT, and all 4 Tones (including full wave configuration).
  * 
  * @param {import('./midi.js').MidiManager} midi - MIDI manager
  * @param {number} part - Part number (1-16, or 0 for single patch mode)
  * @param {number} [deviceId] - Device ID
  * @param {Function} [onProgress] - Callback (stage, current, total, data)
- * @returns {Promise<{common: object, tmt: object, tones: object[]}>}
+ * @returns {Promise<{common: object, mfx: object, chorus: object, reverb: object, tmt: object, tones: object[]}>}
  */
 export async function requestEntirePatch(midi, part, deviceId, onProgress) {
-  if (onProgress) onProgress('common', 0, 6, null);
+  if (onProgress) onProgress('common', 0, 9, null);
   const common = await requestPatchCommon(midi, part, deviceId);
   await new Promise(r => setTimeout(r, 25));
 
-  if (onProgress) onProgress('tmt', 1, 6, common);
+  let mfx = null;
+  try {
+    if (onProgress) onProgress('mfx', 1, 9, common);
+    mfx = await requestPatchMfx(midi, part, deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
+
+  let chorus = null;
+  try {
+    if (onProgress) onProgress('chorus', 2, 9, mfx);
+    chorus = await requestPatchChorus(midi, part, deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
+
+  let reverb = null;
+  try {
+    if (onProgress) onProgress('reverb', 3, 9, chorus);
+    reverb = await requestPatchReverb(midi, part, deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
+
+  if (onProgress) onProgress('tmt', 4, 9, reverb);
   const tmt = await requestPatchTMT(midi, part, deviceId);
   await new Promise(r => setTimeout(r, 25));
 
   const tones = [];
   for (let t = 1; t <= 4; t++) {
-    if (onProgress) onProgress(`tone${t}`, 1 + t, 6, null);
+    if (onProgress) onProgress(`tone${t}`, 4 + t, 9, null);
     const toneData = await requestPatchTone(midi, part, t, deviceId);
     tones.push(toneData);
     await new Promise(r => setTimeout(r, 25));
   }
 
-  return { common, tmt, tones };
+  return { common, mfx, chorus, reverb, tmt, tones };
 }
 
 
@@ -133,6 +211,85 @@ export function sendPatchTMTParam(midi, part, paramKey, value, deviceId) {
   const patchBase = getPatchTempAddress(part);
   const tmtBase = getPatchTMTAddress(patchBase);
   const address = addOffset(tmtBase, param.offset);
+  const msg = buildDT1(address, [value & 0x7F], deviceId);
+  midi.send(msg);
+}
+
+/**
+ * Send a Patch MFX parameter to the device.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single)
+ * @param {string} paramKey - Key from MFX_PARAMS
+ * @param {number} value - Parameter value
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendPatchMfxParam(midi, part = 0, paramKey, value, deviceId = 0x10) {
+  const param = MFX_PARAMS[paramKey];
+  if (!param) {
+    throw new Error(`Unknown patch MFX parameter: ${paramKey}`);
+  }
+  const patchBase = getPatchTempAddress(part);
+  const mfxBase = getPatchMFXAddress(patchBase);
+  const address = addOffset(mfxBase, param.offset);
+
+  let dataBytes;
+  if (param.size === 4) {
+    const rawVal = value < 0 ? value + 32768 : (value <= 127 ? value : value + 32768);
+    dataBytes = [
+      (rawVal >> 12) & 0x0F,
+      (rawVal >> 8) & 0x0F,
+      (rawVal >> 4) & 0x0F,
+      rawVal & 0x0F,
+    ];
+  } else if (paramKey.endsWith('_SENS')) {
+    dataBytes = [(value + 64) & 0x7F];
+  } else {
+    dataBytes = [value & 0x7F];
+  }
+
+  const msg = buildDT1(address, dataBytes, deviceId);
+  midi.send(msg);
+}
+
+/**
+ * Send a Patch Chorus parameter to the device.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single)
+ * @param {string} paramKey - Key from CHORUS_PARAMS
+ * @param {number} value - Parameter value
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendPatchChorusParam(midi, part = 0, paramKey, value, deviceId = 0x10) {
+  const param = CHORUS_PARAMS[paramKey];
+  if (!param) {
+    throw new Error(`Unknown patch Chorus parameter: ${paramKey}`);
+  }
+  const patchBase = getPatchTempAddress(part);
+  const choBase = getPatchChorusAddress(patchBase);
+  const address = addOffset(choBase, param.offset);
+  const msg = buildDT1(address, [value & 0x7F], deviceId);
+  midi.send(msg);
+}
+
+/**
+ * Send a Patch Reverb parameter to the device.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16, or 0 for single)
+ * @param {string} paramKey - Key from REVERB_PARAMS
+ * @param {number} value - Parameter value
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendPatchReverbParam(midi, part = 0, paramKey, value, deviceId = 0x10) {
+  const param = REVERB_PARAMS[paramKey];
+  if (!param) {
+    throw new Error(`Unknown patch Reverb parameter: ${paramKey}`);
+  }
+  const patchBase = getPatchTempAddress(part);
+  const revBase = getPatchReverbAddress(patchBase);
+  const address = addOffset(revBase, param.offset);
   const msg = buildDT1(address, [value & 0x7F], deviceId);
   midi.send(msg);
 }
@@ -297,6 +454,112 @@ export function sendToneLFOParam(midi, part, tone, lfoNum, param, value, deviceI
  */
 export function sendToneWaveParam(midi, part, tone, waveParam, value, deviceId) {
   sendPatchToneParam(midi, part, tone, waveParam, value, deviceId);
+}
+
+/**
+ * Parse raw patch MFX data bytes (Table 1-4-1-2).
+ * 
+ * @param {number[]} data - Raw SysEx payload
+ * @returns {object}
+ */
+export function parsePatchMfx(data) {
+  if (!data || data.length < 5) {
+    return {
+      mfxType: 0,
+      dryLevel: 127,
+      chorusSend: 0,
+      reverbSend: 0,
+      outputAssign: 0,
+      ctrl1Source: 0,
+      ctrl1Sens: 0,
+      ctrl2Source: 0,
+      ctrl2Sens: 0,
+      ctrl3Source: 0,
+      ctrl3Sens: 0,
+      ctrl4Source: 0,
+      ctrl4Sens: 0,
+      ctrl1Assign: 0,
+      ctrl2Assign: 0,
+      ctrl3Assign: 0,
+      ctrl4Assign: 0,
+      params: Array(12).fill(0),
+    };
+  }
+
+  const params = [];
+  for (let i = 0; i < 12; i++) {
+    const off = 0x11 + (i * 4);
+    if (off + 3 < data.length) {
+      const val = (data[off] << 12) | (data[off + 1] << 8) | (data[off + 2] << 4) | data[off + 3];
+      params.push(val >= 32768 ? val - 32768 : val);
+    } else {
+      params.push(0);
+    }
+  }
+
+  return {
+    mfxType: data[0x00] ?? 0,
+    dryLevel: data[0x01] ?? 127,
+    chorusSend: data[0x02] ?? 0,
+    reverbSend: data[0x03] ?? 0,
+    outputAssign: data[0x04] ?? 0,
+    ctrl1Source: data[0x05] ?? 0,
+    ctrl1Sens: (data[0x06] ?? 64) - 64,
+    ctrl2Source: data[0x07] ?? 0,
+    ctrl2Sens: (data[0x08] ?? 64) - 64,
+    ctrl3Source: data[0x09] ?? 0,
+    ctrl3Sens: (data[0x0A] ?? 64) - 64,
+    ctrl4Source: data[0x0B] ?? 0,
+    ctrl4Sens: (data[0x0C] ?? 64) - 64,
+    ctrl1Assign: data[0x0D] ?? 0,
+    ctrl2Assign: data[0x0E] ?? 0,
+    ctrl3Assign: data[0x0F] ?? 0,
+    ctrl4Assign: data[0x10] ?? 0,
+    params,
+  };
+}
+
+/**
+ * Parse raw patch chorus data bytes.
+ * 
+ * @param {number[]} data - Raw SysEx payload
+ * @returns {object}
+ */
+export function parsePatchChorus(data) {
+  if (!data || data.length < 4) {
+    return { chorusType: 0, chorusLevel: 0, outputAssign: 0, outputSelect: 0, preDelay: 0, rate: 0, depth: 0, feedback: 0, revSend: 0 };
+  }
+  return {
+    chorusType: data[0x00],
+    chorusLevel: data[0x01],
+    outputAssign: data[0x02],
+    outputSelect: data[0x03],
+    preDelay: data[0x04] ?? 0,
+    rate: data[0x05] ?? 0,
+    depth: data[0x06] ?? 0,
+    feedback: data[0x07] ?? 0,
+    revSend: data[0x08] ?? 0,
+  };
+}
+
+/**
+ * Parse raw patch reverb data bytes.
+ * 
+ * @param {number[]} data - Raw SysEx payload
+ * @returns {object}
+ */
+export function parsePatchReverb(data) {
+  if (!data || data.length < 3) {
+    return { reverbType: 0, reverbLevel: 0, outputAssign: 0, time: 0, hfDamp: 0, preDelay: 0 };
+  }
+  return {
+    reverbType: data[0x00],
+    reverbLevel: data[0x01],
+    outputAssign: data[0x02],
+    time: data[0x04] ?? 0,
+    hfDamp: data[0x05] ?? 0,
+    preDelay: data[0x07] ?? 0,
+  };
 }
 
 /**

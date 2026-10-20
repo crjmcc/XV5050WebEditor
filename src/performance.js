@@ -10,8 +10,13 @@ import {
   PERF_TEMP,
   PERF_PART,
   SETUP,
+  SYSTEM,
+  MFX_PARAMS,
+  CHORUS_PARAMS,
+  REVERB_PARAMS,
   getPartAddress,
   getPatchTempAddress,
+  getPerfMfxAddress,
   addOffset,
 } from './addresses.js';
 import { decodeName, encodeName } from './parameters.js';
@@ -65,6 +70,77 @@ export async function requestPerformanceReverb(midi, deviceId) {
   );
   const response = await midi.sendAndReceive(msg);
   return parsePerformanceReverb(response.data);
+}
+
+/**
+ * Request Performance MFX block from the device for a slot ('A', 'B', 'C').
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {'A'|'B'|'C'} [slot='A'] - MFX Processor slot
+ * @param {number} [deviceId] - Device ID
+ * @returns {Promise<object>} Parsed MFX data
+ */
+export async function requestPerformanceMfx(midi, slot = 'A', deviceId) {
+  const address = getPerfMfxAddress(slot);
+  const msg = buildRQ1(address, PERF_TEMP.MFXA.SIZE, deviceId);
+  const response = await midi.sendAndReceive(msg);
+  return parsePerformanceMfx(response.data);
+}
+
+/**
+ * Send a parameter to a Performance MFX processor slot ('A', 'B', 'C').
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {'A'|'B'|'C'} slot - MFX Processor slot
+ * @param {string} paramKey - Key from MFX_PARAMS
+ * @param {number} value - Parameter value
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendPerformanceMfxParam(midi, slot, paramKey, value, deviceId) {
+  const mfxBase = getPerfMfxAddress(slot);
+  const param = MFX_PARAMS[paramKey];
+  if (!param) {
+    throw new Error(`Unknown performance MFX parameter: ${paramKey}`);
+  }
+  const address = addOffset(mfxBase, param.offset);
+
+  let dataBytes;
+  if (param.size === 4) {
+    // 4-nibble word: split into [aaaa, bbbb, cccc, dddd]
+    // Raw value in Roland memory is offset by 32768 (0x8000) for signed params
+    const rawVal = value < 0 ? value + 32768 : (value <= 127 ? value : value + 32768);
+    dataBytes = [
+      (rawVal >> 12) & 0x0F,
+      (rawVal >> 8) & 0x0F,
+      (rawVal >> 4) & 0x0F,
+      rawVal & 0x0F,
+    ];
+  } else if (paramKey.endsWith('_SENS')) {
+    dataBytes = [(value + 64) & 0x7F];
+  } else {
+    dataBytes = [value & 0x7F];
+  }
+
+  const msg = buildDT1(address, dataBytes, deviceId);
+  midi.send(msg);
+}
+
+/**
+ * Send System 2-Band Output EQ parameter to hardware (02 00 02 00).
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {string} paramKey - Key from SYSTEM.EQ.params
+ * @param {number} value - Parameter value
+ * @param {number} [deviceId] - Device ID
+ */
+export function sendSystemEqParam(midi, paramKey, value, deviceId) {
+  const param = SYSTEM.EQ.params[paramKey];
+  if (!param) {
+    throw new Error(`Unknown System EQ parameter: ${paramKey}`);
+  }
+  const address = addOffset(SYSTEM.EQ.BASE, param.offset);
+  const msg = buildDT1(address, [value & 0x7F], deviceId);
+  midi.send(msg);
 }
 
 /**
@@ -129,35 +205,50 @@ export async function requestAllParts(midi, deviceId, onProgress) {
 
 /**
  * Request an entire performance in one coordinated operation:
- * Performance Common, Chorus, Reverb, and all 16 Parts + Patch Names.
+ * Performance Common, MFX-A, Chorus, Reverb, and all 16 Parts + Patch Names.
  * 
  * @param {import('./midi.js').MidiManager} midi - MIDI manager
  * @param {number} [deviceId] - Device ID
  * @param {Function} [onProgress] - Callback (stage, current, total, data)
- * @returns {Promise<{common: object, chorus: object, reverb: object, parts: object[]}>}
+ * @returns {Promise<{common: object, mfxA: object, chorus: object, reverb: object, parts: object[]}>}
  */
 export async function requestEntirePerformance(midi, deviceId, onProgress) {
-  if (onProgress) onProgress('common', 0, 18, null);
+  if (onProgress) onProgress('common', 0, 19, null);
   const common = await requestPerformanceCommon(midi, deviceId);
   await new Promise(r => setTimeout(r, 25));
 
-  if (onProgress) onProgress('chorus', 1, 18, common);
+  if (onProgress) onProgress('mfxA', 1, 21, common);
+  let mfxA = null, mfxB = null, mfxC = null;
+  try {
+    mfxA = await requestPerformanceMfx(midi, 'A', deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
+  try {
+    mfxB = await requestPerformanceMfx(midi, 'B', deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
+  try {
+    mfxC = await requestPerformanceMfx(midi, 'C', deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
+
+  if (onProgress) onProgress('chorus', 4, 21, mfxC || mfxB || mfxA);
   const chorus = await requestPerformanceChorus(midi, deviceId);
   await new Promise(r => setTimeout(r, 25));
 
-  if (onProgress) onProgress('reverb', 2, 18, chorus);
+  if (onProgress) onProgress('reverb', 5, 21, chorus);
   const reverb = await requestPerformanceReverb(midi, deviceId);
   await new Promise(r => setTimeout(r, 25));
 
   const parts = [];
   for (let i = 1; i <= 16; i++) {
-    if (onProgress) onProgress('part', 2 + i, 18, null);
+    if (onProgress) onProgress('part', 5 + i, 21, null);
     const partData = await requestPerformancePart(midi, i, deviceId);
     parts.push(partData);
     await new Promise(r => setTimeout(r, 25));
   }
 
-  return { common, chorus, reverb, parts };
+  return { common, mfxA, mfxB, mfxC, chorus, reverb, parts };
 }
 
 /**
@@ -273,6 +364,69 @@ export function parsePerformanceCommon(data) {
 }
 
 /**
+ * Parse raw performance MFX data bytes (Table 1-3-2).
+ * 
+ * @param {number[]} data - Raw SysEx payload
+ * @returns {object}
+ */
+export function parsePerformanceMfx(data) {
+  if (!data || data.length < 5) {
+    return {
+      mfxType: 0,
+      dryLevel: 127,
+      chorusSend: 0,
+      reverbSend: 0,
+      outputAssign: 0,
+      ctrl1Source: 0,
+      ctrl1Sens: 0,
+      ctrl2Source: 0,
+      ctrl2Sens: 0,
+      ctrl3Source: 0,
+      ctrl3Sens: 0,
+      ctrl4Source: 0,
+      ctrl4Sens: 0,
+      ctrl1Assign: 0,
+      ctrl2Assign: 0,
+      ctrl3Assign: 0,
+      ctrl4Assign: 0,
+      params: Array(12).fill(0),
+    };
+  }
+
+  const params = [];
+  for (let i = 0; i < 12; i++) {
+    const off = 0x11 + (i * 4);
+    if (off + 3 < data.length) {
+      const val = (data[off] << 12) | (data[off + 1] << 8) | (data[off + 2] << 4) | data[off + 3];
+      params.push(val >= 32768 ? val - 32768 : val);
+    } else {
+      params.push(0);
+    }
+  }
+
+  return {
+    mfxType: data[0x00] ?? 0,
+    dryLevel: data[0x01] ?? 127,
+    chorusSend: data[0x02] ?? 0,
+    reverbSend: data[0x03] ?? 0,
+    outputAssign: data[0x04] ?? 0,
+    ctrl1Source: data[0x05] ?? 0,
+    ctrl1Sens: (data[0x06] ?? 64) - 64,
+    ctrl2Source: data[0x07] ?? 0,
+    ctrl2Sens: (data[0x08] ?? 64) - 64,
+    ctrl3Source: data[0x09] ?? 0,
+    ctrl3Sens: (data[0x0A] ?? 64) - 64,
+    ctrl4Source: data[0x0B] ?? 0,
+    ctrl4Sens: (data[0x0C] ?? 64) - 64,
+    ctrl1Assign: data[0x0D] ?? 0,
+    ctrl2Assign: data[0x0E] ?? 0,
+    ctrl3Assign: data[0x0F] ?? 0,
+    ctrl4Assign: data[0x10] ?? 0,
+    params,
+  };
+}
+
+/**
  * Parse raw performance chorus data bytes.
  * 
  * @param {number[]} data - Raw SysEx payload
@@ -287,6 +441,11 @@ export function parsePerformanceChorus(data) {
     chorusLevel: data[0x01],
     outputAssign: data[0x02],
     outputSelect: data[0x03],
+    preDelay: data[0x04] ?? 0,
+    rate: data[0x05] ?? 0,
+    depth: data[0x06] ?? 0,
+    feedback: data[0x07] ?? 0,
+    revSend: data[0x08] ?? 0,
   };
 }
 
@@ -304,6 +463,9 @@ export function parsePerformanceReverb(data) {
     reverbType: data[0x00],
     reverbLevel: data[0x01],
     outputAssign: data[0x02],
+    time: data[0x04] ?? 0,
+    hfDamp: data[0x05] ?? 0,
+    preDelay: data[0x07] ?? 0,
   };
 }
 

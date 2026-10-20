@@ -82,6 +82,62 @@ export const SYSTEM = {
 };
 
 // =============================================================================
+// Effects Parameters (MFX, Chorus, Reverb)
+// =============================================================================
+export const MFX_PARAMS = {
+  MFX_TYPE:            { offset: 0x00, size: 1 }, // 0-127 (0-90)
+  DRY_LEVEL:           { offset: 0x01, size: 1 }, // 0-127
+  CHORUS_SEND:         { offset: 0x02, size: 1 }, // 0-127
+  REVERB_SEND:         { offset: 0x03, size: 1 }, // 0-127
+  OUTPUT_ASSIGN:       { offset: 0x04, size: 1 }, // 0-3 (A, B, C, D)
+  MFX_CTRL_1_SOURCE:   { offset: 0x05, size: 1 }, // 0-101
+  MFX_CTRL_1_SENS:     { offset: 0x06, size: 1 }, // 1-127 (-63 to +63)
+  MFX_CTRL_2_SOURCE:   { offset: 0x07, size: 1 }, // 0-101
+  MFX_CTRL_2_SENS:     { offset: 0x08, size: 1 }, // 1-127 (-63 to +63)
+  MFX_CTRL_3_SOURCE:   { offset: 0x09, size: 1 }, // 0-101
+  MFX_CTRL_3_SENS:     { offset: 0x0A, size: 1 }, // 1-127 (-63 to +63)
+  MFX_CTRL_4_SOURCE:   { offset: 0x0B, size: 1 }, // 0-101
+  MFX_CTRL_4_SENS:     { offset: 0x0C, size: 1 }, // 1-127 (-63 to +63)
+  MFX_CTRL_1_ASSIGN:   { offset: 0x0D, size: 1 }, // 0-16 (OFF, 1-16)
+  MFX_CTRL_2_ASSIGN:   { offset: 0x0E, size: 1 }, // 0-16 (OFF, 1-16)
+  MFX_CTRL_3_ASSIGN:   { offset: 0x0F, size: 1 }, // 0-16 (OFF, 1-16)
+  MFX_CTRL_4_ASSIGN:   { offset: 0x10, size: 1 }, // 0-16 (OFF, 1-16)
+  PARAM_1:             { offset: 0x11, size: 4 }, // 4 nibbles (-20000 to +20000, 32768=0)
+  PARAM_2:             { offset: 0x15, size: 4 },
+  PARAM_3:             { offset: 0x19, size: 4 },
+  PARAM_4:             { offset: 0x1D, size: 4 },
+  PARAM_5:             { offset: 0x21, size: 4 },
+  PARAM_6:             { offset: 0x25, size: 4 },
+  PARAM_7:             { offset: 0x29, size: 4 },
+  PARAM_8:             { offset: 0x2D, size: 4 },
+  PARAM_9:             { offset: 0x31, size: 4 },
+  PARAM_10:            { offset: 0x35, size: 4 },
+  PARAM_11:            { offset: 0x39, size: 4 },
+  PARAM_12:            { offset: 0x3D, size: 4 },
+};
+
+export const CHORUS_PARAMS = {
+  CHORUS_TYPE:        { offset: 0x00, size: 1 }, // 0-3 (OFF, CHORUS, DELAY, GM2 CHORUS)
+  CHORUS_LEVEL:       { offset: 0x01, size: 1 }, // 0-127
+  OUTPUT_ASSIGN:      { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
+  OUTPUT_SELECT:      { offset: 0x03, size: 1 }, // 0-2 (MAIN, REV, MAIN+REV)
+  PRE_DELAY:          { offset: 0x04, size: 1 }, // 0-127
+  RATE:               { offset: 0x05, size: 1 }, // 0-127
+  DEPTH:              { offset: 0x06, size: 1 }, // 0-127
+  FEEDBACK:           { offset: 0x07, size: 1 }, // 0-127
+  REV_SEND:           { offset: 0x08, size: 1 }, // 0-127
+};
+
+export const REVERB_PARAMS = {
+  REVERB_TYPE:        { offset: 0x00, size: 1 }, // 0-5 (OFF, REVERB, SRV ROOM, SRV HALL, SRV PLATE, GM2 REVERB)
+  REVERB_LEVEL:       { offset: 0x01, size: 1 }, // 0-127
+  OUTPUT_ASSIGN:      { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
+  TIME:               { offset: 0x04, size: 1 }, // 0-127
+  HF_DAMP:            { offset: 0x05, size: 1 }, // 0-17
+  PRE_DELAY:          { offset: 0x07, size: 1 }, // 0-127
+};
+
+// =============================================================================
 // 1-3 Performance Temporary Area (Base: 10 00 00 00)
 // =============================================================================
 export const PERF_TEMP = {
@@ -117,43 +173,49 @@ export const PERF_TEMP = {
   MFXA: {
     BASE: [0x10, 0x00, 0x02, 0x00],
     SIZE: [0x00, 0x00, 0x01, 0x11], // 273 bytes
+    params: MFX_PARAMS,
   },
 
   // Performance Common Chorus (Offset 00 04 00)
   CHORUS: {
     BASE: [0x10, 0x00, 0x04, 0x00],
     SIZE: [0x00, 0x00, 0x00, 0x34], // 52 bytes
-    params: {
-      CHORUS_TYPE:        { offset: 0x00, size: 1 }, // 0-3 (OFF, CHORUS, DELAY, GM2 CHORUS)
-      CHORUS_LEVEL:       { offset: 0x01, size: 1 }, // 0-127
-      OUTPUT_ASSIGN:      { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
-      OUTPUT_SELECT:      { offset: 0x03, size: 1 }, // 0-2 (MAIN, REV, MAIN+REV)
-    },
+    params: CHORUS_PARAMS,
   },
 
   // Performance Common Reverb (Offset 00 06 00)
   REVERB: {
     BASE: [0x10, 0x00, 0x06, 0x00],
     SIZE: [0x00, 0x00, 0x00, 0x53], // 83 bytes
-    params: {
-      REVERB_TYPE:        { offset: 0x00, size: 1 }, // 0-5 (OFF, REVERB, SRV ROOM, SRV HALL, SRV PLATE, GM2 REVERB)
-      REVERB_LEVEL:       { offset: 0x01, size: 1 }, // 0-127
-      OUTPUT_ASSIGN:      { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
-    },
+    params: REVERB_PARAMS,
   },
 
   // Performance Common MFX-B (Offset 00 08 00)
   MFXB: {
     BASE: [0x10, 0x00, 0x08, 0x00],
     SIZE: [0x00, 0x00, 0x01, 0x11], // 273 bytes
+    params: MFX_PARAMS,
   },
 
   // Performance Common MFX-C (Offset 00 0A 00)
   MFXC: {
     BASE: [0x10, 0x00, 0x0A, 0x00],
     SIZE: [0x00, 0x00, 0x01, 0x11], // 273 bytes
+    params: MFX_PARAMS,
   },
 };
+
+/**
+ * Get base address for Performance MFX processor slot ('A'/'a'/0, 'B'/'b'/1, 'C'/'c'/2).
+ * @param {'A'|'B'|'C'|number} slot
+ * @returns {number[]} 4-byte address
+ */
+export function getPerfMfxAddress(slot = 'A') {
+  const s = String(slot).toUpperCase();
+  if (s === 'B' || slot === 1) return PERF_TEMP.MFXB.BASE;
+  if (s === 'C' || slot === 2) return PERF_TEMP.MFXC.BASE;
+  return PERF_TEMP.MFXA.BASE;
+}
 
 /**
  * Get the base address for Performance MIDI parameters (Channel 1-16).
@@ -362,44 +424,21 @@ export const PATCH_COMMON = {
 export const PATCH_MFX = {
   OFFSET: [0x00, 0x00, 0x02, 0x00],
   SIZE:   [0x00, 0x00, 0x01, 0x11], // 273 bytes
-  params: {
-    MFX_TYPE:             { offset: 0x00, size: 1 }, // 0-127 (0-90 MFX types)
-    DRY_LEVEL:            { offset: 0x01, size: 1 }, // 0-127
-    CHORUS_SEND:          { offset: 0x02, size: 1 }, // 0-127
-    REVERB_SEND:          { offset: 0x03, size: 1 }, // 0-127
-    OUTPUT_ASSIGN:        { offset: 0x04, size: 1 }, // 0-3 (A, B, C, D)
-    MFX_CTRL_1_SOURCE:    { offset: 0x05, size: 1 }, // 0-101
-    MFX_CTRL_1_SENS:      { offset: 0x06, size: 1 }, // 1-127 (-63 to +63)
-    MFX_CTRL_2_SOURCE:    { offset: 0x07, size: 1 }, // 0-101
-    MFX_CTRL_2_SENS:      { offset: 0x08, size: 1 }, // 1-127 (-63 to +63)
-    MFX_CTRL_3_SOURCE:    { offset: 0x09, size: 1 }, // 0-101
-    MFX_CTRL_3_SENS:      { offset: 0x0A, size: 1 }, // 1-127 (-63 to +63)
-    MFX_CTRL_4_SOURCE:    { offset: 0x0B, size: 1 }, // 0-101
-    MFX_CTRL_4_SENS:      { offset: 0x0C, size: 1 }, // 1-127 (-63 to +63)
-  },
+  params: MFX_PARAMS,
 };
 
 // 1-4-1-3 Patch Common Chorus (Offset 00 04 00)
 export const PATCH_CHORUS = {
   OFFSET: [0x00, 0x00, 0x04, 0x00],
   SIZE:   [0x00, 0x00, 0x00, 0x34], // 52 bytes
-  params: {
-    CHORUS_TYPE:          { offset: 0x00, size: 1 }, // 0-3 (OFF, CHORUS, DELAY, GM2 CHORUS)
-    CHORUS_LEVEL:         { offset: 0x01, size: 1 }, // 0-127
-    OUTPUT_ASSIGN:        { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
-    OUTPUT_SELECT:        { offset: 0x03, size: 1 }, // 0-2 (MAIN, REV, MAIN+REV)
-  },
+  params: CHORUS_PARAMS,
 };
 
 // 1-4-1-4 Patch Common Reverb (Offset 00 06 00)
 export const PATCH_REVERB = {
   OFFSET: [0x00, 0x00, 0x06, 0x00],
   SIZE:   [0x00, 0x00, 0x00, 0x53], // 83 bytes
-  params: {
-    REVERB_TYPE:          { offset: 0x00, size: 1 }, // 0-5 (OFF, REVERB, SRV ROOM, SRV HALL, SRV PLATE, GM2 REVERB)
-    REVERB_LEVEL:         { offset: 0x01, size: 1 }, // 0-127
-    OUTPUT_ASSIGN:        { offset: 0x02, size: 1 }, // 0-3 (A, B, C, D)
-  },
+  params: REVERB_PARAMS,
 };
 
 /**

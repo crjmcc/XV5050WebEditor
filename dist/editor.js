@@ -2100,6 +2100,89 @@
       }
     }
   };
+  var MFX_PARAMS = {
+    MFX_TYPE: { offset: 0, size: 1 },
+    // 0-127 (0-90)
+    DRY_LEVEL: { offset: 1, size: 1 },
+    // 0-127
+    CHORUS_SEND: { offset: 2, size: 1 },
+    // 0-127
+    REVERB_SEND: { offset: 3, size: 1 },
+    // 0-127
+    OUTPUT_ASSIGN: { offset: 4, size: 1 },
+    // 0-3 (A, B, C, D)
+    MFX_CTRL_1_SOURCE: { offset: 5, size: 1 },
+    // 0-101
+    MFX_CTRL_1_SENS: { offset: 6, size: 1 },
+    // 1-127 (-63 to +63)
+    MFX_CTRL_2_SOURCE: { offset: 7, size: 1 },
+    // 0-101
+    MFX_CTRL_2_SENS: { offset: 8, size: 1 },
+    // 1-127 (-63 to +63)
+    MFX_CTRL_3_SOURCE: { offset: 9, size: 1 },
+    // 0-101
+    MFX_CTRL_3_SENS: { offset: 10, size: 1 },
+    // 1-127 (-63 to +63)
+    MFX_CTRL_4_SOURCE: { offset: 11, size: 1 },
+    // 0-101
+    MFX_CTRL_4_SENS: { offset: 12, size: 1 },
+    // 1-127 (-63 to +63)
+    MFX_CTRL_1_ASSIGN: { offset: 13, size: 1 },
+    // 0-16 (OFF, 1-16)
+    MFX_CTRL_2_ASSIGN: { offset: 14, size: 1 },
+    // 0-16 (OFF, 1-16)
+    MFX_CTRL_3_ASSIGN: { offset: 15, size: 1 },
+    // 0-16 (OFF, 1-16)
+    MFX_CTRL_4_ASSIGN: { offset: 16, size: 1 },
+    // 0-16 (OFF, 1-16)
+    PARAM_1: { offset: 17, size: 4 },
+    // 4 nibbles (-20000 to +20000, 32768=0)
+    PARAM_2: { offset: 21, size: 4 },
+    PARAM_3: { offset: 25, size: 4 },
+    PARAM_4: { offset: 29, size: 4 },
+    PARAM_5: { offset: 33, size: 4 },
+    PARAM_6: { offset: 37, size: 4 },
+    PARAM_7: { offset: 41, size: 4 },
+    PARAM_8: { offset: 45, size: 4 },
+    PARAM_9: { offset: 49, size: 4 },
+    PARAM_10: { offset: 53, size: 4 },
+    PARAM_11: { offset: 57, size: 4 },
+    PARAM_12: { offset: 61, size: 4 }
+  };
+  var CHORUS_PARAMS = {
+    CHORUS_TYPE: { offset: 0, size: 1 },
+    // 0-3 (OFF, CHORUS, DELAY, GM2 CHORUS)
+    CHORUS_LEVEL: { offset: 1, size: 1 },
+    // 0-127
+    OUTPUT_ASSIGN: { offset: 2, size: 1 },
+    // 0-3 (A, B, C, D)
+    OUTPUT_SELECT: { offset: 3, size: 1 },
+    // 0-2 (MAIN, REV, MAIN+REV)
+    PRE_DELAY: { offset: 4, size: 1 },
+    // 0-127
+    RATE: { offset: 5, size: 1 },
+    // 0-127
+    DEPTH: { offset: 6, size: 1 },
+    // 0-127
+    FEEDBACK: { offset: 7, size: 1 },
+    // 0-127
+    REV_SEND: { offset: 8, size: 1 }
+    // 0-127
+  };
+  var REVERB_PARAMS = {
+    REVERB_TYPE: { offset: 0, size: 1 },
+    // 0-5 (OFF, REVERB, SRV ROOM, SRV HALL, SRV PLATE, GM2 REVERB)
+    REVERB_LEVEL: { offset: 1, size: 1 },
+    // 0-127
+    OUTPUT_ASSIGN: { offset: 2, size: 1 },
+    // 0-3 (A, B, C, D)
+    TIME: { offset: 4, size: 1 },
+    // 0-127
+    HF_DAMP: { offset: 5, size: 1 },
+    // 0-17
+    PRE_DELAY: { offset: 7, size: 1 }
+    // 0-127
+  };
   var PERF_TEMP = {
     COMMON: {
       BASE: [16, 0, 0, 0],
@@ -2138,52 +2221,45 @@
     // Performance Common MFX-A (Offset 00 02 00)
     MFXA: {
       BASE: [16, 0, 2, 0],
-      SIZE: [0, 0, 1, 17]
+      SIZE: [0, 0, 1, 17],
       // 273 bytes
+      params: MFX_PARAMS
     },
     // Performance Common Chorus (Offset 00 04 00)
     CHORUS: {
       BASE: [16, 0, 4, 0],
       SIZE: [0, 0, 0, 52],
       // 52 bytes
-      params: {
-        CHORUS_TYPE: { offset: 0, size: 1 },
-        // 0-3 (OFF, CHORUS, DELAY, GM2 CHORUS)
-        CHORUS_LEVEL: { offset: 1, size: 1 },
-        // 0-127
-        OUTPUT_ASSIGN: { offset: 2, size: 1 },
-        // 0-3 (A, B, C, D)
-        OUTPUT_SELECT: { offset: 3, size: 1 }
-        // 0-2 (MAIN, REV, MAIN+REV)
-      }
+      params: CHORUS_PARAMS
     },
     // Performance Common Reverb (Offset 00 06 00)
     REVERB: {
       BASE: [16, 0, 6, 0],
       SIZE: [0, 0, 0, 83],
       // 83 bytes
-      params: {
-        REVERB_TYPE: { offset: 0, size: 1 },
-        // 0-5 (OFF, REVERB, SRV ROOM, SRV HALL, SRV PLATE, GM2 REVERB)
-        REVERB_LEVEL: { offset: 1, size: 1 },
-        // 0-127
-        OUTPUT_ASSIGN: { offset: 2, size: 1 }
-        // 0-3 (A, B, C, D)
-      }
+      params: REVERB_PARAMS
     },
     // Performance Common MFX-B (Offset 00 08 00)
     MFXB: {
       BASE: [16, 0, 8, 0],
-      SIZE: [0, 0, 1, 17]
+      SIZE: [0, 0, 1, 17],
       // 273 bytes
+      params: MFX_PARAMS
     },
     // Performance Common MFX-C (Offset 00 0A 00)
     MFXC: {
       BASE: [16, 0, 10, 0],
-      SIZE: [0, 0, 1, 17]
+      SIZE: [0, 0, 1, 17],
       // 273 bytes
+      params: MFX_PARAMS
     }
   };
+  function getPerfMfxAddress(slot = "A") {
+    const s = String(slot).toUpperCase();
+    if (s === "B" || slot === 1) return PERF_TEMP.MFXB.BASE;
+    if (s === "C" || slot === 2) return PERF_TEMP.MFXC.BASE;
+    return PERF_TEMP.MFXA.BASE;
+  }
   function getPartAddress(part) {
     if (part < 1 || part > 16) {
       throw new Error(`Part number must be 1-16, got ${part}`);
@@ -2403,6 +2479,33 @@
       MATRIX_CTRL_4_SENS_4: { offset: 78, size: 1 }
     }
   };
+  var PATCH_MFX = {
+    OFFSET: [0, 0, 2, 0],
+    SIZE: [0, 0, 1, 17],
+    // 273 bytes
+    params: MFX_PARAMS
+  };
+  var PATCH_CHORUS = {
+    OFFSET: [0, 0, 4, 0],
+    SIZE: [0, 0, 0, 52],
+    // 52 bytes
+    params: CHORUS_PARAMS
+  };
+  var PATCH_REVERB = {
+    OFFSET: [0, 0, 6, 0],
+    SIZE: [0, 0, 0, 83],
+    // 83 bytes
+    params: REVERB_PARAMS
+  };
+  function getPatchMFXAddress(patchBase) {
+    return [patchBase[0], patchBase[1], patchBase[2] + 2, patchBase[3]];
+  }
+  function getPatchChorusAddress(patchBase) {
+    return [patchBase[0], patchBase[1], patchBase[2] + 4, patchBase[3]];
+  }
+  function getPatchReverbAddress(patchBase) {
+    return [patchBase[0], patchBase[1], patchBase[2] + 6, patchBase[3]];
+  }
   var PATCH_TMT = {
     OFFSET: [0, 0, 16, 0],
     SIZE: [0, 0, 0, 41],
@@ -2728,6 +2831,45 @@
     const response = await midi2.sendAndReceive(msg);
     return parsePerformanceReverb(response.data);
   }
+  async function requestPerformanceMfx(midi2, slot = "A", deviceId) {
+    const address = getPerfMfxAddress(slot);
+    const msg = buildRQ1(address, PERF_TEMP.MFXA.SIZE, deviceId);
+    const response = await midi2.sendAndReceive(msg);
+    return parsePerformanceMfx(response.data);
+  }
+  function sendPerformanceMfxParam(midi2, slot, paramKey, value, deviceId) {
+    const mfxBase = getPerfMfxAddress(slot);
+    const param = MFX_PARAMS[paramKey];
+    if (!param) {
+      throw new Error(`Unknown performance MFX parameter: ${paramKey}`);
+    }
+    const address = addOffset(mfxBase, param.offset);
+    let dataBytes;
+    if (param.size === 4) {
+      const rawVal = value < 0 ? value + 32768 : value <= 127 ? value : value + 32768;
+      dataBytes = [
+        rawVal >> 12 & 15,
+        rawVal >> 8 & 15,
+        rawVal >> 4 & 15,
+        rawVal & 15
+      ];
+    } else if (paramKey.endsWith("_SENS")) {
+      dataBytes = [value + 64 & 127];
+    } else {
+      dataBytes = [value & 127];
+    }
+    const msg = buildDT1(address, dataBytes, deviceId);
+    midi2.send(msg);
+  }
+  function sendSystemEqParam(midi2, paramKey, value, deviceId) {
+    const param = SYSTEM.EQ.params[paramKey];
+    if (!param) {
+      throw new Error(`Unknown System EQ parameter: ${paramKey}`);
+    }
+    const address = addOffset(SYSTEM.EQ.BASE, param.offset);
+    const msg = buildDT1(address, [value & 127], deviceId);
+    midi2.send(msg);
+  }
   async function requestPartPatchName(midi2, part, deviceId) {
     const base = getPatchTempAddress(part);
     const msg = buildRQ1(base, [0, 0, 0, 12], deviceId);
@@ -2758,23 +2900,40 @@
     return parts;
   }
   async function requestEntirePerformance(midi2, deviceId, onProgress) {
-    if (onProgress) onProgress("common", 0, 18, null);
+    if (onProgress) onProgress("common", 0, 19, null);
     const common = await requestPerformanceCommon(midi2, deviceId);
     await new Promise((r) => setTimeout(r, 25));
-    if (onProgress) onProgress("chorus", 1, 18, common);
+    if (onProgress) onProgress("mfxA", 1, 21, common);
+    let mfxA = null, mfxB = null, mfxC = null;
+    try {
+      mfxA = await requestPerformanceMfx(midi2, "A", deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    try {
+      mfxB = await requestPerformanceMfx(midi2, "B", deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    try {
+      mfxC = await requestPerformanceMfx(midi2, "C", deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    if (onProgress) onProgress("chorus", 4, 21, mfxC || mfxB || mfxA);
     const chorus = await requestPerformanceChorus(midi2, deviceId);
     await new Promise((r) => setTimeout(r, 25));
-    if (onProgress) onProgress("reverb", 2, 18, chorus);
+    if (onProgress) onProgress("reverb", 5, 21, chorus);
     const reverb = await requestPerformanceReverb(midi2, deviceId);
     await new Promise((r) => setTimeout(r, 25));
     const parts = [];
     for (let i = 1; i <= 16; i++) {
-      if (onProgress) onProgress("part", 2 + i, 18, null);
+      if (onProgress) onProgress("part", 5 + i, 21, null);
       const partData = await requestPerformancePart(midi2, i, deviceId);
       parts.push(partData);
       await new Promise((r) => setTimeout(r, 25));
     }
-    return { common, chorus, reverb, parts };
+    return { common, mfxA, mfxB, mfxC, chorus, reverb, parts };
   }
   function sendPerformanceCommonParam(midi2, paramKey, value, deviceId) {
     const param = PERF_TEMP.COMMON.params[paramKey];
@@ -2836,6 +2995,60 @@
       reverbSource: data[52] ?? 0
     };
   }
+  function parsePerformanceMfx(data) {
+    if (!data || data.length < 5) {
+      return {
+        mfxType: 0,
+        dryLevel: 127,
+        chorusSend: 0,
+        reverbSend: 0,
+        outputAssign: 0,
+        ctrl1Source: 0,
+        ctrl1Sens: 0,
+        ctrl2Source: 0,
+        ctrl2Sens: 0,
+        ctrl3Source: 0,
+        ctrl3Sens: 0,
+        ctrl4Source: 0,
+        ctrl4Sens: 0,
+        ctrl1Assign: 0,
+        ctrl2Assign: 0,
+        ctrl3Assign: 0,
+        ctrl4Assign: 0,
+        params: Array(12).fill(0)
+      };
+    }
+    const params = [];
+    for (let i = 0; i < 12; i++) {
+      const off = 17 + i * 4;
+      if (off + 3 < data.length) {
+        const val = data[off] << 12 | data[off + 1] << 8 | data[off + 2] << 4 | data[off + 3];
+        params.push(val >= 32768 ? val - 32768 : val);
+      } else {
+        params.push(0);
+      }
+    }
+    return {
+      mfxType: data[0] ?? 0,
+      dryLevel: data[1] ?? 127,
+      chorusSend: data[2] ?? 0,
+      reverbSend: data[3] ?? 0,
+      outputAssign: data[4] ?? 0,
+      ctrl1Source: data[5] ?? 0,
+      ctrl1Sens: (data[6] ?? 64) - 64,
+      ctrl2Source: data[7] ?? 0,
+      ctrl2Sens: (data[8] ?? 64) - 64,
+      ctrl3Source: data[9] ?? 0,
+      ctrl3Sens: (data[10] ?? 64) - 64,
+      ctrl4Source: data[11] ?? 0,
+      ctrl4Sens: (data[12] ?? 64) - 64,
+      ctrl1Assign: data[13] ?? 0,
+      ctrl2Assign: data[14] ?? 0,
+      ctrl3Assign: data[15] ?? 0,
+      ctrl4Assign: data[16] ?? 0,
+      params
+    };
+  }
   function parsePerformanceChorus(data) {
     if (!data || data.length < 4) {
       throw new Error(`Performance chorus data too short: ${data?.length} bytes`);
@@ -2844,7 +3057,12 @@
       chorusType: data[0],
       chorusLevel: data[1],
       outputAssign: data[2],
-      outputSelect: data[3]
+      outputSelect: data[3],
+      preDelay: data[4] ?? 0,
+      rate: data[5] ?? 0,
+      depth: data[6] ?? 0,
+      feedback: data[7] ?? 0,
+      revSend: data[8] ?? 0
     };
   }
   function parsePerformanceReverb(data) {
@@ -2854,7 +3072,10 @@
     return {
       reverbType: data[0],
       reverbLevel: data[1],
-      outputAssign: data[2]
+      outputAssign: data[2],
+      time: data[4] ?? 0,
+      hfDamp: data[5] ?? 0,
+      preDelay: data[7] ?? 0
     };
   }
   function parsePerformancePart(data) {
@@ -2974,21 +3195,63 @@
     const response = await midi2.sendAndReceive(msg);
     return parsePatchTone(response.data);
   }
+  async function requestPatchMfx(midi2, part = 0, deviceId) {
+    const patchBase = getPatchTempAddress(part);
+    const mfxAddr = getPatchMFXAddress(patchBase);
+    const msg = buildRQ1(mfxAddr, PATCH_MFX.SIZE, deviceId);
+    const response = await midi2.sendAndReceive(msg);
+    return parsePatchMfx(response.data);
+  }
+  async function requestPatchChorus(midi2, part = 0, deviceId) {
+    const patchBase = getPatchTempAddress(part);
+    const choAddr = getPatchChorusAddress(patchBase);
+    const msg = buildRQ1(choAddr, PATCH_CHORUS.SIZE, deviceId);
+    const response = await midi2.sendAndReceive(msg);
+    return parsePatchChorus(response.data);
+  }
+  async function requestPatchReverb(midi2, part = 0, deviceId) {
+    const patchBase = getPatchTempAddress(part);
+    const revAddr = getPatchReverbAddress(patchBase);
+    const msg = buildRQ1(revAddr, PATCH_REVERB.SIZE, deviceId);
+    const response = await midi2.sendAndReceive(msg);
+    return parsePatchReverb(response.data);
+  }
   async function requestEntirePatch(midi2, part, deviceId, onProgress) {
-    if (onProgress) onProgress("common", 0, 6, null);
+    if (onProgress) onProgress("common", 0, 9, null);
     const common = await requestPatchCommon(midi2, part, deviceId);
     await new Promise((r) => setTimeout(r, 25));
-    if (onProgress) onProgress("tmt", 1, 6, common);
+    let mfx = null;
+    try {
+      if (onProgress) onProgress("mfx", 1, 9, common);
+      mfx = await requestPatchMfx(midi2, part, deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    let chorus = null;
+    try {
+      if (onProgress) onProgress("chorus", 2, 9, mfx);
+      chorus = await requestPatchChorus(midi2, part, deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    let reverb = null;
+    try {
+      if (onProgress) onProgress("reverb", 3, 9, chorus);
+      reverb = await requestPatchReverb(midi2, part, deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    if (onProgress) onProgress("tmt", 4, 9, reverb);
     const tmt = await requestPatchTMT(midi2, part, deviceId);
     await new Promise((r) => setTimeout(r, 25));
     const tones = [];
     for (let t = 1; t <= 4; t++) {
-      if (onProgress) onProgress(`tone${t}`, 1 + t, 6, null);
+      if (onProgress) onProgress(`tone${t}`, 4 + t, 9, null);
       const toneData = await requestPatchTone(midi2, part, t, deviceId);
       tones.push(toneData);
       await new Promise((r) => setTimeout(r, 25));
     }
-    return { common, tmt, tones };
+    return { common, mfx, chorus, reverb, tmt, tones };
   }
   function sendPatchCommonParam(midi2, part, paramKey, value, deviceId) {
     const param = PATCH_COMMON.params[paramKey];
@@ -3008,6 +3271,53 @@
     const patchBase = getPatchTempAddress(part);
     const tmtBase = getPatchTMTAddress(patchBase);
     const address = addOffset(tmtBase, param.offset);
+    const msg = buildDT1(address, [value & 127], deviceId);
+    midi2.send(msg);
+  }
+  function sendPatchMfxParam(midi2, part = 0, paramKey, value, deviceId = 16) {
+    const param = MFX_PARAMS[paramKey];
+    if (!param) {
+      throw new Error(`Unknown patch MFX parameter: ${paramKey}`);
+    }
+    const patchBase = getPatchTempAddress(part);
+    const mfxBase = getPatchMFXAddress(patchBase);
+    const address = addOffset(mfxBase, param.offset);
+    let dataBytes;
+    if (param.size === 4) {
+      const rawVal = value < 0 ? value + 32768 : value <= 127 ? value : value + 32768;
+      dataBytes = [
+        rawVal >> 12 & 15,
+        rawVal >> 8 & 15,
+        rawVal >> 4 & 15,
+        rawVal & 15
+      ];
+    } else if (paramKey.endsWith("_SENS")) {
+      dataBytes = [value + 64 & 127];
+    } else {
+      dataBytes = [value & 127];
+    }
+    const msg = buildDT1(address, dataBytes, deviceId);
+    midi2.send(msg);
+  }
+  function sendPatchChorusParam(midi2, part = 0, paramKey, value, deviceId = 16) {
+    const param = CHORUS_PARAMS[paramKey];
+    if (!param) {
+      throw new Error(`Unknown patch Chorus parameter: ${paramKey}`);
+    }
+    const patchBase = getPatchTempAddress(part);
+    const choBase = getPatchChorusAddress(patchBase);
+    const address = addOffset(choBase, param.offset);
+    const msg = buildDT1(address, [value & 127], deviceId);
+    midi2.send(msg);
+  }
+  function sendPatchReverbParam(midi2, part = 0, paramKey, value, deviceId = 16) {
+    const param = REVERB_PARAMS[paramKey];
+    if (!param) {
+      throw new Error(`Unknown patch Reverb parameter: ${paramKey}`);
+    }
+    const patchBase = getPatchTempAddress(part);
+    const revBase = getPatchReverbAddress(patchBase);
+    const address = addOffset(revBase, param.offset);
     const msg = buildDT1(address, [value & 127], deviceId);
     midi2.send(msg);
   }
@@ -3065,6 +3375,89 @@
   function sendToneLFOParam(midi2, part, tone, lfoNum, param, value, deviceId) {
     const key = param.startsWith("LFO") ? param : `LFO${lfoNum}_${param}`;
     sendPatchToneParam(midi2, part, tone, key, value, deviceId);
+  }
+  function parsePatchMfx(data) {
+    if (!data || data.length < 5) {
+      return {
+        mfxType: 0,
+        dryLevel: 127,
+        chorusSend: 0,
+        reverbSend: 0,
+        outputAssign: 0,
+        ctrl1Source: 0,
+        ctrl1Sens: 0,
+        ctrl2Source: 0,
+        ctrl2Sens: 0,
+        ctrl3Source: 0,
+        ctrl3Sens: 0,
+        ctrl4Source: 0,
+        ctrl4Sens: 0,
+        ctrl1Assign: 0,
+        ctrl2Assign: 0,
+        ctrl3Assign: 0,
+        ctrl4Assign: 0,
+        params: Array(12).fill(0)
+      };
+    }
+    const params = [];
+    for (let i = 0; i < 12; i++) {
+      const off = 17 + i * 4;
+      if (off + 3 < data.length) {
+        const val = data[off] << 12 | data[off + 1] << 8 | data[off + 2] << 4 | data[off + 3];
+        params.push(val >= 32768 ? val - 32768 : val);
+      } else {
+        params.push(0);
+      }
+    }
+    return {
+      mfxType: data[0] ?? 0,
+      dryLevel: data[1] ?? 127,
+      chorusSend: data[2] ?? 0,
+      reverbSend: data[3] ?? 0,
+      outputAssign: data[4] ?? 0,
+      ctrl1Source: data[5] ?? 0,
+      ctrl1Sens: (data[6] ?? 64) - 64,
+      ctrl2Source: data[7] ?? 0,
+      ctrl2Sens: (data[8] ?? 64) - 64,
+      ctrl3Source: data[9] ?? 0,
+      ctrl3Sens: (data[10] ?? 64) - 64,
+      ctrl4Source: data[11] ?? 0,
+      ctrl4Sens: (data[12] ?? 64) - 64,
+      ctrl1Assign: data[13] ?? 0,
+      ctrl2Assign: data[14] ?? 0,
+      ctrl3Assign: data[15] ?? 0,
+      ctrl4Assign: data[16] ?? 0,
+      params
+    };
+  }
+  function parsePatchChorus(data) {
+    if (!data || data.length < 4) {
+      return { chorusType: 0, chorusLevel: 0, outputAssign: 0, outputSelect: 0, preDelay: 0, rate: 0, depth: 0, feedback: 0, revSend: 0 };
+    }
+    return {
+      chorusType: data[0],
+      chorusLevel: data[1],
+      outputAssign: data[2],
+      outputSelect: data[3],
+      preDelay: data[4] ?? 0,
+      rate: data[5] ?? 0,
+      depth: data[6] ?? 0,
+      feedback: data[7] ?? 0,
+      revSend: data[8] ?? 0
+    };
+  }
+  function parsePatchReverb(data) {
+    if (!data || data.length < 3) {
+      return { reverbType: 0, reverbLevel: 0, outputAssign: 0, time: 0, hfDamp: 0, preDelay: 0 };
+    }
+    return {
+      reverbType: data[0],
+      reverbLevel: data[1],
+      outputAssign: data[2],
+      time: data[4] ?? 0,
+      hfDamp: data[5] ?? 0,
+      preDelay: data[7] ?? 0
+    };
   }
   function parsePatchCommon(data) {
     if (!data || data.length < 43) {
@@ -3300,6 +3693,468 @@
       lfo2TvfDepth: data[134] ?? 64,
       lfo2TvaDepth: data[135] ?? 64,
       lfo2PanDepth: data[136] ?? 64
+    };
+  }
+
+  // src/mfx_data.js
+  var MFX_CATALOG = [
+    { id: 0, name: "THRU (Bypass)", category: "Bypass", params: [] },
+    {
+      id: 1,
+      name: "01: Stereo EQ",
+      category: "Equalizer / Filter",
+      params: [
+        { name: "Low Freq", min: 0, max: 1, display: ["200Hz", "400Hz"] },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Mid 1 Freq", min: 0, max: 16, unit: "kHz" },
+        { name: "Mid 1 Q", min: 0, max: 4, display: ["0.5", "1.0", "2.0", "4.0", "8.0"] },
+        { name: "Mid 1 Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Mid 2 Freq", min: 0, max: 16, unit: "kHz" },
+        { name: "Mid 2 Q", min: 0, max: 4, display: ["0.5", "1.0", "2.0", "4.0", "8.0"] },
+        { name: "Mid 2 Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Freq", min: 0, max: 1, display: ["4kHz", "8kHz"] },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Level", min: 0, max: 127 },
+        { name: "Phase", min: 0, max: 1, display: ["Normal", "Inverse"] }
+      ]
+    },
+    {
+      id: 2,
+      name: "02: Overdrive",
+      category: "Distortion / Amp",
+      params: [
+        { name: "Drive", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 },
+        { name: "Tone", min: 0, max: 127 },
+        { name: "Amp Simulator", min: 0, max: 4, display: ["Small", "Built-in", "2-Stack", "3-Stack", "Off"] },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Pan", min: 0, max: 127, display: "pan" },
+        { name: "Dry/Wet", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 3,
+      name: "03: Distortion",
+      category: "Distortion / Amp",
+      params: [
+        { name: "Drive", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 },
+        { name: "Tone", min: 0, max: 127 },
+        { name: "Amp Simulator", min: 0, max: 4, display: ["Small", "Built-in", "2-Stack", "3-Stack", "Off"] },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Pan", min: 0, max: 127, display: "pan" },
+        { name: "Dry/Wet", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 4,
+      name: "04: Phaser",
+      category: "Modulation",
+      params: [
+        { name: "Manual", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Resonance", min: 0, max: 127 },
+        { name: "Mix Level", min: 0, max: 127 },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 5,
+      name: "05: Spectrum",
+      category: "Equalizer / Filter",
+      params: [
+        { name: "Band 1 (250Hz)", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Band 2 (500Hz)", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Band 3 (1kHz)", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Band 4 (2kHz)", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Band 5 (4kHz)", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Band 6 (8kHz)", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Bandwidth Q", min: 0, max: 4, display: ["0.5", "1.0", "2.0", "4.0", "8.0"] },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 6,
+      name: "06: Enhancer",
+      category: "Equalizer / Filter",
+      params: [
+        { name: "Sens", min: 0, max: 127 },
+        { name: "Mix", min: 0, max: 127 },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 7,
+      name: "07: Auto Wah",
+      category: "Equalizer / Filter",
+      params: [
+        { name: "Filter Type", min: 0, max: 1, display: ["LPF", "BPF"] },
+        { name: "Manual", min: 0, max: 127 },
+        { name: "Peak", min: 0, max: 127 },
+        { name: "Sens", min: 0, max: 127 },
+        { name: "Polarity", min: 0, max: 1, display: ["Up", "Down"] },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 8,
+      name: "08: Rotary",
+      category: "Modulation",
+      params: [
+        { name: "Speed", min: 0, max: 1, display: ["Slow", "Fast"] },
+        { name: "Woofer Slow", min: 0, max: 127 },
+        { name: "Woofer Fast", min: 0, max: 127 },
+        { name: "Woofer Accel", min: 0, max: 127 },
+        { name: "Tweeter Slow", min: 0, max: 127 },
+        { name: "Tweeter Fast", min: 0, max: 127 },
+        { name: "Tweeter Accel", min: 0, max: 127 },
+        { name: "Separation", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 9,
+      name: "09: Compressor",
+      category: "Dynamics",
+      params: [
+        { name: "Attack", min: 0, max: 127 },
+        { name: "Sustain", min: 0, max: 127 },
+        { name: "Post Gain", min: 0, max: 3, display: ["0dB", "+6dB", "+12dB", "+18dB"] },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 10,
+      name: "10: Limiter",
+      category: "Dynamics",
+      params: [
+        { name: "Threshold", min: 0, max: 127 },
+        { name: "Release", min: 0, max: 127 },
+        { name: "Ratio", min: 0, max: 3, display: ["1.5:1", "2:1", "4:1", "100:1"] },
+        { name: "Post Gain", min: 0, max: 3, display: ["0dB", "+6dB", "+12dB", "+18dB"] },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 11,
+      name: "11: Hexa-Chorus",
+      category: "Modulation",
+      params: [
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Pre-Delay Dev", min: 0, max: 20 },
+        { name: "Depth Dev", min: 0, max: 20 },
+        { name: "Pan Dev", min: 0, max: 20 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 12,
+      name: "12: Tremolo Chorus",
+      category: "Modulation",
+      params: [
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Chorus Rate", min: 0, max: 127 },
+        { name: "Chorus Depth", min: 0, max: 127 },
+        { name: "Tremolo Rate", min: 0, max: 127 },
+        { name: "Tremolo Depth", min: 0, max: 127 },
+        { name: "Tremolo Phase", min: 0, max: 180, unit: "deg" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 13,
+      name: "13: Space-D",
+      category: "Modulation",
+      params: [
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Phase", min: 0, max: 180, unit: "deg" },
+        { name: "Low Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "High Gain", min: 49, max: 79, offset: 64, unit: "dB" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 14,
+      name: "14: Stereo Chorus",
+      category: "Modulation",
+      params: [
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Phase", min: 0, max: 180, unit: "deg" },
+        { name: "Filter Type", min: 0, max: 2, display: ["Off", "LPF", "HPF"] },
+        { name: "Cutoff Freq", min: 0, max: 16, unit: "kHz" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 15,
+      name: "15: Stereo Flanger",
+      category: "Modulation",
+      params: [
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "Phase", min: 0, max: 180, unit: "deg" },
+        { name: "Filter Type", min: 0, max: 2, display: ["Off", "LPF", "HPF"] },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 16,
+      name: "16: Step Flanger",
+      category: "Modulation",
+      params: [
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "Step Rate", min: 0, max: 127 },
+        { name: "Phase", min: 0, max: 180, unit: "deg" },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 17,
+      name: "17: Stereo Delay",
+      category: "Delay",
+      params: [
+        { name: "Delay Left", min: 0, max: 127 },
+        { name: "Delay Right", min: 0, max: 127 },
+        { name: "Feedback Mode", min: 0, max: 1, display: ["Normal", "Cross"] },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "HF Damp", min: 0, max: 17, display: ["Bypass", "16k", "12k", "10k", "8k", "6k", "4k", "2k"] },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 18,
+      name: "18: Modulation Delay",
+      category: "Delay",
+      params: [
+        { name: "Delay Left", min: 0, max: 127 },
+        { name: "Delay Right", min: 0, max: 127 },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "Rate", min: 0, max: 127 },
+        { name: "Depth", min: 0, max: 127 },
+        { name: "HF Damp", min: 0, max: 17 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 19,
+      name: "19: Triple Tap Delay",
+      category: "Delay",
+      params: [
+        { name: "Delay Center", min: 0, max: 127 },
+        { name: "Delay Left", min: 0, max: 127 },
+        { name: "Delay Right", min: 0, max: 127 },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "HF Damp", min: 0, max: 17 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 20,
+      name: "20: Quadruple Tap Delay",
+      category: "Delay",
+      params: [
+        { name: "Delay Tap 1", min: 0, max: 127 },
+        { name: "Delay Tap 2", min: 0, max: 127 },
+        { name: "Delay Tap 3", min: 0, max: 127 },
+        { name: "Delay Tap 4", min: 0, max: 127 },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 21,
+      name: "21: Time Control Delay",
+      category: "Delay",
+      params: [
+        { name: "Delay Time", min: 0, max: 127 },
+        { name: "Acceleration", min: 0, max: 15 },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "HF Damp", min: 0, max: 17 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 22,
+      name: "22: 2-Voice Pitch Shifter",
+      category: "Pitch Shift",
+      params: [
+        { name: "Pitch 1 Coarse", min: 40, max: 88, offset: 64, unit: "semi" },
+        { name: "Pitch 1 Fine", min: 14, max: 114, offset: 64, unit: "cent" },
+        { name: "Pitch 1 Pan", min: 0, max: 127, display: "pan" },
+        { name: "Pitch 1 Level", min: 0, max: 127 },
+        { name: "Pitch 2 Coarse", min: 40, max: 88, offset: 64, unit: "semi" },
+        { name: "Pitch 2 Fine", min: 14, max: 114, offset: 64, unit: "cent" },
+        { name: "Pitch 2 Pan", min: 0, max: 127, display: "pan" },
+        { name: "Pitch 2 Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 23,
+      name: "23: FB Pitch Shifter",
+      category: "Pitch Shift",
+      params: [
+        { name: "Coarse Tune", min: 40, max: 88, offset: 64, unit: "semi" },
+        { name: "Fine Tune", min: 14, max: 114, offset: 64, unit: "cent" },
+        { name: "Feedback", min: 0, max: 127 },
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 24,
+      name: "24: Reverb",
+      category: "Reverb",
+      params: [
+        { name: "Reverb Type", min: 0, max: 5, display: ["Room 1", "Room 2", "Stage 1", "Stage 2", "Hall 1", "Hall 2"] },
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Reverb Time", min: 0, max: 127 },
+        { name: "HF Damp", min: 0, max: 17 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    {
+      id: 25,
+      name: "25: Gate Reverb",
+      category: "Reverb",
+      params: [
+        { name: "Type", min: 0, max: 3, display: ["Normal", "Reverse", "Sweep 1", "Sweep 2"] },
+        { name: "Pre-Delay", min: 0, max: 127 },
+        { name: "Gate Time", min: 0, max: 127 },
+        { name: "Level", min: 0, max: 127 }
+      ]
+    },
+    // Multi combinations & Chains 26-40
+    { id: 26, name: "26: Overdrive -> Chorus", category: "Combination", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Cho Rate", min: 0, max: 127 }, { name: "Cho Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 27, name: "27: Overdrive -> Flanger", category: "Combination", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Flg Rate", min: 0, max: 127 }, { name: "Flg Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 28, name: "28: Overdrive -> Delay", category: "Combination", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 29, name: "29: Distortion -> Chorus", category: "Combination", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Cho Rate", min: 0, max: 127 }, { name: "Cho Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 30, name: "30: Distortion -> Flanger", category: "Combination", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Flg Rate", min: 0, max: 127 }, { name: "Flg Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 31, name: "31: Distortion -> Delay", category: "Combination", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 32, name: "32: Enhancer -> Chorus", category: "Combination", params: [{ name: "Sens", min: 0, max: 127 }, { name: "Cho Rate", min: 0, max: 127 }, { name: "Cho Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 33, name: "33: Enhancer -> Flanger", category: "Combination", params: [{ name: "Sens", min: 0, max: 127 }, { name: "Flg Rate", min: 0, max: 127 }, { name: "Flg Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 34, name: "34: Enhancer -> Delay", category: "Combination", params: [{ name: "Sens", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 35, name: "35: Chorus -> Delay", category: "Combination", params: [{ name: "Cho Rate", min: 0, max: 127 }, { name: "Cho Depth", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }] },
+    { id: 36, name: "36: Flanger -> Delay", category: "Combination", params: [{ name: "Flg Rate", min: 0, max: 127 }, { name: "Flg Feedback", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }] },
+    { id: 37, name: "37: Chorus -> Flanger", category: "Combination", params: [{ name: "Cho Rate", min: 0, max: 127 }, { name: "Flg Rate", min: 0, max: 127 }, { name: "Flg Feedback", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 38, name: "38: Chorus / Delay", category: "Combination", params: [{ name: "Cho Level", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Delay Level", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 39, name: "39: Flanger / Delay", category: "Combination", params: [{ name: "Flg Level", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Delay Level", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 40, name: "40: Chorus / Flanger", category: "Combination", params: [{ name: "Cho Level", min: 0, max: 127 }, { name: "Flg Level", min: 0, max: 127 }, { name: "Balance", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 41, name: "41: Isolator", category: "Equalizer / Filter", params: [{ name: "Low Boost/Cut", min: 0, max: 127 }, { name: "Mid Boost/Cut", min: 0, max: 127 }, { name: "High Boost/Cut", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 42, name: "42: 3D Chorus", category: "Modulation", params: [{ name: "Pre-Delay", min: 0, max: 127 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 43, name: "43: 3D Flanger", category: "Modulation", params: [{ name: "Pre-Delay", min: 0, max: 127 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }] },
+    { id: 44, name: "44: 3D Step Flanger", category: "Modulation", params: [{ name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Step Rate", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 45, name: "45: Band Pass Filter", category: "Equalizer / Filter", params: [{ name: "Cutoff Freq", min: 0, max: 127 }, { name: "Q", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 46, name: "46: Ring Modulator", category: "Modulation", params: [{ name: "Frequency", min: 0, max: 127 }, { name: "Sens", min: 0, max: 127 }, { name: "Mix Level", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 47, name: "47: Stereo Auto Wah", category: "Equalizer / Filter", params: [{ name: "Manual", min: 0, max: 127 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 48, name: "48: Step Auto Wah", category: "Equalizer / Filter", params: [{ name: "Manual", min: 0, max: 127 }, { name: "Step Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 49, name: "49: Guitar Amp Simulator", category: "Distortion / Amp", params: [{ name: "Pre-Amp Type", min: 0, max: 127 }, { name: "Drive", min: 0, max: 127 }, { name: "Master", min: 0, max: 127 }, { name: "Speaker", min: 0, max: 127 }] },
+    { id: 50, name: "50: Rhodes Rotary", category: "Modulation", params: [{ name: "Speed", min: 0, max: 1 }, { name: "Slow Rate", min: 0, max: 127 }, { name: "Fast Rate", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 51, name: "51: VK Rotary", category: "Modulation", params: [{ name: "Speed", min: 0, max: 1 }, { name: "Brake", min: 0, max: 1 }, { name: "Horn/Rotor", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 52, name: "52: Keyboard Multi", category: "Multi", params: [{ name: "Ring Mod Freq", min: 0, max: 127 }, { name: "Phaser Rate", min: 0, max: 127 }, { name: "Pitch Shift", min: 40, max: 88, offset: 64 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 53, name: "53: Guitar Multi", category: "Multi", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Amp Type", min: 0, max: 127 }, { name: "Cho Rate", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }] },
+    { id: 54, name: "54: Vocal Multi", category: "Multi", params: [{ name: "Compressor", min: 0, max: 127 }, { name: "De-Esser", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Reverb Level", min: 0, max: 127 }] },
+    { id: 55, name: "55: Clean Guitar Multi", category: "Multi", params: [{ name: "Comp", min: 0, max: 127 }, { name: "EQ Mid", min: 49, max: 79, offset: 64 }, { name: "Chorus", min: 0, max: 127 }, { name: "Delay", min: 0, max: 127 }] },
+    { id: 56, name: "56: Bass Multi", category: "Multi", params: [{ name: "Comp Threshold", min: 0, max: 127 }, { name: "Drive", min: 0, max: 127 }, { name: "Low Freq", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 57, name: "57: Rotary Multi", category: "Multi", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Rotary Speed", min: 0, max: 1 }, { name: "Separation", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 58, name: "58: Short Delay", category: "Delay", params: [{ name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "HF Damp", min: 0, max: 17 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 59, name: "59: Auto Pan", category: "Modulation", params: [{ name: "Waveform", min: 0, max: 3 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 60, name: "60: Tremolo", category: "Modulation", params: [{ name: "Waveform", min: 0, max: 3 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 61, name: "61: Slicer", category: "Modulation", params: [{ name: "Pattern", min: 0, max: 19 }, { name: "Rate", min: 0, max: 127 }, { name: "Attack", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 62, name: "62: Phono Noise", category: "Lo-Fi", params: [{ name: "Disc Type", min: 0, max: 2 }, { name: "Noise Level", min: 0, max: 127 }, { name: "Tone", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 63, name: "63: Lo-Fi Processor", category: "Lo-Fi", params: [{ name: "Bit Down", min: 0, max: 7 }, { name: "Sample Rate", min: 0, max: 31 }, { name: "Post Gain", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 64, name: "64: Radio Tuning", category: "Lo-Fi", params: [{ name: "Detune", min: 0, max: 127 }, { name: "Noise", min: 0, max: 127 }, { name: "Bandwidth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 65, name: "65: Noise Generator", category: "Lo-Fi", params: [{ name: "Noise Type", min: 0, max: 3 }, { name: "Cutoff", min: 0, max: 127 }, { name: "Noise Level", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 66, name: "66: Overdrive 2", category: "Distortion / Amp", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Tone", min: 0, max: 127 }, { name: "Bottom", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 67, name: "67: Distortion 2", category: "Distortion / Amp", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Tone", min: 0, max: 127 }, { name: "Edge", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 68, name: "68: Multi-Stage Phaser", category: "Modulation", params: [{ name: "Mode", min: 0, max: 4, display: ["4-Stage", "8-Stage", "12-Stage", "16-Stage", "24-Stage"] }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }] },
+    { id: 69, name: "69: Compressor 2", category: "Dynamics", params: [{ name: "Threshold", min: 0, max: 127 }, { name: "Attack", min: 0, max: 127 }, { name: "Release", min: 0, max: 127 }, { name: "Gain", min: 0, max: 127 }] },
+    { id: 70, name: "70: Limiter 2", category: "Dynamics", params: [{ name: "Threshold", min: 0, max: 127 }, { name: "Release", min: 0, max: 127 }, { name: "Post Gain", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 71, name: "71: Stereo Pitch Shifter", category: "Pitch Shift", params: [{ name: "Coarse", min: 40, max: 88, offset: 64 }, { name: "Fine", min: 14, max: 114, offset: 64 }, { name: "Feedback", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 72, name: "72: Delay -> Chorus", category: "Combination", params: [{ name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "Cho Rate", min: 0, max: 127 }, { name: "Cho Depth", min: 0, max: 127 }] },
+    { id: 73, name: "73: Reverb 2", category: "Reverb", params: [{ name: "Type", min: 0, max: 5 }, { name: "Time", min: 0, max: 127 }, { name: "HF Damp", min: 0, max: 17 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 74, name: "74: 3D Delay", category: "Delay", params: [{ name: "Delay Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "Azimuth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 75, name: "75: 3D Rotary", category: "Modulation", params: [{ name: "Speed", min: 0, max: 1 }, { name: "Separation", min: 0, max: 127 }, { name: "Horn Level", min: 0, max: 127 }, { name: "Rotor Level", min: 0, max: 127 }] },
+    { id: 76, name: "76: 3D Auto Pan", category: "Modulation", params: [{ name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Direction", min: 0, max: 1 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 77, name: "77: 4-Band EQ", category: "Equalizer / Filter", params: [{ name: "Low Freq", min: 0, max: 1 }, { name: "Low Gain", min: 49, max: 79, offset: 64 }, { name: "Mid 1 Gain", min: 49, max: 79, offset: 64 }, { name: "Mid 2 Gain", min: 49, max: 79, offset: 64 }, { name: "High Gain", min: 49, max: 79, offset: 64 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 78, name: "78: Mastering Limiter", category: "Dynamics", params: [{ name: "Threshold", min: 0, max: 127 }, { name: "Release", min: 0, max: 127 }, { name: "Post Gain", min: 0, max: 127 }, { name: "Ceiling", min: 0, max: 127 }] },
+    { id: 79, name: "79: Enhancer 2", category: "Equalizer / Filter", params: [{ name: "Sens", min: 0, max: 127 }, { name: "Frequency", min: 0, max: 127 }, { name: "Mix", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 80, name: "80: Auto Wah 2", category: "Equalizer / Filter", params: [{ name: "Manual", min: 0, max: 127 }, { name: "Sens", min: 0, max: 127 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }] },
+    { id: 81, name: "81: Humanizer", category: "Equalizer / Filter", params: [{ name: "Vowel 1", min: 0, max: 4, display: ["a", "e", "i", "o", "u"] }, { name: "Vowel 2", min: 0, max: 4, display: ["a", "e", "i", "o", "u"] }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }] },
+    { id: 82, name: "82: Speaker Simulator", category: "Distortion / Amp", params: [{ name: "Cabinet Type", min: 0, max: 15 }, { name: "Mic Pos", min: 0, max: 1 }, { name: "Tone", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 83, name: "83: Feedbacker", category: "Distortion / Amp", params: [{ name: "Mode", min: 0, max: 1 }, { name: "Depth", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 84, name: "84: Stereo Reverb", category: "Reverb", params: [{ name: "Type", min: 0, max: 5 }, { name: "Pre-Delay", min: 0, max: 127 }, { name: "Time", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 85, name: "85: Stereo Mod Delay", category: "Delay", params: [{ name: "Delay Time", min: 0, max: 127 }, { name: "Rate", min: 0, max: 127 }, { name: "Depth", min: 0, max: 127 }, { name: "Level", min: 0, max: 127 }] },
+    { id: 86, name: "86: 3-Tap Pan Delay", category: "Delay", params: [{ name: "Tap 1 Time", min: 0, max: 127 }, { name: "Tap 2 Time", min: 0, max: 127 }, { name: "Tap 3 Time", min: 0, max: 127 }, { name: "Feedback", min: 0, max: 127 }] },
+    { id: 87, name: "87: 4-Tap Pan Delay", category: "Delay", params: [{ name: "Tap 1 Time", min: 0, max: 127 }, { name: "Tap 2 Time", min: 0, max: 127 }, { name: "Tap 3 Time", min: 0, max: 127 }, { name: "Tap 4 Time", min: 0, max: 127 }] },
+    { id: 88, name: "88: Chorus -> Delay -> Reverb", category: "Multi", params: [{ name: "Cho Level", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Rev Level", min: 0, max: 127 }, { name: "Master Level", min: 0, max: 127 }] },
+    { id: 89, name: "89: Flanger -> Delay -> Reverb", category: "Multi", params: [{ name: "Flg Level", min: 0, max: 127 }, { name: "Delay Time", min: 0, max: 127 }, { name: "Rev Level", min: 0, max: 127 }, { name: "Master Level", min: 0, max: 127 }] },
+    { id: 90, name: "90: Multi-Effects Chain", category: "Multi", params: [{ name: "Drive", min: 0, max: 127 }, { name: "Chorus", min: 0, max: 127 }, { name: "Delay", min: 0, max: 127 }, { name: "Master Level", min: 0, max: 127 }] }
+  ];
+  var CC_LABELS = {
+    1: "CC 01: Modulation",
+    2: "CC 02: Breath Controller",
+    4: "CC 04: Foot Controller",
+    5: "CC 05: Portamento Time",
+    7: "CC 07: Volume",
+    8: "CC 08: Balance",
+    10: "CC 10: Pan",
+    11: "CC 11: Expression",
+    64: "CC 64: Hold 1 (Damper)",
+    65: "CC 65: Portamento",
+    66: "CC 66: Sostenuto",
+    67: "CC 67: Soft Pedal",
+    71: "CC 71: Resonance",
+    72: "CC 72: Release Time",
+    73: "CC 73: Attack Time",
+    74: "CC 74: Cutoff Freq"
+  };
+  var MFX_CTRL_SOURCES = [
+    "OFF",
+    ...Array.from({ length: 31 }, (_, i) => {
+      const cc = i + 1;
+      return CC_LABELS[cc] || `CC ${String(cc).padStart(2, "0")}`;
+    }),
+    ...Array.from({ length: 63 }, (_, i) => {
+      const cc = i + 33;
+      return CC_LABELS[cc] || `CC ${String(cc).padStart(2, "0")}`;
+    }),
+    "BEND: Pitch Bend",
+    "AFT: Aftertouch",
+    "SYS-CTRL 1",
+    "SYS-CTRL 2",
+    "SYS-CTRL 3",
+    "SYS-CTRL 4"
+  ];
+  function getMfxAlgorithm(typeId) {
+    return MFX_CATALOG[typeId] || {
+      id: typeId,
+      name: `Algorithm ${typeId}`,
+      category: "Other",
+      params: Array.from({ length: 12 }, (_, i) => ({ name: `Param ${i + 1}`, min: 0, max: 127 }))
     };
   }
 
@@ -4368,6 +5223,8 @@
     $("perfSoloPart").value = data.soloPartSelect ?? 0;
     $("perfMfxCtrlCh").value = data.mfxCtrlChannel ?? 0;
     $("perfMfxASource").value = data.mfxASource ?? 0;
+    if ($("perfMfxBSource")) $("perfMfxBSource").value = data.mfxBSource ?? 0;
+    if ($("perfMfxCSource")) $("perfMfxCSource").value = data.mfxCSource ?? 0;
     $("perfChorusSource").value = data.chorusSource ?? 0;
     $("perfReverbSource").value = data.reverbSource ?? 0;
   }
@@ -4376,12 +5233,33 @@
     $("perfChorusLevel").value = data.chorusLevel ?? 64;
     $("perfChorusLevelVal").textContent = data.chorusLevel ?? 64;
     $("perfChorusOutputAssign").value = data.outputAssign ?? 0;
+    if ($("perfChorusRate")) {
+      $("perfChorusRate").value = data.rate ?? 32;
+      $("perfChorusRateVal").textContent = data.rate ?? 32;
+    }
+    if ($("perfChorusDepth")) {
+      $("perfChorusDepth").value = data.depth ?? 64;
+      $("perfChorusDepthVal").textContent = data.depth ?? 64;
+    }
+    if ($("perfChorusRevSend")) {
+      $("perfChorusRevSend").value = data.revSend ?? 0;
+      $("perfChorusRevSendVal").textContent = data.revSend ?? 0;
+    }
   }
   function updatePerformanceReverbUI(data) {
     $("perfReverbType").value = data.reverbType ?? 1;
     $("perfReverbLevel").value = data.reverbLevel ?? 64;
     $("perfReverbLevelVal").textContent = data.reverbLevel ?? 64;
     $("perfReverbOutputAssign").value = data.outputAssign ?? 0;
+    if ($("perfReverbTime")) {
+      $("perfReverbTime").value = data.time ?? 64;
+      $("perfReverbTimeVal").textContent = data.time ?? 64;
+    }
+    if ($("perfReverbHfDamp")) {
+      const hf = data.hfDamp ?? 17;
+      $("perfReverbHfDamp").value = hf;
+      $("perfReverbHfDampVal").textContent = hf === 17 ? "BYPASS" : `${hf}`;
+    }
   }
   function bindPerformanceCommonControls() {
     $("perfName").addEventListener("change", () => {
@@ -4393,14 +5271,19 @@
       { el: "perfSoloPart", param: "SOLO_PART_SELECT" },
       { el: "perfMfxCtrlCh", param: "MFX_CTRL_CHANNEL" },
       { el: "perfMfxASource", param: "MFXA_SOURCE" },
+      { el: "perfMfxBSource", param: "MFXB_SOURCE" },
+      { el: "perfMfxCSource", param: "MFXC_SOURCE" },
       { el: "perfChorusSource", param: "CHORUS_SOURCE" },
       { el: "perfReverbSource", param: "REVERB_SOURCE" }
     ];
     for (const b of selectBindings) {
-      $(b.el).addEventListener("change", () => {
-        if (!midi.isConnected) return;
-        sendPerformanceCommonParam(midi, b.param, parseInt($(b.el).value, 10), getDeviceId());
-      });
+      const el = $(b.el);
+      if (el) {
+        el.addEventListener("change", () => {
+          if (!midi.isConnected) return;
+          sendPerformanceCommonParam(midi, b.param, parseInt(el.value, 10), getDeviceId());
+        });
+      }
     }
     $("perfChorusType").addEventListener("change", () => {
       if (!midi.isConnected) return;
@@ -4422,6 +5305,36 @@
       if (!midi.isConnected) return;
       sendPerformanceChorusParam(midi, "OUTPUT_ASSIGN", parseInt($("perfChorusOutputAssign").value, 10), getDeviceId());
     });
+    if ($("perfChorusRate")) {
+      $("perfChorusRate").addEventListener("input", () => {
+        const val = parseInt($("perfChorusRate").value, 10);
+        $("perfChorusRateVal").textContent = val;
+        if (!midi.isConnected) return;
+        sendThrottled("perfChorusRate", () => {
+          sendPerformanceChorusParam(midi, "RATE", val, getDeviceId());
+        });
+      });
+    }
+    if ($("perfChorusDepth")) {
+      $("perfChorusDepth").addEventListener("input", () => {
+        const val = parseInt($("perfChorusDepth").value, 10);
+        $("perfChorusDepthVal").textContent = val;
+        if (!midi.isConnected) return;
+        sendThrottled("perfChorusDepth", () => {
+          sendPerformanceChorusParam(midi, "DEPTH", val, getDeviceId());
+        });
+      });
+    }
+    if ($("perfChorusRevSend")) {
+      $("perfChorusRevSend").addEventListener("input", () => {
+        const val = parseInt($("perfChorusRevSend").value, 10);
+        $("perfChorusRevSendVal").textContent = val;
+        if (!midi.isConnected) return;
+        sendThrottled("perfChorusRevSend", () => {
+          sendPerformanceChorusParam(midi, "REV_SEND", val, getDeviceId());
+        });
+      });
+    }
     $("perfReverbType").addEventListener("change", () => {
       if (!midi.isConnected) return;
       sendPerformanceReverbParam(midi, "REVERB_TYPE", parseInt($("perfReverbType").value, 10), getDeviceId());
@@ -4442,6 +5355,569 @@
       if (!midi.isConnected) return;
       sendPerformanceReverbParam(midi, "OUTPUT_ASSIGN", parseInt($("perfReverbOutputAssign").value, 10), getDeviceId());
     });
+    if ($("perfReverbTime")) {
+      $("perfReverbTime").addEventListener("input", () => {
+        const val = parseInt($("perfReverbTime").value, 10);
+        $("perfReverbTimeVal").textContent = val;
+        if (!midi.isConnected) return;
+        sendThrottled("perfReverbTime", () => {
+          sendPerformanceReverbParam(midi, "TIME", val, getDeviceId());
+        });
+      });
+    }
+    if ($("perfReverbHfDamp")) {
+      $("perfReverbHfDamp").addEventListener("input", () => {
+        const val = parseInt($("perfReverbHfDamp").value, 10);
+        $("perfReverbHfDampVal").textContent = val === 17 ? "BYPASS" : `${val}`;
+        if (!midi.isConnected) return;
+        sendThrottled("perfReverbHfDamp", () => {
+          sendPerformanceReverbParam(midi, "HF_DAMP", val, getDeviceId());
+        });
+      });
+    }
+    if ($("sysEqBassFreq")) {
+      $("sysEqBassFreq").addEventListener("change", () => {
+        if (!midi.isConnected) return;
+        sendSystemEqParam(midi, "EQ_LOW_FREQ", parseInt($("sysEqBassFreq").value, 10), getDeviceId());
+      });
+    }
+    if ($("sysEqBassGain")) {
+      $("sysEqBassGain").addEventListener("input", () => {
+        const val = parseInt($("sysEqBassGain").value, 10);
+        const db = val - 15;
+        $("sysEqBassGainVal").textContent = (db > 0 ? `+${db}` : `${db}`) + " dB";
+        if (!midi.isConnected) return;
+        sendThrottled("sysEqBassGain", () => {
+          sendSystemEqParam(midi, "EQ_LOW_GAIN", val, getDeviceId());
+        });
+      });
+    }
+    if ($("sysEqTrebleFreq")) {
+      $("sysEqTrebleFreq").addEventListener("change", () => {
+        if (!midi.isConnected) return;
+        sendSystemEqParam(midi, "EQ_HIGH_FREQ", parseInt($("sysEqTrebleFreq").value, 10), getDeviceId());
+      });
+    }
+    if ($("sysEqTrebleGain")) {
+      $("sysEqTrebleGain").addEventListener("input", () => {
+        const val = parseInt($("sysEqTrebleGain").value, 10);
+        const db = val - 15;
+        $("sysEqTrebleGainVal").textContent = (db > 0 ? `+${db}` : `${db}`) + " dB";
+        if (!midi.isConnected) return;
+        sendThrottled("sysEqTrebleGain", () => {
+          sendSystemEqParam(midi, "EQ_HIGH_GAIN", val, getDeviceId());
+        });
+      });
+    }
+  }
+  var activePerfMfxSlot = "A";
+  var perfMfxCache = { A: null, B: null, C: null };
+  function togglePerfMfxRollup(expand) {
+    const card = $("perfMfxRollup");
+    const arrow = $("perfMfxArrow");
+    const text = $("perfMfxRollupText");
+    if (!card) return;
+    const shouldOpen = expand !== void 0 ? expand : card.classList.contains("collapsed");
+    if (shouldOpen) {
+      card.classList.remove("collapsed");
+      if (arrow) arrow.textContent = "\u25B4";
+      if (text) text.textContent = "\u25B2 Roll Up";
+      localStorage.setItem("xv5050_perf_mfx_collapsed", "false");
+    } else {
+      card.classList.add("collapsed");
+      if (arrow) arrow.textContent = "\u25BE";
+      if (text) text.textContent = "\u25BC Expand";
+      localStorage.setItem("xv5050_perf_mfx_collapsed", "true");
+    }
+  }
+  function togglePatchEffectsRollup(expand) {
+    const card = $("patchEffectsRollup");
+    const arrow = $("patchEffectsArrow");
+    const text = $("patchEffectsRollupText");
+    if (!card) return;
+    const shouldOpen = expand !== void 0 ? expand : card.classList.contains("collapsed");
+    if (shouldOpen) {
+      card.classList.remove("collapsed");
+      if (arrow) arrow.textContent = "\u25B4";
+      if (text) text.textContent = "\u25B2 Roll Up";
+      localStorage.setItem("xv5050_patch_effects_collapsed", "false");
+    } else {
+      card.classList.add("collapsed");
+      if (arrow) arrow.textContent = "\u25BE";
+      if (text) text.textContent = "\u25BC Expand";
+      localStorage.setItem("xv5050_patch_effects_collapsed", "true");
+    }
+  }
+  function populateMfxDropdown(selectEl) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    const categories = {};
+    MFX_CATALOG.forEach((algo) => {
+      const cat = algo.category || "General";
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(algo);
+    });
+    for (const [catName, algos] of Object.entries(categories)) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = catName;
+      for (const algo of algos) {
+        const opt = document.createElement("option");
+        opt.value = algo.id;
+        opt.textContent = algo.name;
+        optgroup.appendChild(opt);
+      }
+      selectEl.appendChild(optgroup);
+    }
+  }
+  function populateMfxCtrlSources(selectEl) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    MFX_CTRL_SOURCES.forEach((name, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = name;
+      selectEl.appendChild(opt);
+    });
+  }
+  function formatMfxParamValue(inputEl, valEl) {
+    if (!inputEl || !valEl) return;
+    const val = parseFloat(inputEl.value);
+    if (inputEl.dataset.enumValues) {
+      try {
+        const enums = JSON.parse(inputEl.dataset.enumValues);
+        valEl.textContent = enums[val] !== void 0 ? enums[val] : val;
+        return;
+      } catch (_) {
+      }
+    }
+    const unit = inputEl.dataset.unit || "";
+    if (unit === "dB") {
+      valEl.textContent = (val > 0 ? `+${val}` : `${val}`) + " dB";
+    } else if (unit) {
+      valEl.textContent = `${val} ${unit}`;
+    } else {
+      valEl.textContent = `${val}`;
+    }
+  }
+  function updateMfxAlgorithmUI(prefix, typeId) {
+    const algo = getMfxAlgorithm(typeId);
+    const countBadge = $(prefix === "perfMfx" ? "algoParamCountBadge" : "patchAlgoParamCountBadge");
+    if (countBadge) {
+      countBadge.textContent = `${algo.params.length} Parameters`;
+    }
+    for (let i = 1; i <= 12; i++) {
+      const box = $(`${prefix}ParamBox${i}`);
+      const label = $(`${prefix}ParamLabel${i}`);
+      const input = $(`${prefix}Param${i}`);
+      const valEl = $(`${prefix}ParamVal${i}`);
+      if (!box || !label || !input) continue;
+      const paramDef = algo.params[i - 1];
+      if (paramDef) {
+        box.classList.remove("hidden");
+        label.textContent = paramDef.name;
+        input.min = paramDef.min;
+        input.max = paramDef.max;
+        input.step = paramDef.step || 1;
+        input.dataset.unit = paramDef.unit || "";
+        if (paramDef.type === "enum" && paramDef.enumValues) {
+          input.dataset.enumValues = JSON.stringify(paramDef.enumValues);
+        } else {
+          delete input.dataset.enumValues;
+        }
+        formatMfxParamValue(input, valEl);
+      } else {
+        box.classList.add("hidden");
+      }
+    }
+    if (prefix === "perfMfx") {
+      for (let c = 1; c <= 4; c++) {
+        const assignSel = $(`perfMfxCtrl${c}Assign`);
+        if (!assignSel) continue;
+        const currentVal = assignSel.value;
+        assignSel.innerHTML = '<option value="0">OFF</option>';
+        algo.params.forEach((p, idx) => {
+          const opt = document.createElement("option");
+          opt.value = idx + 1;
+          opt.textContent = `${idx + 1}: ${p.name}`;
+          assignSel.appendChild(opt);
+        });
+        assignSel.value = currentVal <= algo.params.length ? currentVal : 0;
+      }
+    }
+  }
+  function updatePerfMfxBadges(slot, typeId) {
+    const algo = getMfxAlgorithm(typeId);
+    const text = algo.name;
+    const slotBadge = $(`slotBadge${slot}`);
+    if (slotBadge) slotBadge.textContent = text;
+    const summaryChip = $(`summaryMfx${slot}`);
+    if (summaryChip) summaryChip.textContent = `MFX-${slot}: ${text}`;
+  }
+  function applyPerfMfxToUI(data) {
+    if (!data) return;
+    const typeId = data.mfxType ?? 0;
+    if ($("perfMfxType")) $("perfMfxType").value = typeId;
+    if ($("perfMfxDryLevel")) {
+      $("perfMfxDryLevel").value = data.dryLevel ?? 127;
+      $("perfMfxDryLevelVal").textContent = data.dryLevel ?? 127;
+    }
+    if ($("perfMfxChorusSend")) {
+      $("perfMfxChorusSend").value = data.chorusSend ?? 0;
+      $("perfMfxChorusSendVal").textContent = data.chorusSend ?? 0;
+    }
+    if ($("perfMfxReverbSend")) {
+      $("perfMfxReverbSend").value = data.reverbSend ?? 0;
+      $("perfMfxReverbSendVal").textContent = data.reverbSend ?? 0;
+    }
+    if ($("perfMfxOutputAssign")) $("perfMfxOutputAssign").value = data.outputAssign ?? 0;
+    updateMfxAlgorithmUI("perfMfx", typeId);
+    if (Array.isArray(data.params)) {
+      data.params.forEach((val, idx) => {
+        const input = $(`perfMfxParam${idx + 1}`);
+        const valEl = $(`perfMfxParamVal${idx + 1}`);
+        if (input) {
+          input.value = val;
+          formatMfxParamValue(input, valEl);
+        }
+      });
+    }
+    for (let c = 1; c <= 4; c++) {
+      const srcSel = $(`perfMfxCtrl${c}Source`);
+      const sensIn = $(`perfMfxCtrl${c}Sens`);
+      const sensVal = $(`perfMfxCtrl${c}SensVal`);
+      const assSel = $(`perfMfxCtrl${c}Assign`);
+      if (srcSel) srcSel.value = data[`ctrl${c}Source`] ?? 0;
+      if (sensIn) {
+        const s = data[`ctrl${c}Sens`] ?? 0;
+        sensIn.value = s;
+        if (sensVal) sensVal.textContent = s > 0 ? `+${s}` : `${s}`;
+      }
+      if (assSel) assSel.value = data[`ctrl${c}Assign`] ?? 0;
+    }
+    updatePerfMfxBadges(activePerfMfxSlot, typeId);
+  }
+  function setActivePerfMfxSlot(slot) {
+    activePerfMfxSlot = slot.toUpperCase();
+    ["A", "B", "C"].forEach((s) => {
+      const btn = $(`btnSlotMfx${s}`);
+      if (btn) btn.classList.toggle("active", s === activePerfMfxSlot);
+    });
+    const ind = $("activeSlotIndicator");
+    if (ind) {
+      const addr = activePerfMfxSlot === "A" ? "10 00 02 00" : activePerfMfxSlot === "B" ? "10 00 08 00" : "10 00 0A 00";
+      ind.textContent = `Editing MFX-${activePerfMfxSlot} (SysEx ${addr})`;
+    }
+    const cached = perfMfxCache[activePerfMfxSlot];
+    if (cached) {
+      applyPerfMfxToUI(cached);
+    } else if (midi.isConnected) {
+      requestPerformanceMfx(midi, activePerfMfxSlot, getDeviceId()).then((data) => {
+        perfMfxCache[activePerfMfxSlot] = data;
+        applyPerfMfxToUI(data);
+      }).catch((e) => {
+        console.warn(`Could not read MFX-${activePerfMfxSlot}:`, e);
+      });
+    }
+  }
+  function bindPerfMfxControls() {
+    populateMfxDropdown($("perfMfxType"));
+    for (let c = 1; c <= 4; c++) {
+      populateMfxCtrlSources($(`perfMfxCtrl${c}Source`));
+    }
+    const isCollapsed = localStorage.getItem("xv5050_perf_mfx_collapsed") === "true";
+    if (isCollapsed) togglePerfMfxRollup(false);
+    const btnToggle = $("btnTogglePerfMfx");
+    if (btnToggle) {
+      btnToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        togglePerfMfxRollup();
+      });
+    }
+    const rollupHeader = $("perfMfxRollupHeader");
+    if (rollupHeader) {
+      rollupHeader.addEventListener("click", (e) => {
+        if (e.target.closest("button") || e.target.closest("select")) return;
+        togglePerfMfxRollup();
+      });
+    }
+    ["A", "B", "C"].forEach((slot) => {
+      const btn = $(`btnSlotMfx${slot}`);
+      if (btn) {
+        btn.addEventListener("click", () => setActivePerfMfxSlot(slot));
+      }
+    });
+    const btnSync = $("btnSyncActiveMfx");
+    if (btnSync) {
+      btnSync.addEventListener("click", async () => {
+        if (!midi.isConnected) {
+          setStatus("Not connected");
+          return;
+        }
+        setStatus(`Reading MFX-${activePerfMfxSlot} from XV-5050...`);
+        try {
+          const data = await requestPerformanceMfx(midi, activePerfMfxSlot, getDeviceId());
+          perfMfxCache[activePerfMfxSlot] = data;
+          applyPerfMfxToUI(data);
+          setStatus(`MFX-${activePerfMfxSlot} successfully read from hardware`);
+        } catch (e) {
+          setStatus(`Failed reading MFX-${activePerfMfxSlot}: ${e.message}`);
+        }
+      });
+    }
+    $("perfMfxType").addEventListener("change", () => {
+      const typeId = parseInt($("perfMfxType").value, 10);
+      updateMfxAlgorithmUI("perfMfx", typeId);
+      updatePerfMfxBadges(activePerfMfxSlot, typeId);
+      if (!midi.isConnected) return;
+      sendPerformanceMfxParam(midi, activePerfMfxSlot, "MFX_TYPE", typeId, getDeviceId());
+      setStatus(`MFX-${activePerfMfxSlot} Algorithm set to ${typeId}`);
+    });
+    $("perfMfxDryLevel").addEventListener("input", () => {
+      const val = parseInt($("perfMfxDryLevel").value, 10);
+      $("perfMfxDryLevelVal").textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled(`perfMfx${activePerfMfxSlot}DryLevel`, () => {
+        sendPerformanceMfxParam(midi, activePerfMfxSlot, "DRY_LEVEL", val, getDeviceId());
+      });
+    });
+    $("perfMfxChorusSend").addEventListener("input", () => {
+      const val = parseInt($("perfMfxChorusSend").value, 10);
+      $("perfMfxChorusSendVal").textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled(`perfMfx${activePerfMfxSlot}ChorusSend`, () => {
+        sendPerformanceMfxParam(midi, activePerfMfxSlot, "CHORUS_SEND", val, getDeviceId());
+      });
+    });
+    $("perfMfxReverbSend").addEventListener("input", () => {
+      const val = parseInt($("perfMfxReverbSend").value, 10);
+      $("perfMfxReverbSendVal").textContent = val;
+      if (!midi.isConnected) return;
+      sendThrottled(`perfMfx${activePerfMfxSlot}ReverbSend`, () => {
+        sendPerformanceMfxParam(midi, activePerfMfxSlot, "REVERB_SEND", val, getDeviceId());
+      });
+    });
+    $("perfMfxOutputAssign").addEventListener("change", () => {
+      const val = parseInt($("perfMfxOutputAssign").value, 10);
+      if (!midi.isConnected) return;
+      sendPerformanceMfxParam(midi, activePerfMfxSlot, "OUTPUT_ASSIGN", val, getDeviceId());
+    });
+    for (let i = 1; i <= 12; i++) {
+      const input = $(`perfMfxParam${i}`);
+      const valEl = $(`perfMfxParamVal${i}`);
+      if (!input) continue;
+      input.addEventListener("input", () => {
+        formatMfxParamValue(input, valEl);
+        if (!midi.isConnected) return;
+        const val = parseInt(input.value, 10);
+        sendThrottled(`perfMfx${activePerfMfxSlot}Param${i}`, () => {
+          sendPerformanceMfxParam(midi, activePerfMfxSlot, `PARAM_${i}`, val, getDeviceId());
+        });
+      });
+    }
+    for (let c = 1; c <= 4; c++) {
+      const srcSel = $(`perfMfxCtrl${c}Source`);
+      const sensIn = $(`perfMfxCtrl${c}Sens`);
+      const sensVal = $(`perfMfxCtrl${c}SensVal`);
+      const assSel = $(`perfMfxCtrl${c}Assign`);
+      if (srcSel) {
+        srcSel.addEventListener("change", () => {
+          if (!midi.isConnected) return;
+          sendPerformanceMfxParam(midi, activePerfMfxSlot, `MFX_CTRL_${c}_SOURCE`, parseInt(srcSel.value, 10), getDeviceId());
+        });
+      }
+      if (sensIn) {
+        sensIn.addEventListener("input", () => {
+          const s = parseInt(sensIn.value, 10);
+          if (sensVal) sensVal.textContent = s > 0 ? `+${s}` : `${s}`;
+          if (!midi.isConnected) return;
+          sendThrottled(`perfMfx${activePerfMfxSlot}Ctrl${c}Sens`, () => {
+            sendPerformanceMfxParam(midi, activePerfMfxSlot, `MFX_CTRL_${c}_SENS`, s, getDeviceId());
+          });
+        });
+      }
+      if (assSel) {
+        assSel.addEventListener("change", () => {
+          if (!midi.isConnected) return;
+          sendPerformanceMfxParam(midi, activePerfMfxSlot, `MFX_CTRL_${c}_ASSIGN`, parseInt(assSel.value, 10), getDeviceId());
+        });
+      }
+    }
+    updateMfxAlgorithmUI("perfMfx", 1);
+    updatePerfMfxBadges("A", 1);
+    updatePerfMfxBadges("B", 1);
+    updatePerfMfxBadges("C", 1);
+  }
+  function bindPatchEffectsControls() {
+    populateMfxDropdown($("patchMfxType"));
+    const isCollapsed = localStorage.getItem("xv5050_patch_effects_collapsed") === "true";
+    if (isCollapsed) togglePatchEffectsRollup(false);
+    const btnToggle = $("btnTogglePatchEffects");
+    if (btnToggle) {
+      btnToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        togglePatchEffectsRollup();
+      });
+    }
+    const rollupHeader = $("patchEffectsRollupHeader");
+    if (rollupHeader) {
+      rollupHeader.addEventListener("click", (e) => {
+        if (e.target.closest("button") || e.target.closest("select")) return;
+        togglePatchEffectsRollup();
+      });
+    }
+    const btnSync = $("btnSyncPatchEffects");
+    if (btnSync) {
+      btnSync.addEventListener("click", async () => {
+        if (!midi.isConnected) {
+          setStatus("Not connected");
+          return;
+        }
+        const part = parseInt($("patchPartSelect")?.value || "0", 10);
+        setStatus("Reading Patch Effects from XV-5050...");
+        try {
+          const [mfxData, choData, revData] = await Promise.all([
+            requestPatchMfx(midi, part, getDeviceId()),
+            requestPatchChorus(midi, part, getDeviceId()),
+            requestPatchReverb(midi, part, getDeviceId())
+          ]);
+          applyPatchEffectsToUI(mfxData, choData, revData);
+          setStatus("Patch Effects read successfully");
+        } catch (e) {
+          setStatus(`Failed reading Patch Effects: ${e.message}`);
+        }
+      });
+    }
+    $("patchMfxType").addEventListener("change", () => {
+      const typeId = parseInt($("patchMfxType").value, 10);
+      updateMfxAlgorithmUI("patchMfx", typeId);
+      const algo = getMfxAlgorithm(typeId);
+      if ($("summaryPatchMfx")) $("summaryPatchMfx").textContent = `MFX: ${String(typeId).padStart(2, "0")}: ${algo.name}`;
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendPatchMfxParam(midi, part, "MFX_TYPE", typeId, getDeviceId());
+    });
+    $("patchMfxDryLevel").addEventListener("input", () => {
+      const val = parseInt($("patchMfxDryLevel").value, 10);
+      $("patchMfxDryLevelVal").textContent = val;
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendThrottled("patchMfxDryLevel", () => {
+        sendPatchMfxParam(midi, part, "DRY_LEVEL", val, getDeviceId());
+      });
+    });
+    $("patchMfxChorusSend").addEventListener("input", () => {
+      const val = parseInt($("patchMfxChorusSend").value, 10);
+      $("patchMfxChorusSendVal").textContent = val;
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendThrottled("patchMfxChorusSend", () => {
+        sendPatchMfxParam(midi, part, "CHORUS_SEND", val, getDeviceId());
+      });
+    });
+    $("patchMfxReverbSend").addEventListener("input", () => {
+      const val = parseInt($("patchMfxReverbSend").value, 10);
+      $("patchMfxReverbSendVal").textContent = val;
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendThrottled("patchMfxReverbSend", () => {
+        sendPatchMfxParam(midi, part, "REVERB_SEND", val, getDeviceId());
+      });
+    });
+    $("patchMfxOutputAssign").addEventListener("change", () => {
+      const val = parseInt($("patchMfxOutputAssign").value, 10);
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendPatchMfxParam(midi, part, "OUTPUT_ASSIGN", val, getDeviceId());
+    });
+    for (let i = 1; i <= 12; i++) {
+      const input = $(`patchMfxParam${i}`);
+      const valEl = $(`patchMfxParamVal${i}`);
+      if (!input) continue;
+      input.addEventListener("input", () => {
+        formatMfxParamValue(input, valEl);
+        if (!midi.isConnected) return;
+        const part = parseInt($("patchPartSelect")?.value || "0", 10);
+        const val = parseInt(input.value, 10);
+        sendThrottled(`patchMfxParam${i}`, () => {
+          sendPatchMfxParam(midi, part, `PARAM_${i}`, val, getDeviceId());
+        });
+      });
+    }
+    $("patchChorusType").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendPatchChorusParam(midi, part, "CHORUS_TYPE", parseInt($("patchChorusType").value, 10), getDeviceId());
+    });
+    $("patchChorusLevel").addEventListener("input", () => {
+      const val = parseInt($("patchChorusLevel").value, 10);
+      $("patchChorusLevelVal").textContent = val;
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendThrottled("patchChorusLevel", () => {
+        sendPatchChorusParam(midi, part, "CHORUS_LEVEL", val, getDeviceId());
+      });
+    });
+    $("patchReverbType").addEventListener("change", () => {
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendPatchReverbParam(midi, part, "REVERB_TYPE", parseInt($("patchReverbType").value, 10), getDeviceId());
+    });
+    $("patchReverbLevel").addEventListener("input", () => {
+      const val = parseInt($("patchReverbLevel").value, 10);
+      $("patchReverbLevelVal").textContent = val;
+      if (!midi.isConnected) return;
+      const part = parseInt($("patchPartSelect")?.value || "0", 10);
+      sendThrottled("patchReverbLevel", () => {
+        sendPatchReverbParam(midi, part, "REVERB_LEVEL", val, getDeviceId());
+      });
+    });
+    updateMfxAlgorithmUI("patchMfx", 1);
+  }
+  function applyPatchEffectsToUI(mfxData, choData, revData) {
+    if (mfxData) {
+      const typeId = mfxData.mfxType ?? 0;
+      if ($("patchMfxType")) $("patchMfxType").value = typeId;
+      if ($("patchMfxDryLevel")) {
+        $("patchMfxDryLevel").value = mfxData.dryLevel ?? 127;
+        $("patchMfxDryLevelVal").textContent = mfxData.dryLevel ?? 127;
+      }
+      if ($("patchMfxChorusSend")) {
+        $("patchMfxChorusSend").value = mfxData.chorusSend ?? 0;
+        $("patchMfxChorusSendVal").textContent = mfxData.chorusSend ?? 0;
+      }
+      if ($("patchMfxReverbSend")) {
+        $("patchMfxReverbSend").value = mfxData.reverbSend ?? 0;
+        $("patchMfxReverbSendVal").textContent = mfxData.reverbSend ?? 0;
+      }
+      if ($("patchMfxOutputAssign")) $("patchMfxOutputAssign").value = mfxData.outputAssign ?? 0;
+      updateMfxAlgorithmUI("patchMfx", typeId);
+      const algo = getMfxAlgorithm(typeId);
+      if ($("summaryPatchMfx")) $("summaryPatchMfx").textContent = `MFX: ${String(typeId).padStart(2, "0")}: ${algo.name}`;
+      if (Array.isArray(mfxData.params)) {
+        mfxData.params.forEach((val, idx) => {
+          const input = $(`patchMfxParam${idx + 1}`);
+          const valEl = $(`patchMfxParamVal${idx + 1}`);
+          if (input) {
+            input.value = val;
+            formatMfxParamValue(input, valEl);
+          }
+        });
+      }
+    }
+    if (choData) {
+      if ($("patchChorusType")) $("patchChorusType").value = choData.chorusType ?? 1;
+      if ($("patchChorusLevel")) {
+        $("patchChorusLevel").value = choData.chorusLevel ?? 64;
+        $("patchChorusLevelVal").textContent = choData.chorusLevel ?? 64;
+      }
+    }
+    if (revData) {
+      if ($("patchReverbType")) $("patchReverbType").value = revData.reverbType ?? 1;
+      if ($("patchReverbLevel")) {
+        $("patchReverbLevel").value = revData.reverbLevel ?? 64;
+        $("patchReverbLevelVal").textContent = revData.reverbLevel ?? 64;
+      }
+    }
   }
   function buildPartsTable() {
     const tbody = $("partsTableBody");
@@ -5659,15 +7135,45 @@
       const perf = await requestEntirePerformance(midi, getDeviceId(), (stage, cur, total, data) => {
         if (progEl) progEl.textContent = `Reading ${stage} (${cur + 1}/${total})...`;
         if (stage === "common" && data) updatePerformanceCommonUI(data);
+        if (stage === "mfxA" && data) {
+          perfMfxCache.A = data;
+          updatePerfMfxBadges("A", data.mfxType);
+          if (activePerfMfxSlot === "A") applyPerfMfxToUI(data);
+        }
+        if (stage === "mfxB" && data) {
+          perfMfxCache.B = data;
+          updatePerfMfxBadges("B", data.mfxType);
+          if (activePerfMfxSlot === "B") applyPerfMfxToUI(data);
+        }
+        if (stage === "mfxC" && data) {
+          perfMfxCache.C = data;
+          updatePerfMfxBadges("C", data.mfxType);
+          if (activePerfMfxSlot === "C") applyPerfMfxToUI(data);
+        }
         if (stage === "chorus" && data) updatePerformanceChorusUI(data);
         if (stage === "reverb" && data) updatePerformanceReverbUI(data);
       });
       updatePerformanceCommonUI(perf.common);
+      if (perf.mfxA) {
+        perfMfxCache.A = perf.mfxA;
+        updatePerfMfxBadges("A", perf.mfxA.mfxType);
+      }
+      if (perf.mfxB) {
+        perfMfxCache.B = perf.mfxB;
+        updatePerfMfxBadges("B", perf.mfxB.mfxType);
+      }
+      if (perf.mfxC) {
+        perfMfxCache.C = perf.mfxC;
+        updatePerfMfxBadges("C", perf.mfxC.mfxType);
+      }
+      if (perfMfxCache[activePerfMfxSlot]) {
+        applyPerfMfxToUI(perfMfxCache[activePerfMfxSlot]);
+      }
       updatePerformanceChorusUI(perf.chorus);
       updatePerformanceReverbUI(perf.reverb);
       perf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
       if (progEl) progEl.textContent = "Entire performance loaded";
-      setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, Effects, 16 Parts)`);
+      setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, 3-MFX, Chorus, Reverb, 16 Parts)`);
     } catch (e) {
       if (progEl) progEl.textContent = "";
       setStatus(`Failed loading entire performance: ${e.message}`);
@@ -6229,7 +7735,9 @@ Click to cycle to: ${nextTheme.name}`;
     initTabs();
     initEditTracking();
     bindPerformanceCommonControls();
+    bindPerfMfxControls();
     bindPatchControls();
+    bindPatchEffectsControls();
     initLibrarianControls();
     $("connectBtn").addEventListener("click", connectMidi);
     $("refreshBtn").addEventListener("click", refreshDeviceList);
