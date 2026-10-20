@@ -72,6 +72,271 @@
   --transition-normal: 250ms ease;
 }
 
+/* =============================================================================
+   THEME 1: XV-5050 Native Silver (Default Hardware Skin)
+   Brushed metallic silver rack chassis with Roland amber/orange dot-matrix LCD
+   ============================================================================= */
+[data-theme="native-silver"],
+:root:not([data-theme]) {
+  --bg-primary:        #181c24;
+  --bg-secondary:      #212732;
+  --bg-card:           #2a3240;
+  --bg-card-hover:     #343e50;
+  --bg-input:          #141820;
+  --bg-elevated:       #3c465a;
+
+  --accent:            #ff8c00;
+  --accent-dim:        #d96e00;
+  --accent-glow:       rgba(255, 140, 0, 0.2);
+  --accent-glow-strong: rgba(255, 140, 0, 0.45);
+
+  --accent-warm:       #ff4500;
+  --accent-warm-dim:   #cc3700;
+  --accent-warm-glow:  rgba(255, 69, 0, 0.2);
+
+  --text-primary:      #f1f5f9;
+  --text-secondary:    #cbd5e1;
+  --text-muted:        #94a3b8;
+  --text-accent:       #ffa726;
+
+  --border:            #475569;
+  --border-hover:      #64748b;
+  --border-active:     #ff8c00;
+
+  --shadow-glow:       0 0 16px rgba(255, 140, 0, 0.3);
+}
+
+/* =============================================================================
+   THEME 2: Cyber Neon Cyan
+   Deep space obsidian with high-energy electric cyan
+   ============================================================================= */
+[data-theme="cyber-cyan"] {
+  --bg-primary:        #0a0e17;
+  --bg-secondary:      #111827;
+  --bg-card:           #1a2035;
+  --bg-card-hover:     #1f2847;
+  --bg-input:          #0d1220;
+  --bg-elevated:       #232d45;
+
+  --accent:            #00d4ff;
+  --accent-dim:        #0099bb;
+  --accent-glow:       rgba(0, 212, 255, 0.18);
+  --accent-glow-strong: rgba(0, 212, 255, 0.35);
+
+  --accent-warm:       #ff9f1c;
+  --accent-warm-dim:   #cc7a00;
+  --accent-warm-glow:  rgba(255, 159, 28, 0.18);
+
+  --text-primary:      #e2e8f0;
+  --text-secondary:    #94a3b8;
+  --text-muted:        #64748b;
+  --text-accent:       #00d4ff;
+
+  --border:            #1e293b;
+  --border-hover:      #334155;
+  --border-active:     #00d4ff;
+
+  --shadow-glow:       0 0 18px rgba(0, 212, 255, 0.25);
+}
+
+/* =============================================================================
+   THEME 3: Roland Vintage JD
+   Classic dark charcoal Roland JD-800 / JD-990 with bright orange & cobalt blue
+   ============================================================================= */
+[data-theme="vintage-jd"] {
+  --bg-primary:        #111215;
+  --bg-secondary:      #181a1f;
+  --bg-card:           #21242c;
+  --bg-card-hover:     #2b2f3a;
+  --bg-input:          #0e1014;
+  --bg-elevated:       #323744;
+
+  --accent:            #ff6600;
+  --accent-dim:        #cc5200;
+  --accent-glow:       rgba(255, 102, 0, 0.22);
+  --accent-glow-strong: rgba(255, 102, 0, 0.45);
+
+  --accent-warm:       #38bdf8;
+  --accent-warm-dim:   #0284c7;
+  --accent-warm-glow:  rgba(56, 189, 248, 0.2);
+
+  --text-primary:      #f8fafc;
+  --text-secondary:    #94a3b8;
+  --text-muted:        #64748b;
+  --text-accent:       #ff771a;
+
+  --border:            #2e3340;
+  --border-hover:      #475569;
+  --border-active:     #ff6600;
+
+  --shadow-glow:       0 0 16px rgba(255, 102, 0, 0.3);
+}
+
+/* =============================================================================
+   THEME 4: OLED Obsidian
+   True pitch-black ultra-high contrast minimalist monochrome
+   ============================================================================= */
+[data-theme="oled-obsidian"] {
+  --bg-primary:        #000000;
+  --bg-secondary:      #080808;
+  --bg-card:           #121212;
+  --bg-card-hover:     #1a1a1a;
+  --bg-input:          #040404;
+  --bg-elevated:       #242424;
+
+  --accent:            #ffffff;
+  --accent-dim:        #cccccc;
+  --accent-glow:       rgba(255, 255, 255, 0.2);
+  --accent-glow-strong: rgba(255, 255, 255, 0.4);
+
+  --accent-warm:       #a1a1aa;
+  --accent-warm-dim:   #71717a;
+  --accent-warm-glow:  rgba(161, 161, 170, 0.2);
+
+  --text-primary:      #ffffff;
+  --text-secondary:    #d4d4d8;
+  --text-muted:        #71717a;
+  --text-accent:       #ffffff;
+
+  --border:            #262626;
+  --border-hover:      #404040;
+  --border-active:     #ffffff;
+
+  --shadow-glow:       0 0 14px rgba(255, 255, 255, 0.25);
+}
+
+/* =============================================================================
+   THEME 5: Emerald Matrix
+   Retro phosphor-green CRT & green dot matrix display
+   ============================================================================= */
+[data-theme="emerald-matrix"] {
+  --bg-primary:        #040d07;
+  --bg-secondary:      #08170e;
+  --bg-card:           #0f2418;
+  --bg-card-hover:     #163624;
+  --bg-input:          #030a05;
+  --bg-elevated:       #1e4630;
+
+  --accent:            #00ff66;
+  --accent-dim:        #00cc52;
+  --accent-glow:       rgba(0, 255, 102, 0.22);
+  --accent-glow-strong: rgba(0, 255, 102, 0.45);
+
+  --accent-warm:       #a3e635;
+  --accent-warm-dim:   #84cc16;
+  --accent-warm-glow:  rgba(163, 230, 53, 0.2);
+
+  --text-primary:      #f0fdf4;
+  --text-secondary:    #86efac;
+  --text-muted:        #4ade80;
+  --text-accent:       #00ff66;
+
+  --border:            #164e2e;
+  --border-hover:      #22c55e;
+  --border-active:     #00ff66;
+
+  --shadow-glow:       0 0 18px rgba(0, 255, 102, 0.3);
+}
+
+/* =============================================================================
+   THEME 6: Solar Amber
+   Warm golden amber analog vacuum tube & synth glow
+   ============================================================================= */
+[data-theme="solar-amber"] {
+  --bg-primary:        #120c04;
+  --bg-secondary:      #1a1206;
+  --bg-card:           #271a09;
+  --bg-card-hover:     #35240c;
+  --bg-input:          #0b0702;
+  --bg-elevated:       #452f10;
+
+  --accent:            #ffb300;
+  --accent-dim:        #cc8f00;
+  --accent-glow:       rgba(255, 179, 0, 0.22);
+  --accent-glow-strong: rgba(255, 179, 0, 0.45);
+
+  --accent-warm:       #ff5722;
+  --accent-warm-dim:   #e64a19;
+  --accent-warm-glow:  rgba(255, 87, 34, 0.2);
+
+  --text-primary:      #fffbeb;
+  --text-secondary:    #fde68a;
+  --text-muted:        #b45309;
+  --text-accent:       #ffc107;
+
+  --border:            #45290a;
+  --border-hover:      #78350f;
+  --border-active:     #ffb300;
+
+  --shadow-glow:       0 0 18px rgba(255, 179, 0, 0.3);
+}
+
+/* =============================================================================
+   THEME 7: Midnight Ultraviolet
+   Synthwave deep violet & neon electric magenta
+   ============================================================================= */
+[data-theme="midnight-uv"] {
+  --bg-primary:        #0c0817;
+  --bg-secondary:      #130e24;
+  --bg-card:           #1e1538;
+  --bg-card-hover:     #2b1e4f;
+  --bg-input:          #080510;
+  --bg-elevated:       #392869;
+
+  --accent:            #e879f9;
+  --accent-dim:        #c026d3;
+  --accent-glow:       rgba(232, 121, 249, 0.22);
+  --accent-glow-strong: rgba(232, 121, 249, 0.45);
+
+  --accent-warm:       #818cf8;
+  --accent-warm-dim:   #4f46e5;
+  --accent-warm-glow:  rgba(129, 140, 248, 0.2);
+
+  --text-primary:      #faf5ff;
+  --text-secondary:    #d8b4fe;
+  --text-muted:        #a855f7;
+  --text-accent:       #f0abfc;
+
+  --border:            #3b236e;
+  --border-hover:      #6b21a8;
+  --border-active:     #e879f9;
+
+  --shadow-glow:       0 0 18px rgba(232, 121, 249, 0.3);
+}
+
+/* =============================================================================
+   THEME 8: Studio Slate
+   Pro audio titanium & neutral anodized slate gray workstation
+   ============================================================================= */
+[data-theme="studio-slate"] {
+  --bg-primary:        #181a1f;
+  --bg-secondary:      #21242b;
+  --bg-card:           #2b2f38;
+  --bg-card-hover:     #353a45;
+  --bg-input:          #121417;
+  --bg-elevated:       #404654;
+
+  --accent:            #38bdf8;
+  --accent-dim:        #0284c7;
+  --accent-glow:       rgba(56, 189, 248, 0.2);
+  --accent-glow-strong: rgba(56, 189, 248, 0.4);
+
+  --accent-warm:       #fbbf24;
+  --accent-warm-dim:   #d97706;
+  --accent-warm-glow:  rgba(251, 191, 36, 0.2);
+
+  --text-primary:      #f8fafc;
+  --text-secondary:    #cbd5e1;
+  --text-muted:        #64748b;
+  --text-accent:       #38bdf8;
+
+  --border:            #3e4451;
+  --border-hover:      #5c6370;
+  --border-active:     #38bdf8;
+
+  --shadow-glow:       0 0 16px rgba(56, 189, 248, 0.25);
+}
+
 /* -- Reset & Base --------------------------------------------------------- */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -872,6 +1137,8 @@ input[type="range"]::-moz-range-thumb {
 .midi-row label {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
 /* -- Header Actions & Utilities ------------------------------------------- */
 .header-actions {
   display: flex;
@@ -1075,77 +1342,166 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 10px var(--accent-glow);
 }
 
-/* Visual Curve Display Containers */
-.curve-display-card {
-  background: #060910;
-  border: 1px solid var(--border);
+/* -- Modern Modular Synth Layout (Tone Envelopes & LFOs) ------------------ */
+.tone-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.synth-module-card {
+  background: linear-gradient(180deg, #111827 0%, #0c1220 100%);
+  border: 1px solid #1e2b42;
   border-radius: var(--radius-md);
-  padding: var(--space-sm);
-  margin-bottom: var(--space-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.synth-module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.synth-module-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.synth-module-title .module-icon {
+  color: #00d4ff;
+  font-size: 0.95rem;
+}
+
+.synth-dual-scope {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mini-scope-card {
+  background: #040811;
+  border: 1px solid #162238;
+  border-radius: 4px;
+  padding: 4px 6px;
   position: relative;
   overflow: hidden;
 }
 
-.curve-display-card::before {
+.mini-scope-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 212, 255, 0.03) 0%, transparent 100%);
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+  background-position: center center;
   pointer-events: none;
 }
 
-.curve-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-  padding: 0 4px;
-}
-
-.curve-title {
-  font-size: 0.75rem;
+.mini-scope-label {
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.curve-badge {
-  font-size: 0.7rem;
-  font-family: var(--font-mono);
-  color: var(--accent);
-  background: rgba(0, 212, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  margin-bottom: 2px;
+  display: block;
 }
 
 .curve-svg {
-  width: 100%;
-  height: 110px;
+  width: 100% !important;
+  height: 70px !important;
+  max-height: 70px !important;
   display: block;
-  background: radial-gradient(ellipse at center, #0d1424 0%, #060910 100%);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  overflow: visible;
 }
 
-.curve-path {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.5;
+.curve-path,
+path.curve-path,
+svg.curve-svg path {
+  fill: none !important;
+  stroke: #00d4ff !important;
+  stroke-width: 2 !important;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 4px var(--accent-dim));
+  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6));
 }
 
-.curve-fill {
-  fill: url(#curveGradient);
-  opacity: 0.25;
+.compact-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px 10px;
+  padding-top: 4px;
 }
 
-.curve-grid {
-  stroke: rgba(255, 255, 255, 0.06);
-  stroke-dasharray: 2 2;
-  stroke-width: 1;
+.compact-controls-grid .param-group {
+  margin-bottom: 0;
+}
+
+.compact-controls-grid .param-label {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-bottom: 2px;
+  letter-spacing: 0.03em;
+}
+
+.compact-controls-grid input[type="range"] {
+  height: 18px;
+}
+
+.compact-controls-grid .param-value {
+  font-size: 0.72rem;
+  min-width: 20px;
+}
+
+.lfo-pill-toggle {
+  display: flex;
+  background: #090e1a;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 1px;
+}
+
+.lfo-pill-toggle button {
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.lfo-pill-toggle button.active {
+  background: #00d4ff;
+  color: #040811;
+  font-weight: 700;
+}
+
+.curve-badge {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: rgba(0, 212, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  white-space: nowrap;
 }
 
 /* Modulation Matrix Table */
@@ -1467,5 +1823,163 @@ input[type="range"]::-moz-range-thumb {
   font-size: 0.88rem;
   line-height: 1.4;
 }
+
+/* -- Theme Toggle Button -------------------------------------------------- */
+.btn-theme-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-theme-toggle:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.theme-badge {
+  color: var(--text-accent);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+}
+
+/* -- Modern 2-Column Patch Layout (Master & Modulation Matrix) ------------ */
+.patch-top-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .patch-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.patch-master-card,
+.patch-matrix-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 0 !important;
+}
+
+.master-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.master-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.compact-param-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 80px;
+}
+
+.slider-val-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slider-val-wrap input[type="range"] {
+  flex: 1;
+  min-width: 50px;
+  max-width: 130px;
+}
+
+.slider-val-wrap .param-value {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-accent);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Modulation Matrix 2x2 Layout */
+.matrix-source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.matrix-dest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .matrix-dest-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.matrix-dest-box {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
+
+.matrix-dest-box:hover {
+  border-color: var(--border-hover);
+}
+
+.dest-slot-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dest-badge {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 2px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.dest-slot-header select {
+  flex: 1;
+  font-size: 0.76rem;
+  padding: 4px 6px;
+  min-width: 0;
+  background: var(--bg-card);
+}
+
 
 

@@ -13,6 +13,8 @@ import {
   encodeName,
   MATRIX_SOURCES,
   MATRIX_DESTINATIONS,
+  MATRIX_SOURCE_LABELS,
+  MATRIX_DEST_LABELS,
   LFO_WAVEFORMS,
   FILTER_TYPES,
   INTERNAL_WAVEFORMS,
@@ -172,7 +174,7 @@ function setSynthesizerMode(mode, sendToHardware = true) {
     if (partSelect) partSelect.value = '0';
     if (sendToHardware && midi.isConnected) {
       sendSoundMode(midi, 1, getDeviceId());
-      setStatus('XV-5050 switched to PATCH Mode (Base: 1F 00 00 00)');
+      setStatus('XV-5050 switched to Single PATCH Mode');
     }
   } else {
     if (btnPerform) btnPerform.classList.add('active');
@@ -918,8 +920,10 @@ function updateToneUI(data) {
   const wNumR = data.waveNumberR ?? 0;
   setWaveSelectValue($('waveNumberL'), wNumL, grp);
   setWaveSelectValue($('waveNumberR'), wNumR, grp);
-  $('waveNameL').textContent = `${wNumL}: ${getWaveName(grp, wNumL)}`;
-  $('waveNameR').textContent = wNumR === 0 ? 'OFF' : `${wNumR}: ${getWaveName(grp, wNumR)}`;
+  const nl = $('waveNameL');
+  if (nl) nl.textContent = getWaveName(grp, wNumL);
+  const nr = $('waveNameR');
+  if (nr) nr.textContent = wNumR === 0 ? 'OFF' : getWaveName(grp, wNumR);
 
   // Pitch Env
   const pDepth = data.pitchEnvDepth ?? 64;
@@ -1012,7 +1016,7 @@ function redrawPitchEnvCurve() {
   const l1 = parseInt($('pitchEnvL1').value, 10);
   const depth = parseInt($('pitchEnvDepth').value, 10) - 64;
 
-  const d = generateEnvelopePath('pitch', { t1, t2, t3, t4, l0: 64, l1, l2: 64, l3: 64, l4: 64 });
+  const d = generateEnvelopePath('pitch', { t1, t2, t3, t4, l0: 64, l1, l2: 64, l3: 64, l4: 64 }, 300, 75);
   $('pitchEnvPath').setAttribute('d', d);
   $('pitchEnvBadge').textContent = `Depth: ${depth >= 0 ? '+' : ''}${depth} semi`;
 }
@@ -1024,11 +1028,11 @@ function redrawFilterCurves() {
   const t1 = parseInt($('tvfEnvT1').value, 10);
   const t4 = parseInt($('tvfEnvT4').value, 10);
 
-  const filterD = generateFilterCurvePath(fType, cutoff, resonance);
+  const filterD = generateFilterCurvePath(fType, cutoff, resonance, 300, 75);
   $('filterRespPath').setAttribute('d', filterD);
   $('filterRespBadge').textContent = FILTER_TYPES[fType] || 'LPF';
 
-  const envD = generateEnvelopePath('tvf', { t1, t2: 25, t3: 40, t4, l1: 127, l2: 90, l3: 60, l4: 0 });
+  const envD = generateEnvelopePath('tvf', { t1, t2: 25, t3: 40, t4, l1: 127, l2: 90, l3: 60, l4: 0 }, 300, 75);
   $('tvfEnvPath').setAttribute('d', envD);
 }
 
@@ -1040,7 +1044,7 @@ function redrawTVAEnvCurve() {
   const l3 = parseInt($('tvaEnvL3').value, 10);
   const level = parseInt($('toneTvaLevel').value, 10);
 
-  const envD = generateEnvelopePath('tva', { t1, t2, t3, t4, l1: level, l2: Math.floor(level * 0.8), l3 });
+  const envD = generateEnvelopePath('tva', { t1, t2, t3, t4, l1: level, l2: Math.floor(level * 0.8), l3 }, 300, 75);
   $('tvaEnvPath').setAttribute('d', envD);
   $('tvaEnvBadge').textContent = `Level: ${level}`;
 }
@@ -1048,7 +1052,7 @@ function redrawTVAEnvCurve() {
 function redrawLFOCurve() {
   const form = parseInt($('lfoForm').value, 10);
   const rate = parseInt($('lfoRate').value, 10);
-  const waveD = generateLFOWavePath(form, rate);
+  const waveD = generateLFOWavePath(form, rate, 300, 75);
   $('lfoWavePath').setAttribute('d', waveD);
   $('lfoWaveBadge').textContent = `${LFO_WAVEFORMS[form] || 'TRI'} @ Rate ${rate}`;
 }
@@ -1059,7 +1063,7 @@ function populateMatrixDropdowns() {
     MATRIX_SOURCES.forEach((name, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = `${idx}: ${name}`;
+      opt.textContent = MATRIX_SOURCE_LABELS[name] || (name.startsWith('CC') ? `${name} (MIDI CC)` : name);
       srcSelect.appendChild(opt);
     });
   }
@@ -1070,7 +1074,7 @@ function populateMatrixDropdowns() {
       MATRIX_DESTINATIONS.forEach((name, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
-        opt.textContent = `${idx}: ${name}`;
+        opt.textContent = MATRIX_DEST_LABELS[name] || name;
         destSelect.appendChild(opt);
       });
     }
@@ -1085,7 +1089,7 @@ function populateWaveDropdowns() {
     INTERNAL_WAVEFORMS.forEach((name, idx) => {
       const opt = document.createElement('option');
       opt.value = idx + 1;
-      opt.textContent = `${idx + 1}: ${name}`;
+      opt.textContent = name;
       waveLSelect.appendChild(opt);
     });
   }
@@ -1094,7 +1098,7 @@ function populateWaveDropdowns() {
     INTERNAL_WAVEFORMS.forEach((name, idx) => {
       const opt = document.createElement('option');
       opt.value = idx + 1;
-      opt.textContent = `${idx + 1}: ${name}`;
+      opt.textContent = name;
       waveRSelect.appendChild(opt);
     });
   }
@@ -1348,8 +1352,10 @@ function bindPatchControls() {
     const grp = parseInt($('waveGroup').value, 10);
     const numL = parseInt($('waveNumberL').value, 10) || 1;
     const numR = parseInt($('waveNumberR').value, 10) || 0;
-    $('waveNameL').textContent = `${numL}: ${getWaveName(grp, numL)}`;
-    $('waveNameR').textContent = numR === 0 ? 'OFF' : `${numR}: ${getWaveName(grp, numR)}`;
+    const nl = $('waveNameL');
+    if (nl) nl.textContent = getWaveName(grp, numL);
+    const nr = $('waveNameR');
+    if (nr) nr.textContent = numR === 0 ? 'OFF' : getWaveName(grp, numR);
     if (!midi.isConnected) return;
     sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_GROUP_TYPE', grp, getDeviceId());
   });
@@ -1357,7 +1363,8 @@ function bindPatchControls() {
   $('waveNumberL').addEventListener('change', () => {
     const val = parseInt($('waveNumberL').value, 10);
     const grp = parseInt($('waveGroup').value, 10);
-    $('waveNameL').textContent = `${val}: ${getWaveName(grp, val)}`;
+    const nl = $('waveNameL');
+    if (nl) nl.textContent = getWaveName(grp, val);
     if (!midi.isConnected) return;
     sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_NUMBER_L', val, getDeviceId());
   });
@@ -1365,7 +1372,8 @@ function bindPatchControls() {
   $('waveNumberR').addEventListener('change', () => {
     const val = parseInt($('waveNumberR').value, 10);
     const grp = parseInt($('waveGroup').value, 10);
-    $('waveNameR').textContent = val === 0 ? 'OFF' : `${val}: ${getWaveName(grp, val)}`;
+    const nr = $('waveNameR');
+    if (nr) nr.textContent = val === 0 ? 'OFF' : getWaveName(grp, val);
     if (!midi.isConnected) return;
     sendPatchToneParam(midi, currentPart(), currentToneIndex, 'WAVE_NUMBER_R', val, getDeviceId());
   });
@@ -2502,6 +2510,65 @@ async function executeSyncWithUnit() {
 }
 
 // =============================================================================
+// Theme Switcher System (8 Synthesizer Schemes, Persisted in Browser Storage)
+// =============================================================================
+
+export const THEMES = [
+  { id: 'native-silver', name: 'XV-5050 Native', icon: '🎛️', desc: 'Brushed Silver Chassis with Amber Dot-Matrix LCD' },
+  { id: 'cyber-cyan', name: 'Cyber Cyan', icon: '⚡', desc: 'Deep Space Obsidian with Electric Cyan' },
+  { id: 'vintage-jd', name: 'Roland JD Classic', icon: '🎹', desc: 'Charcoal JD-800 Vintage Rack with Orange & Blue' },
+  { id: 'oled-obsidian', name: 'OLED Obsidian', icon: '🌑', desc: 'Monochrome High-Contrast Pitch Black' },
+  { id: 'emerald-matrix', name: 'Emerald Matrix', icon: '📟', desc: 'Neon Phosphor Green CRT & Dot Matrix' },
+  { id: 'solar-amber', name: 'Solar Amber', icon: '☀️', desc: 'Warm Tube Valve & Analog Copper Glow' },
+  { id: 'midnight-uv', name: 'Midnight UV', icon: '🔮', desc: 'Synthwave Deep Violet & Electric Magenta' },
+  { id: 'studio-slate', name: 'Studio Slate', icon: '🎚️', desc: 'Pro Audio Titanium & Neutral Slate Gray' }
+];
+
+export function applyTheme(themeId, persist = true) {
+  const theme = THEMES.find(t => t.id === themeId) || THEMES[0];
+  document.documentElement.setAttribute('data-theme', theme.id);
+  const badge = $('themeNameBadge');
+  if (badge) {
+    badge.textContent = `${theme.icon} ${theme.name}`;
+  }
+  const btn = $('themeCycleBtn');
+  if (btn) {
+    const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+    btn.title = `Current Scheme: ${theme.name} (${theme.desc})\nClick to cycle to: ${nextTheme.name}`;
+  }
+  if (persist) {
+    try {
+      localStorage.setItem('xv5050_theme', theme.id);
+    } catch (e) {
+      console.warn('Could not save theme to localStorage', e);
+    }
+  }
+}
+
+export function cycleNextTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'native-silver';
+  const currentIndex = THEMES.findIndex(t => t.id === current);
+  const nextIndex = (currentIndex + 1) % THEMES.length;
+  applyTheme(THEMES[nextIndex].id, true);
+  setStatus(`Color Theme: ${THEMES[nextIndex].name}`);
+}
+
+export function initThemeManager() {
+  let savedTheme = 'native-silver';
+  try {
+    savedTheme = localStorage.getItem('xv5050_theme') || 'native-silver';
+  } catch (e) {
+    console.warn('Could not read theme from localStorage', e);
+  }
+  applyTheme(savedTheme, false);
+
+  const cycleBtn = $('themeCycleBtn');
+  if (cycleBtn) {
+    cycleBtn.addEventListener('click', cycleNextTheme);
+  }
+}
+
+// =============================================================================
 // Initialization
 // =============================================================================
 
@@ -2715,6 +2782,7 @@ function init() {
     refreshDeviceList();
   });
 
+  initThemeManager();
   initMidi();
 }
 

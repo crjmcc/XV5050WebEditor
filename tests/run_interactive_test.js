@@ -169,10 +169,32 @@ async function run() {
   const firstRowText = await page.$eval('#trafficLogBody tr:first-child', el => el.textContent.replace(/\s+/g, ' ').trim()).catch(() => 'No rows');
   console.log(`  Latest SysEx traffic packet: "${firstRowText}"`);
 
-  // 8. Capture Screenshot
+  // 8. Test Theme Switcher Button
+  console.log('\n[Step 9] Testing Theme Switcher (8 Schemes)...');
+  const initialTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme') || 'native-silver');
+  console.log(`  Initial Theme: ${initialTheme}`);
+  await page.click('#themeCycleBtn');
+  await new Promise(r => setTimeout(r, 200));
+  const cycledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  console.log(`  After 1 Click: ${cycledTheme}`);
+  
+  // Set back to XV-5050 Native Silver default
+  await page.evaluate(() => {
+    localStorage.setItem('xv5050_theme', 'native-silver');
+    document.documentElement.setAttribute('data-theme', 'native-silver');
+    const badge = document.getElementById('themeNameBadge');
+    if (badge) badge.textContent = '🎛️ XV-5050 Native';
+  });
+  await new Promise(r => setTimeout(r, 200));
+
+  // 9. Switch back to Patch Tab and Capture Screenshot
+  console.log('\n[Step 10] Switching back to Patch Tab for Visual Verification...');
+  await page.click('#tabPatch');
+  await new Promise(r => setTimeout(r, 500));
+
   const screenshotPath = path.resolve(__dirname, 'web_editor_test_screenshot.png');
   await page.screenshot({ path: screenshotPath, fullPage: false });
-  console.log(`\n[Step 9] Captured verification screenshot: ${screenshotPath}`);
+  console.log(`  Captured verification screenshot: ${screenshotPath}`);
 
   console.log('\n====================================================');
   console.log(' Test Execution Complete: All Verifications PASSED!');

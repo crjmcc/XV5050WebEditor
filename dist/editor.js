@@ -1892,6 +1892,75 @@
     "MFX-CTRL3",
     "MFX-CTRL4"
   ];
+  var MATRIX_SOURCE_LABELS = {
+    OFF: "Off (Disabled)",
+    BEND: "Pitch Bend Wheel",
+    AFT: "Channel Aftertouch",
+    SYS1: "System Controller 1",
+    SYS2: "System Controller 2",
+    SYS3: "System Controller 3",
+    SYS4: "System Controller 4",
+    VELOCITY: "Key Velocity",
+    KEYFOLLOW: "Keyboard Note / Follow",
+    TEMPO: "Master BPM Tempo",
+    LFO1: "LFO Generator 1",
+    LFO2: "LFO Generator 2",
+    "PIT-ENV": "Pitch Envelope",
+    "TVF-ENV": "Filter Envelope (TVF)",
+    "TVA-ENV": "Amp Envelope (TVA)",
+    CC01: "CC01: Modulation Wheel",
+    CC02: "CC02: Breath Controller",
+    CC04: "CC04: Foot Controller",
+    CC05: "CC05: Portamento Time",
+    CC07: "CC07: Channel Volume",
+    CC08: "CC08: Balance",
+    CC10: "CC10: Stereo Pan",
+    CC11: "CC11: Expression",
+    CC64: "CC64: Sustain / Hold 1",
+    CC65: "CC65: Portamento Switch",
+    CC66: "CC66: Sostenuto",
+    CC67: "CC67: Soft Pedal",
+    CC71: "CC71: Resonance / Timbre",
+    CC72: "CC72: Release Time",
+    CC73: "CC73: Attack Time",
+    CC74: "CC74: Cutoff / Brightness"
+  };
+  var MATRIX_DEST_LABELS = {
+    OFF: "Off (Disabled)",
+    PCH: "Pitch (Fine/Coarse)",
+    CUT: "Filter Cutoff Frequency",
+    RES: "Filter Resonance",
+    LEV: "Amplifier Level (Volume)",
+    PAN: "Stereo Pan Position",
+    DRY: "Direct Output Level (Dry)",
+    CHO: "Chorus Send Level",
+    REV: "Reverb Send Level",
+    "PIT-LFO1": "Pitch LFO 1 Depth",
+    "PIT-LFO2": "Pitch LFO 2 Depth",
+    "TVF-LFO1": "Filter LFO 1 Depth",
+    "TVF-LFO2": "Filter LFO 2 Depth",
+    "TVA-LFO1": "Amp LFO 1 Depth",
+    "TVA-LFO2": "Amp LFO 2 Depth",
+    "PAN-LFO1": "Pan LFO 1 Depth",
+    "PAN-LFO2": "Pan LFO 2 Depth",
+    "LFO1-RATE": "LFO 1 Rate / Speed",
+    "LFO2-RATE": "LFO 2 Rate / Speed",
+    "PIT-ATK": "Pitch Attack Time",
+    "PIT-DCY": "Pitch Decay Time",
+    "PIT-REL": "Pitch Release Time",
+    "TVF-ATK": "Filter Attack Time",
+    "TVF-DCY": "Filter Decay Time",
+    "TVF-REL": "Filter Release Time",
+    "TVA-ATK": "Amp Attack Time",
+    "TVA-DCY": "Amp Decay Time",
+    "TVA-REL": "Amp Release Time",
+    TMT: "Velocity Switch / Tone Mix",
+    FXM: "Frequency Cross Modulation (FXM)",
+    "MFX-CTRL1": "MFX Multi-FX Control 1",
+    "MFX-CTRL2": "MFX Multi-FX Control 2",
+    "MFX-CTRL3": "MFX Multi-FX Control 3",
+    "MFX-CTRL4": "MFX Multi-FX Control 4"
+  };
   var WAVE_GROUP_TYPES = ["INT", "SR-JV80", "SRX", "SAMPLE"];
   function getWaveName(groupType, waveNumber) {
     if (!waveNumber || waveNumber === 0) return "OFF";
@@ -4033,7 +4102,7 @@
       if (partSelect) partSelect.value = "0";
       if (sendToHardware && midi.isConnected) {
         sendSoundMode(midi, 1, getDeviceId());
-        setStatus("XV-5050 switched to PATCH Mode (Base: 1F 00 00 00)");
+        setStatus("XV-5050 switched to Single PATCH Mode");
       }
     } else {
       if (btnPerform) btnPerform.classList.add("active");
@@ -4655,8 +4724,10 @@
     const wNumR = data.waveNumberR ?? 0;
     setWaveSelectValue($("waveNumberL"), wNumL, grp);
     setWaveSelectValue($("waveNumberR"), wNumR, grp);
-    $("waveNameL").textContent = `${wNumL}: ${getWaveName(grp, wNumL)}`;
-    $("waveNameR").textContent = wNumR === 0 ? "OFF" : `${wNumR}: ${getWaveName(grp, wNumR)}`;
+    const nl = $("waveNameL");
+    if (nl) nl.textContent = getWaveName(grp, wNumL);
+    const nr = $("waveNameR");
+    if (nr) nr.textContent = wNumR === 0 ? "OFF" : getWaveName(grp, wNumR);
     const pDepth = data.pitchEnvDepth ?? 64;
     $("pitchEnvDepth").value = pDepth;
     $("pitchEnvDepthVal").textContent = pDepth - 64;
@@ -4732,7 +4803,7 @@
     const t4 = parseInt($("pitchEnvT4").value, 10);
     const l1 = parseInt($("pitchEnvL1").value, 10);
     const depth = parseInt($("pitchEnvDepth").value, 10) - 64;
-    const d = generateEnvelopePath("pitch", { t1, t2, t3, t4, l0: 64, l1, l2: 64, l3: 64, l4: 64 });
+    const d = generateEnvelopePath("pitch", { t1, t2, t3, t4, l0: 64, l1, l2: 64, l3: 64, l4: 64 }, 300, 75);
     $("pitchEnvPath").setAttribute("d", d);
     $("pitchEnvBadge").textContent = `Depth: ${depth >= 0 ? "+" : ""}${depth} semi`;
   }
@@ -4742,10 +4813,10 @@
     const resonance = parseInt($("toneResonance").value, 10);
     const t1 = parseInt($("tvfEnvT1").value, 10);
     const t4 = parseInt($("tvfEnvT4").value, 10);
-    const filterD = generateFilterCurvePath(fType, cutoff, resonance);
+    const filterD = generateFilterCurvePath(fType, cutoff, resonance, 300, 75);
     $("filterRespPath").setAttribute("d", filterD);
     $("filterRespBadge").textContent = FILTER_TYPES[fType] || "LPF";
-    const envD = generateEnvelopePath("tvf", { t1, t2: 25, t3: 40, t4, l1: 127, l2: 90, l3: 60, l4: 0 });
+    const envD = generateEnvelopePath("tvf", { t1, t2: 25, t3: 40, t4, l1: 127, l2: 90, l3: 60, l4: 0 }, 300, 75);
     $("tvfEnvPath").setAttribute("d", envD);
   }
   function redrawTVAEnvCurve() {
@@ -4755,14 +4826,14 @@
     const t4 = parseInt($("tvaEnvT4").value, 10);
     const l3 = parseInt($("tvaEnvL3").value, 10);
     const level = parseInt($("toneTvaLevel").value, 10);
-    const envD = generateEnvelopePath("tva", { t1, t2, t3, t4, l1: level, l2: Math.floor(level * 0.8), l3 });
+    const envD = generateEnvelopePath("tva", { t1, t2, t3, t4, l1: level, l2: Math.floor(level * 0.8), l3 }, 300, 75);
     $("tvaEnvPath").setAttribute("d", envD);
     $("tvaEnvBadge").textContent = `Level: ${level}`;
   }
   function redrawLFOCurve() {
     const form = parseInt($("lfoForm").value, 10);
     const rate = parseInt($("lfoRate").value, 10);
-    const waveD = generateLFOWavePath(form, rate);
+    const waveD = generateLFOWavePath(form, rate, 300, 75);
     $("lfoWavePath").setAttribute("d", waveD);
     $("lfoWaveBadge").textContent = `${LFO_WAVEFORMS[form] || "TRI"} @ Rate ${rate}`;
   }
@@ -4772,7 +4843,7 @@
       MATRIX_SOURCES.forEach((name, idx) => {
         const opt = document.createElement("option");
         opt.value = idx;
-        opt.textContent = `${idx}: ${name}`;
+        opt.textContent = MATRIX_SOURCE_LABELS[name] || (name.startsWith("CC") ? `${name} (MIDI CC)` : name);
         srcSelect.appendChild(opt);
       });
     }
@@ -4782,7 +4853,7 @@
         MATRIX_DESTINATIONS.forEach((name, idx) => {
           const opt = document.createElement("option");
           opt.value = idx;
-          opt.textContent = `${idx}: ${name}`;
+          opt.textContent = MATRIX_DEST_LABELS[name] || name;
           destSelect.appendChild(opt);
         });
       }
@@ -4795,7 +4866,7 @@
       INTERNAL_WAVEFORMS.forEach((name, idx) => {
         const opt = document.createElement("option");
         opt.value = idx + 1;
-        opt.textContent = `${idx + 1}: ${name}`;
+        opt.textContent = name;
         waveLSelect.appendChild(opt);
       });
     }
@@ -4803,7 +4874,7 @@
       INTERNAL_WAVEFORMS.forEach((name, idx) => {
         const opt = document.createElement("option");
         opt.value = idx + 1;
-        opt.textContent = `${idx + 1}: ${name}`;
+        opt.textContent = name;
         waveRSelect.appendChild(opt);
       });
     }
@@ -5022,22 +5093,26 @@
       const grp = parseInt($("waveGroup").value, 10);
       const numL = parseInt($("waveNumberL").value, 10) || 1;
       const numR = parseInt($("waveNumberR").value, 10) || 0;
-      $("waveNameL").textContent = `${numL}: ${getWaveName(grp, numL)}`;
-      $("waveNameR").textContent = numR === 0 ? "OFF" : `${numR}: ${getWaveName(grp, numR)}`;
+      const nl = $("waveNameL");
+      if (nl) nl.textContent = getWaveName(grp, numL);
+      const nr = $("waveNameR");
+      if (nr) nr.textContent = numR === 0 ? "OFF" : getWaveName(grp, numR);
       if (!midi.isConnected) return;
       sendPatchToneParam(midi, currentPart(), currentToneIndex, "WAVE_GROUP_TYPE", grp, getDeviceId());
     });
     $("waveNumberL").addEventListener("change", () => {
       const val = parseInt($("waveNumberL").value, 10);
       const grp = parseInt($("waveGroup").value, 10);
-      $("waveNameL").textContent = `${val}: ${getWaveName(grp, val)}`;
+      const nl = $("waveNameL");
+      if (nl) nl.textContent = getWaveName(grp, val);
       if (!midi.isConnected) return;
       sendPatchToneParam(midi, currentPart(), currentToneIndex, "WAVE_NUMBER_L", val, getDeviceId());
     });
     $("waveNumberR").addEventListener("change", () => {
       const val = parseInt($("waveNumberR").value, 10);
       const grp = parseInt($("waveGroup").value, 10);
-      $("waveNameR").textContent = val === 0 ? "OFF" : `${val}: ${getWaveName(grp, val)}`;
+      const nr = $("waveNameR");
+      if (nr) nr.textContent = val === 0 ? "OFF" : getWaveName(grp, val);
       if (!midi.isConnected) return;
       sendPatchToneParam(midi, currentPart(), currentToneIndex, "WAVE_NUMBER_R", val, getDeviceId());
     });
@@ -6029,6 +6104,57 @@
       console.error("Entire Unit Sync failed:", err);
     }
   }
+  var THEMES = [
+    { id: "native-silver", name: "XV-5050 Native", icon: "\u{1F39B}\uFE0F", desc: "Brushed Silver Chassis with Amber Dot-Matrix LCD" },
+    { id: "cyber-cyan", name: "Cyber Cyan", icon: "\u26A1", desc: "Deep Space Obsidian with Electric Cyan" },
+    { id: "vintage-jd", name: "Roland JD Classic", icon: "\u{1F3B9}", desc: "Charcoal JD-800 Vintage Rack with Orange & Blue" },
+    { id: "oled-obsidian", name: "OLED Obsidian", icon: "\u{1F311}", desc: "Monochrome High-Contrast Pitch Black" },
+    { id: "emerald-matrix", name: "Emerald Matrix", icon: "\u{1F4DF}", desc: "Neon Phosphor Green CRT & Dot Matrix" },
+    { id: "solar-amber", name: "Solar Amber", icon: "\u2600\uFE0F", desc: "Warm Tube Valve & Analog Copper Glow" },
+    { id: "midnight-uv", name: "Midnight UV", icon: "\u{1F52E}", desc: "Synthwave Deep Violet & Electric Magenta" },
+    { id: "studio-slate", name: "Studio Slate", icon: "\u{1F39A}\uFE0F", desc: "Pro Audio Titanium & Neutral Slate Gray" }
+  ];
+  function applyTheme(themeId, persist = true) {
+    const theme = THEMES.find((t) => t.id === themeId) || THEMES[0];
+    document.documentElement.setAttribute("data-theme", theme.id);
+    const badge = $("themeNameBadge");
+    if (badge) {
+      badge.textContent = `${theme.icon} ${theme.name}`;
+    }
+    const btn = $("themeCycleBtn");
+    if (btn) {
+      const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+      btn.title = `Current Scheme: ${theme.name} (${theme.desc})
+Click to cycle to: ${nextTheme.name}`;
+    }
+    if (persist) {
+      try {
+        localStorage.setItem("xv5050_theme", theme.id);
+      } catch (e) {
+        console.warn("Could not save theme to localStorage", e);
+      }
+    }
+  }
+  function cycleNextTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "native-silver";
+    const currentIndex = THEMES.findIndex((t) => t.id === current);
+    const nextIndex = (currentIndex + 1) % THEMES.length;
+    applyTheme(THEMES[nextIndex].id, true);
+    setStatus(`Color Theme: ${THEMES[nextIndex].name}`);
+  }
+  function initThemeManager() {
+    let savedTheme = "native-silver";
+    try {
+      savedTheme = localStorage.getItem("xv5050_theme") || "native-silver";
+    } catch (e) {
+      console.warn("Could not read theme from localStorage", e);
+    }
+    applyTheme(savedTheme, false);
+    const cycleBtn = $("themeCycleBtn");
+    if (cycleBtn) {
+      cycleBtn.addEventListener("click", cycleNextTheme);
+    }
+  }
   function init() {
     buildPartsTable();
     initTabs();
@@ -6205,6 +6331,7 @@
       }
       refreshDeviceList();
     });
+    initThemeManager();
     initMidi();
   }
   if (document.readyState === "loading") {
