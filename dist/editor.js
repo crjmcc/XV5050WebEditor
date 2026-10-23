@@ -125,6 +125,8 @@
       this._onMessage = null;
       this._onStateChange = null;
       this._connected = false;
+      this._sysexBuffer = null;
+      this._sysexQueue = Promise.resolve();
       this._onTraffic = null;
       this._handleMidiMessage = this._handleMidiMessage.bind(this);
       this._handleStateChange = this._handleStateChange.bind(this);
@@ -216,6 +218,10 @@
       }
       this._connected = true;
       console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}" (In: ${this._input.connection}, Out: ${this._output.connection})`);
+      try {
+        this.sendRaw([240, 126, 127, 6, 1, 247]);
+      } catch (_) {
+      }
       return true;
     }
     /**
@@ -229,6 +235,7 @@
       this._output = null;
       this._connected = false;
       this._sysexBuffer = null;
+      this._sysexQueue = Promise.resolve();
     }
     /**
      * Subscribe to raw MIDI traffic for monitoring (direction: 'TX' | 'RX', bytes: Uint8Array|number[]).
@@ -254,10 +261,10 @@
       }
       console.log("[MIDI TX]", arr.map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join(" "));
       try {
-        this._output.send(arr);
-      } catch (err) {
-        console.warn("Output send with Array failed, trying Uint8Array:", err);
         this._output.send(uint8);
+      } catch (err) {
+        console.warn("Output send with Uint8Array failed, trying Array:", err);
+        this._output.send(arr);
       }
     }
     /**
@@ -266,10 +273,15 @@
      */
     sendRaw(bytes) {
       if (!this._output) return;
+      const uint8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
       if (this._onTraffic) {
-        this._onTraffic("TX", bytes, Date.now());
+        this._onTraffic("TX", Array.from(uint8), Date.now());
       }
-      this._output.send(bytes);
+      try {
+        this._output.send(uint8);
+      } catch (_) {
+        this._output.send(Array.from(uint8));
+      }
     }
     /**
      * Send Note On to audition a part/channel.
@@ -304,12 +316,62 @@
      * Send a SysEx message and wait for the complete response within a timeout.
      * Handles multi-packet SysEx responses (e.g. Tone 265 bytes, MFX 273 bytes)
      * where the hardware sends successive DT1 packets up to 256 bytes each.
+     * Serialized via internal queue so concurrent requests never overlap on the wire.
      * 
      * @param {Uint8Array|number[]} message - SysEx message to send
      * @param {number} [timeout=3000] - Timeout in milliseconds
      * @returns {Promise<object>} Complete parsed SysEx response
      */
     sendAndReceive(message, timeout = 3e3) {
+      if (!this.isConnected) {
+        return Promise.reject(new Error("MIDI ports are not connected."));
+      }
+      if (!this._sysexQueue) {
+        this._sysexQueue = Promise.resolve();
+      }
+      const task = async () => {
+        try {
+          return await this._sendAndReceiveInternal(message, timeout);
+        } finally {
+          await new Promise((r) => setTimeout(r, 25));
+        }
+      };
+      const queued = this._sysexQueue.then(task, task);
+      this._sysexQueue = queued.catch(() => {
+      });
+      return queued;
+    }
+    /**
+     * Send a SysEx message and wait for response with automatic retry.
+     * 
+     * @param {Uint8Array|number[]} message - SysEx message to send
+     * @param {object} [options]
+     * @param {number} [options.maxRetries=3]
+     * @param {number} [options.timeoutMs=2500]
+     * @param {number} [options.throttleMs=30]
+     * @returns {Promise<object>} Complete parsed SysEx response
+     */
+    async sendAndReceiveWithRetry(message, { maxRetries = 3, timeoutMs = 2500, throttleMs = 30 } = {}) {
+      let lastError = null;
+      for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+        try {
+          if (attempt > 1) {
+            await new Promise((r) => setTimeout(r, 100 * attempt));
+          } else if (throttleMs > 0) {
+            await new Promise((r) => setTimeout(r, throttleMs));
+          }
+          const response = await this.sendAndReceive(message, timeoutMs);
+          if (!response || !response.valid) {
+            throw new Error(response?.error || "Invalid SysEx packet received");
+          }
+          return response;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw new Error(`Failed after ${maxRetries + 1} attempts: ${lastError?.message || "Unknown error"}`);
+    }
+    _sendAndReceiveInternal(message, timeout = 3e3) {
       if (!this.isConnected) {
         return Promise.reject(new Error("MIDI ports are not connected."));
       }
@@ -2810,8 +2872,8 @@
       PERF_TEMP.COMMON.SIZE,
       deviceId
     );
-    const response = await midi2.sendAndReceive(msg);
-    return parsePerformanceCommon(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePerformanceCommon(response.data || response);
   }
   async function requestPerformanceChorus(midi2, deviceId) {
     const msg = buildRQ1(
@@ -2819,8 +2881,8 @@
       PERF_TEMP.CHORUS.SIZE,
       deviceId
     );
-    const response = await midi2.sendAndReceive(msg);
-    return parsePerformanceChorus(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePerformanceChorus(response.data || response);
   }
   async function requestPerformanceReverb(midi2, deviceId) {
     const msg = buildRQ1(
@@ -2828,14 +2890,14 @@
       PERF_TEMP.REVERB.SIZE,
       deviceId
     );
-    const response = await midi2.sendAndReceive(msg);
-    return parsePerformanceReverb(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePerformanceReverb(response.data || response);
   }
   async function requestPerformanceMfx(midi2, slot = "A", deviceId) {
     const address = getPerfMfxAddress(slot);
     const msg = buildRQ1(address, PERF_TEMP.MFXA.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePerformanceMfx(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePerformanceMfx(response.data || response);
   }
   function sendPerformanceMfxParam(midi2, slot, paramKey, value, deviceId) {
     const mfxBase = getPerfMfxAddress(slot);
@@ -2873,19 +2935,24 @@
   async function requestPartPatchName(midi2, part, deviceId) {
     const base = getPatchTempAddress(part);
     const msg = buildRQ1(base, [0, 0, 0, 12], deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return decodeName(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return decodeName(response.data || response);
   }
   async function requestPerformancePart(midi2, part, deviceId) {
     const address = getPartAddress(part);
     const msg = buildRQ1(address, PERF_PART.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    const partData = parsePerformancePart(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    const partData = parsePerformancePart(response.data || response);
+    if (part === 10 && partData.patchBankMSB === 92) {
+      partData.isRhythm = true;
+      partData.patchName = "Rhythm Kit (Part 10)";
+      return partData;
+    }
     try {
       const patchName = await requestPartPatchName(midi2, part, deviceId);
       partData.patchName = patchName || `Part ${part}`;
     } catch (_) {
-      partData.patchName = `Part ${part}`;
+      partData.patchName = part === 10 ? "Rhythm Kit (Part 10)" : `Part ${part}`;
     }
     return partData;
   }
@@ -2921,16 +2988,27 @@
     } catch (_) {
     }
     if (onProgress) onProgress("chorus", 4, 21, mfxC || mfxB || mfxA);
-    const chorus = await requestPerformanceChorus(midi2, deviceId);
-    await new Promise((r) => setTimeout(r, 25));
-    if (onProgress) onProgress("reverb", 5, 21, chorus);
-    const reverb = await requestPerformanceReverb(midi2, deviceId);
-    await new Promise((r) => setTimeout(r, 25));
+    let chorus = null, reverb = null;
+    try {
+      chorus = await requestPerformanceChorus(midi2, deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
+    if (onProgress) onProgress("reverb", 5, 21, chorus || mfxC || mfxB || mfxA);
+    try {
+      reverb = await requestPerformanceReverb(midi2, deviceId);
+      await new Promise((r) => setTimeout(r, 25));
+    } catch (_) {
+    }
     const parts = [];
     for (let i = 1; i <= 16; i++) {
       if (onProgress) onProgress("part", 5 + i, 21, null);
-      const partData = await requestPerformancePart(midi2, i, deviceId);
-      parts.push(partData);
+      try {
+        const partData = await requestPerformancePart(midi2, i, deviceId);
+        parts.push(partData);
+      } catch (_) {
+        parts.push({ part: i, patchName: `Part ${i}` });
+      }
       await new Promise((r) => setTimeout(r, 25));
     }
     return { common, mfxA, mfxB, mfxC, chorus, reverb, parts };
@@ -2988,11 +3066,11 @@
       mfxCtrlChannel: data[13] ?? 0,
       mfxCtrlMidi1: data[14] ?? 0,
       mfxCtrlMidi2: data[15] ?? 0,
-      mfxASource: data[48] ?? 0,
-      mfxBSource: data[49] ?? 0,
-      mfxCSource: data[50] ?? 0,
-      chorusSource: data[51] ?? 0,
-      reverbSource: data[52] ?? 0
+      mfxASource: (data.length > 48 ? data[48] : 0) ?? 0,
+      mfxBSource: (data.length > 49 ? data[49] : 0) ?? 0,
+      mfxCSource: (data.length > 50 ? data[50] : 0) ?? 0,
+      chorusSource: (data.length > 51 ? data[51] : 0) ?? 0,
+      reverbSource: (data.length > 52 ? data[52] : 0) ?? 0
     };
   }
   function parsePerformanceMfx(data) {
@@ -3124,8 +3202,8 @@
   }
   async function requestSoundMode(midi2, deviceId) {
     const msg = buildRQ1(SETUP.BASE, [0, 0, 0, 1], deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return response.data?.[0] ?? 2;
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return (response.data || response)?.[0] ?? 2;
   }
   function sendActivePerformanceSelection(midi2, perfIndex, deviceId = 16, perfCtrlCh = null) {
     if (perfIndex < 1 || perfIndex > 64) {
@@ -3178,43 +3256,43 @@
   async function requestPatchCommon(midi2, part, deviceId) {
     const base = getPatchTempAddress(part);
     const msg = buildRQ1(base, PATCH_COMMON.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePatchCommon(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePatchCommon(response.data || response);
   }
   async function requestPatchTMT(midi2, part, deviceId) {
     const patchBase = getPatchTempAddress(part);
     const tmtAddress = getPatchTMTAddress(patchBase);
     const msg = buildRQ1(tmtAddress, PATCH_TMT.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePatchTMT(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePatchTMT(response.data || response);
   }
   async function requestPatchTone(midi2, part, tone, deviceId) {
     const patchBase = getPatchTempAddress(part);
     const toneAddress = getToneAddress(patchBase, tone);
     const msg = buildRQ1(toneAddress, PATCH_TONE.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePatchTone(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePatchTone(response.data || response);
   }
   async function requestPatchMfx(midi2, part = 0, deviceId) {
     const patchBase = getPatchTempAddress(part);
     const mfxAddr = getPatchMFXAddress(patchBase);
     const msg = buildRQ1(mfxAddr, PATCH_MFX.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePatchMfx(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePatchMfx(response.data || response);
   }
   async function requestPatchChorus(midi2, part = 0, deviceId) {
     const patchBase = getPatchTempAddress(part);
     const choAddr = getPatchChorusAddress(patchBase);
     const msg = buildRQ1(choAddr, PATCH_CHORUS.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePatchChorus(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePatchChorus(response.data || response);
   }
   async function requestPatchReverb(midi2, part = 0, deviceId) {
     const patchBase = getPatchTempAddress(part);
     const revAddr = getPatchReverbAddress(patchBase);
     const msg = buildRQ1(revAddr, PATCH_REVERB.SIZE, deviceId);
-    const response = await midi2.sendAndReceive(msg);
-    return parsePatchReverb(response.data);
+    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
+    return parsePatchReverb(response.data || response);
   }
   async function requestEntirePatch(midi2, part, deviceId, onProgress) {
     if (onProgress) onProgress("common", 0, 9, null);
@@ -4394,7 +4472,10 @@
     return parsed?.data || null;
   }
   var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  async function sendAndReceiveWithRetry(midiManager, requestBytes, { maxRetries = 3, timeoutMs = 1500, throttleMs = 40 } = {}) {
+  async function sendAndReceiveWithRetry(midiManager, requestBytes, { maxRetries = 3, timeoutMs = 2500, throttleMs = 40 } = {}) {
+    if (midiManager && typeof midiManager.sendAndReceiveWithRetry === "function") {
+      return midiManager.sendAndReceiveWithRetry(requestBytes, { maxRetries, timeoutMs, throttleMs });
+    }
     let lastError = null;
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
@@ -4442,6 +4523,22 @@
       buildRQ1(commonAddr, PERF_TEMP.COMMON.SIZE, deviceId)
     );
     const common = parsePerformanceCommon(extractData(commResp));
+    let mfxA = null, mfxB = null, mfxC = null;
+    try {
+      const rA = await sendAndReceiveWithRetry(midiManager, buildRQ1([32, b1, 2, 0], PERF_TEMP.MFXA.SIZE, deviceId));
+      mfxA = parsePerformanceMfx(extractData(rA));
+    } catch (_) {
+    }
+    try {
+      const rB = await sendAndReceiveWithRetry(midiManager, buildRQ1([32, b1, 8, 0], PERF_TEMP.MFXB.SIZE, deviceId));
+      mfxB = parsePerformanceMfx(extractData(rB));
+    } catch (_) {
+    }
+    try {
+      const rC = await sendAndReceiveWithRetry(midiManager, buildRQ1([32, b1, 10, 0], PERF_TEMP.MFXC.SIZE, deviceId));
+      mfxC = parsePerformanceMfx(extractData(rC));
+    } catch (_) {
+    }
     const chorResp = await sendAndReceiveWithRetry(
       midiManager,
       buildRQ1(chorusAddr, PERF_TEMP.CHORUS.SIZE, deviceId)
@@ -4465,6 +4562,9 @@
     return {
       index: perfIndex,
       common,
+      mfxA,
+      mfxB,
+      mfxC,
       chorus,
       reverb,
       parts
@@ -4513,6 +4613,22 @@
       buildRQ1(commonAddr, PATCH_COMMON.SIZE, deviceId)
     );
     const common = parsePatchCommon(extractData(commResp));
+    let mfx = null, chorus = null, reverb = null;
+    try {
+      const mfxResp = await sendAndReceiveWithRetry(midiManager, buildRQ1([48, b1, 2, 0], PATCH_MFX.SIZE, deviceId));
+      mfx = parsePatchMfx(extractData(mfxResp));
+    } catch (_) {
+    }
+    try {
+      const choResp = await sendAndReceiveWithRetry(midiManager, buildRQ1([48, b1, 4, 0], PATCH_CHORUS.SIZE, deviceId));
+      chorus = parsePatchChorus(extractData(choResp));
+    } catch (_) {
+    }
+    try {
+      const revResp = await sendAndReceiveWithRetry(midiManager, buildRQ1([48, b1, 6, 0], PATCH_REVERB.SIZE, deviceId));
+      reverb = parsePatchReverb(extractData(revResp));
+    } catch (_) {
+    }
     const tmtResp = await sendAndReceiveWithRetry(
       midiManager,
       buildRQ1(tmtAddr, PATCH_TMT.SIZE, deviceId)
@@ -4531,6 +4647,9 @@
     return {
       index: patchIndex,
       common,
+      mfx,
+      chorus,
+      reverb,
       tmt,
       tones
     };
@@ -4709,20 +4828,20 @@
     };
   }
   function parseUserPerformanceHeader(data, index) {
-    if (!data || data.length < 53) return { index, name: `User Perf ${index}` };
+    if (!data || data.length < 12) return { index, name: `User Perf ${index}` };
     return {
       index,
       raw: data,
       name: decodeName(data.slice(0, 12)) || `USER PERF ${index}`,
       soloPart: data[12] ?? 0,
       mfxCtrlChannel: data[13] ?? 0,
-      mfxSource: data[48] ?? 0,
-      chorusSource: data[51] ?? 0,
-      reverbSource: data[52] ?? 0
+      mfxSource: (data.length > 48 ? data[48] : 0) ?? 0,
+      chorusSource: (data.length > 51 ? data[51] : 0) ?? 0,
+      reverbSource: (data.length > 52 ? data[52] : 0) ?? 0
     };
   }
   function parseUserPatchHeader(data, index) {
-    if (!data || data.length < 79) return { index, name: `User Patch ${index}` };
+    if (!data || data.length < 12) return { index, name: `User Patch ${index}` };
     return {
       index,
       raw: data,
@@ -4807,13 +4926,13 @@
   async function syncEntireUnit(midiManager, deviceId = 16, onProgress = null) {
     const report = (pct, text, stage) => {
       if (typeof onProgress === "function") {
-        onProgress(Math.min(100, Math.max(0, Math.round(pct))), text, stage);
+        onProgress(Math.min(100, Math.max(0, Math.round(pct))), text, stage, unitDb);
       }
     };
     const unitDb = {
       setup: null,
       system: { common: null, eq: null },
-      currentPerformance: { common: null, chorus: null, reverb: null, parts: [] },
+      currentPerformance: { common: null, mfxA: null, mfxB: null, mfxC: null, chorus: null, reverb: null, parts: [] },
       activePatches: [],
       userPerformances: [],
       userPatches: [],
@@ -4828,9 +4947,28 @@
     unitDb.system.eq = await requestSystemEQ(midiManager, deviceId);
     report(12, "Reading Current Performance Common...", "current_performance");
     unitDb.currentPerformance.common = await requestPerformanceCommon(midiManager, deviceId);
-    report(15, "Reading Performance Effects...", "current_performance");
-    unitDb.currentPerformance.chorus = await requestPerformanceChorus(midiManager, deviceId);
-    unitDb.currentPerformance.reverb = await requestPerformanceReverb(midiManager, deviceId);
+    report(14, "Reading Performance MFX Processors...", "current_performance");
+    try {
+      unitDb.currentPerformance.mfxA = await requestPerformanceMfx(midiManager, "A", deviceId);
+    } catch (_) {
+    }
+    try {
+      unitDb.currentPerformance.mfxB = await requestPerformanceMfx(midiManager, "B", deviceId);
+    } catch (_) {
+    }
+    try {
+      unitDb.currentPerformance.mfxC = await requestPerformanceMfx(midiManager, "C", deviceId);
+    } catch (_) {
+    }
+    report(16, "Reading Performance Effects...", "current_performance");
+    try {
+      unitDb.currentPerformance.chorus = await requestPerformanceChorus(midiManager, deviceId);
+    } catch (_) {
+    }
+    try {
+      unitDb.currentPerformance.reverb = await requestPerformanceReverb(midiManager, deviceId);
+    } catch (_) {
+    }
     report(18, "Reading 16 Performance Parts...", "current_performance");
     unitDb.currentPerformance.parts = await requestAllParts(midiManager, deviceId, (done, total, part) => {
       const pct = 18 + Math.round(done / total * 17);
@@ -4839,28 +4977,80 @@
     report(36, "Reading Active Part Patches & Waveforms...", "active_patches");
     for (let p = 1; p <= 16; p++) {
       const pct = 36 + Math.round(p / 16 * 19);
-      report(pct, `Reading Part ${p}/16 Patch & Waveforms...`, "active_patches");
-      const pCommon = await requestPatchCommon(midiManager, p, deviceId);
-      const pTmt = await requestPatchTMT(midiManager, p, deviceId);
-      const tones = [];
-      for (let t = 1; t <= 4; t++) {
-        const toneData = await requestPatchTone(midiManager, p, t, deviceId);
-        tones.push(toneData);
+      report(pct, `Reading Part ${p}/16 Patch & Effects...`, "active_patches");
+      const partInfo = unitDb.currentPerformance?.parts?.[p - 1];
+      const isRhythm = partInfo?.isRhythm || p === 10 && partInfo?.patchBankMSB === 92;
+      if (isRhythm) {
+        unitDb.activePatches.push({
+          part: p,
+          isRhythm: true,
+          common: { name: partInfo?.patchName || `Part ${p} (Rhythm Kit)` },
+          mfx: null,
+          chorus: null,
+          reverb: null,
+          tmt: null,
+          tones: []
+        });
+        continue;
       }
-      unitDb.activePatches.push({
-        part: p,
-        common: pCommon,
-        tmt: pTmt,
-        tones
-      });
+      try {
+        const pCommon = await requestPatchCommon(midiManager, p, deviceId);
+        let pMfx = null, pCho = null, pRev = null;
+        if (p === 1) {
+          try {
+            pMfx = await requestPatchMfx(midiManager, p, deviceId);
+          } catch (_) {
+          }
+          try {
+            pCho = await requestPatchChorus(midiManager, p, deviceId);
+          } catch (_) {
+          }
+          try {
+            pRev = await requestPatchReverb(midiManager, p, deviceId);
+          } catch (_) {
+          }
+        }
+        const pTmt = await requestPatchTMT(midiManager, p, deviceId);
+        const tones = [];
+        for (let t = 1; t <= 4; t++) {
+          const toneData = await requestPatchTone(midiManager, p, t, deviceId);
+          tones.push(toneData);
+        }
+        unitDb.activePatches.push({
+          part: p,
+          isRhythm: false,
+          common: pCommon,
+          mfx: pMfx,
+          chorus: pCho,
+          reverb: pRev,
+          tmt: pTmt,
+          tones
+        });
+      } catch (partErr) {
+        console.warn(`Part ${p} patch read skipped:`, partErr?.message || partErr);
+        unitDb.activePatches.push({
+          part: p,
+          isRhythm: false,
+          common: { name: partInfo?.patchName || `Part ${p}` },
+          mfx: null,
+          chorus: null,
+          reverb: null,
+          tmt: null,
+          tones: []
+        });
+      }
     }
     report(56, "Reading 64 User Performances...", "user_performances");
-    unitDb.userPerformances = await requestAllUserPerformanceHeaders(midiManager, deviceId, (done, total, perf) => {
+    unitDb.userPerformances = [];
+    await requestAllUserPerformanceHeaders(midiManager, deviceId, (done, total, perf) => {
+      unitDb.userPerformances.push(perf);
       const pct = 56 + Math.round(done / total * 19);
       report(pct, `User Performance ${done}/${total}: "${perf.name}"`, "user_performances");
     });
     report(76, "Reading 128 User Patches...", "user_patches");
-    unitDb.userPatches = await requestAllUserPatchHeaders(midiManager, deviceId, (done, total, patch) => {
+    unitDb.userPatches = [];
+    await requestAllUserPatchHeaders(midiManager, deviceId, (done, total, patch) => {
+      unitDb.userPatches.push(patch);
       const pct = 76 + Math.round(done / total * 19);
       report(pct, `User Patch ${done}/${total}: "${patch.name}"`, "user_patches");
     });
@@ -5095,13 +5285,15 @@
       setStatus("Connected \u2014 ready to communicate");
       midi.onSysEx(handleIncomingSysEx);
       toggleSystemDrawer(false);
-      requestSoundMode(midi, getDeviceId()).then((mode) => {
-        if (mode === 1 || mode === 2) {
-          setSynthesizerMode(mode, false);
-          setStatus(`Connected to XV-5050 (${mode === 1 ? "PATCH Mode" : "PERFORMANCE Mode"})`);
-        }
-      }).catch(() => {
-      });
+      if (!isSyncInProgress) {
+        requestSoundMode(midi, getDeviceId()).then((mode) => {
+          if (mode === 1 || mode === 2) {
+            setSynthesizerMode(mode, false);
+            setStatus(`Connected to XV-5050 (${mode === 1 ? "PATCH Mode" : "PERFORMANCE Mode"})`);
+          }
+        }).catch(() => {
+        });
+      }
     } else {
       setStatus("Connection failed \u2014 verify device selection");
     }
@@ -5378,7 +5570,7 @@
     if ($("sysEqBassFreq")) {
       $("sysEqBassFreq").addEventListener("change", () => {
         if (!midi.isConnected) return;
-        sendSystemEqParam(midi, "EQ_LOW_FREQ", parseInt($("sysEqBassFreq").value, 10), getDeviceId());
+        sendSystemEqParam(midi, "EQ1_LOW_FREQ", parseInt($("sysEqBassFreq").value, 10), getDeviceId());
       });
     }
     if ($("sysEqBassGain")) {
@@ -5388,14 +5580,14 @@
         $("sysEqBassGainVal").textContent = (db > 0 ? `+${db}` : `${db}`) + " dB";
         if (!midi.isConnected) return;
         sendThrottled("sysEqBassGain", () => {
-          sendSystemEqParam(midi, "EQ_LOW_GAIN", val, getDeviceId());
+          sendSystemEqParam(midi, "EQ1_LOW_GAIN", val, getDeviceId());
         });
       });
     }
     if ($("sysEqTrebleFreq")) {
       $("sysEqTrebleFreq").addEventListener("change", () => {
         if (!midi.isConnected) return;
-        sendSystemEqParam(midi, "EQ_HIGH_FREQ", parseInt($("sysEqTrebleFreq").value, 10), getDeviceId());
+        sendSystemEqParam(midi, "EQ1_HIGH_FREQ", parseInt($("sysEqTrebleFreq").value, 10), getDeviceId());
       });
     }
     if ($("sysEqTrebleGain")) {
@@ -5405,7 +5597,7 @@
         $("sysEqTrebleGainVal").textContent = (db > 0 ? `+${db}` : `${db}`) + " dB";
         if (!midi.isConnected) return;
         sendThrottled("sysEqTrebleGain", () => {
-          sendSystemEqParam(midi, "EQ_HIGH_GAIN", val, getDeviceId());
+          sendSystemEqParam(midi, "EQ1_HIGH_GAIN", val, getDeviceId());
         });
       });
     }
@@ -7205,7 +7397,7 @@
     document.querySelectorAll(".tab-content").forEach((c) => {
       c.classList.toggle("active", c.id === `${target}Tab`);
     });
-    if ((target === "performance" || target === "patch") && midi.isConnected) {
+    if ((target === "performance" || target === "patch") && midi.isConnected && !isSyncInProgress) {
       requestSoundMode(midi, getDeviceId()).then((detectedMode) => {
         if (detectedMode && detectedMode !== currentSoundMode) {
           setSynthesizerMode(detectedMode, false);
@@ -7220,6 +7412,7 @@
     });
   }
   var isEdited = false;
+  var isSyncInProgress = false;
   function markEdited() {
     if (!isEdited) {
       isEdited = true;
@@ -7251,6 +7444,10 @@
     });
   }
   async function handleSyncWithUnit() {
+    if (isSyncInProgress) {
+      setStatus("Unit sync is already in progress...");
+      return;
+    }
     if (!midi.sysexEnabled) {
       const hasAccess = await midi.requestAccess();
       if (hasAccess) refreshDeviceList();
@@ -7383,6 +7580,21 @@
         setStatus(`Reading complete User Performance ${index} from XV-5050 hardware...`);
         const fullPerf = await requestEntireUserPerformance(midi, index, getDeviceId());
         if (fullPerf.common) updatePerformanceCommonUI(fullPerf.common);
+        if (fullPerf.mfxA) {
+          perfMfxCache.A = fullPerf.mfxA;
+          updatePerfMfxBadges("A", fullPerf.mfxA.mfxType);
+        }
+        if (fullPerf.mfxB) {
+          perfMfxCache.B = fullPerf.mfxB;
+          updatePerfMfxBadges("B", fullPerf.mfxB.mfxType);
+        }
+        if (fullPerf.mfxC) {
+          perfMfxCache.C = fullPerf.mfxC;
+          updatePerfMfxBadges("C", fullPerf.mfxC.mfxType);
+        }
+        if (perfMfxCache[activePerfMfxSlot]) {
+          applyPerfMfxToUI(perfMfxCache[activePerfMfxSlot]);
+        }
         if (fullPerf.chorus) updatePerformanceChorusUI(fullPerf.chorus);
         if (fullPerf.reverb) updatePerformanceReverbUI(fullPerf.reverb);
         if (Array.isArray(fullPerf.parts)) {
@@ -7422,6 +7634,9 @@
         setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
         const fullPatch = await requestEntireUserPatch(midi, index, getDeviceId());
         if (fullPatch.common) updatePatchCommonUI(fullPatch.common);
+        if (fullPatch.mfx || fullPatch.chorus || fullPatch.reverb) {
+          applyPatchEffectsToUI(fullPatch.mfx, fullPatch.chorus, fullPatch.reverb);
+        }
         if (fullPatch.tmt) updatePatchTMTUI(fullPatch.tmt);
         if (Array.isArray(fullPatch.tones)) {
           fullPatch.tones.forEach((toneData, tIdx) => {
@@ -7603,6 +7818,8 @@
     }
   }
   async function executeSyncWithUnit() {
+    if (isSyncInProgress) return;
+    isSyncInProgress = true;
     const modal = $("confirmSyncModal");
     if (modal) modal.style.display = "none";
     const progModal = $("syncProgressModal");
@@ -7615,58 +7832,95 @@
     };
     if (progModal) progModal.style.display = "flex";
     setProgress(2, "Connecting to XV-5050...");
+    let activeDb = null;
+    let unitDb = null;
     try {
       const devId = getDeviceId();
-      const unitDb = await syncEntireUnit(midi, devId, (pct, statusText, stage) => {
+      unitDb = await syncEntireUnit(midi, devId, (pct, statusText, stage, currentDb) => {
+        activeDb = currentDb;
         setProgress(pct, statusText);
+        const db = currentDb || unitDb;
+        if (db && (db.userPerformances?.length || db.userPatches?.length)) {
+          syncedUnitDb = db;
+          populateUserBankSelectors();
+        }
       });
       syncedUnitDb = unitDb;
-      if (unitDb.currentPerformance?.common) {
-        updatePerformanceCommonUI(unitDb.currentPerformance.common);
-        store.set("performance.common", unitDb.currentPerformance.common);
+      try {
+        if (unitDb.currentPerformance?.common) {
+          updatePerformanceCommonUI(unitDb.currentPerformance.common);
+          store.set("performance.common", unitDb.currentPerformance.common);
+        }
+        if (unitDb.currentPerformance?.mfxA) {
+          perfMfxCache.A = unitDb.currentPerformance.mfxA;
+          updatePerfMfxBadges("A", unitDb.currentPerformance.mfxA.mfxType);
+        }
+        if (unitDb.currentPerformance?.mfxB) {
+          perfMfxCache.B = unitDb.currentPerformance.mfxB;
+          updatePerfMfxBadges("B", unitDb.currentPerformance.mfxB.mfxType);
+        }
+        if (unitDb.currentPerformance?.mfxC) {
+          perfMfxCache.C = unitDb.currentPerformance.mfxC;
+          updatePerfMfxBadges("C", unitDb.currentPerformance.mfxC.mfxType);
+        }
+        if (perfMfxCache[activePerfMfxSlot]) {
+          applyPerfMfxToUI(perfMfxCache[activePerfMfxSlot]);
+        }
+        if (unitDb.currentPerformance?.chorus) {
+          updatePerformanceChorusUI(unitDb.currentPerformance.chorus);
+          store.set("performance.effects.chorus", unitDb.currentPerformance.chorus);
+        }
+        if (unitDb.currentPerformance?.reverb) {
+          updatePerformanceReverbUI(unitDb.currentPerformance.reverb);
+          store.set("performance.effects.reverb", unitDb.currentPerformance.reverb);
+        }
+        if (Array.isArray(unitDb.currentPerformance?.parts)) {
+          unitDb.currentPerformance.parts.forEach((p, idx) => {
+            updatePartRow(idx + 1, p);
+          });
+          store.set("performance.parts", unitDb.currentPerformance.parts);
+        }
+      } catch (e) {
+        console.warn("Non-fatal error updating performance UI:", e);
       }
-      if (unitDb.currentPerformance?.chorus) {
-        updatePerformanceChorusUI(unitDb.currentPerformance.chorus);
-        store.set("performance.effects.chorus", unitDb.currentPerformance.chorus);
-      }
-      if (unitDb.currentPerformance?.reverb) {
-        updatePerformanceReverbUI(unitDb.currentPerformance.reverb);
-        store.set("performance.effects.reverb", unitDb.currentPerformance.reverb);
-      }
-      if (Array.isArray(unitDb.currentPerformance?.parts)) {
-        unitDb.currentPerformance.parts.forEach((p, idx) => {
-          updatePartRow(idx + 1, p);
-        });
-        store.set("performance.parts", unitDb.currentPerformance.parts);
-      }
-      if (Array.isArray(unitDb.activePatches)) {
-        unitDb.activePatches.forEach((ap) => {
-          activePartPatchesCache[ap.part] = ap;
-        });
-        const activePart = getSelectedPart();
-        const currentPatch = activePartPatchesCache[activePart] || unitDb.activePatches[0];
-        if (currentPatch) {
-          if (currentPatch.common) {
-            updatePatchCommonUI(currentPatch.common);
-            store.set("patch.common", currentPatch.common);
-          }
-          if (currentPatch.tmt) {
-            updatePatchTMTUI(currentPatch.tmt);
-            store.set("patch.tmt", currentPatch.tmt);
-          }
-          if (Array.isArray(currentPatch.tones)) {
-            currentPatch.tones.forEach((toneData, tIdx) => {
-              store.set(`patch.tones.${tIdx}`, toneData);
-              currentToneCache[tIdx] = toneData;
-            });
-            const activeTone = currentToneCache[currentToneIndex - 1];
-            if (activeTone) updateToneUI(activeTone);
+      try {
+        if (Array.isArray(unitDb.activePatches)) {
+          unitDb.activePatches.forEach((ap) => {
+            activePartPatchesCache[ap.part] = ap;
+          });
+          const activePart = getSelectedPart();
+          const currentPatch = activePartPatchesCache[activePart] || unitDb.activePatches[0];
+          if (currentPatch) {
+            if (currentPatch.common) {
+              updatePatchCommonUI(currentPatch.common);
+              store.set("patch.common", currentPatch.common);
+            }
+            if (currentPatch.mfx || currentPatch.chorus || currentPatch.reverb) {
+              applyPatchEffectsToUI(currentPatch.mfx, currentPatch.chorus, currentPatch.reverb);
+            }
+            if (currentPatch.tmt) {
+              updatePatchTMTUI(currentPatch.tmt);
+              store.set("patch.tmt", currentPatch.tmt);
+            }
+            if (Array.isArray(currentPatch.tones)) {
+              currentPatch.tones.forEach((toneData, tIdx) => {
+                store.set(`patch.tones.${tIdx}`, toneData);
+                currentToneCache[tIdx] = toneData;
+              });
+              const activeTone = currentToneCache[currentToneIndex - 1];
+              if (activeTone) updateToneUI(activeTone);
+            }
           }
         }
+      } catch (e) {
+        console.warn("Non-fatal error updating patch UI:", e);
       }
       populateUserBankSelectors();
       renderUserPerfsTable();
       renderUserPatchesTable();
+      if (unitDb?.setup?.soundMode) {
+        setSynthesizerMode(unitDb.setup.soundMode, false);
+      }
       setProgress(100, "Entire Unit Sync Complete!");
       clearEdited();
       setStatus("\u2713 Successfully synchronized entire XV-5050 unit: Setup, System, Current Performance, 64 User Performances, 128 User Patches, 4 User Rhythm Sets");
@@ -7675,8 +7929,17 @@
       }, 600);
     } catch (err) {
       if (progModal) progModal.style.display = "none";
-      setStatus(`Sync failed: ${err.message}`);
+      const fallbackDb = unitDb || activeDb;
+      if (fallbackDb && (fallbackDb.userPerformances?.length || fallbackDb.userPatches?.length)) {
+        syncedUnitDb = fallbackDb;
+        populateUserBankSelectors();
+        renderUserPerfsTable();
+        renderUserPatchesTable();
+      }
+      setStatus(`Sync completed with warning: ${err.message}`);
       console.error("Entire Unit Sync failed:", err);
+    } finally {
+      isSyncInProgress = false;
     }
   }
   var THEMES = [
@@ -7802,6 +8065,9 @@ Click to cycle to: ${nextTheme.name}`;
         const cached = activePartPatchesCache[part];
         if (cached) {
           if (cached.common) updatePatchCommonUI(cached.common);
+          if (cached.mfx || cached.chorus || cached.reverb) {
+            applyPatchEffectsToUI(cached.mfx, cached.chorus, cached.reverb);
+          }
           if (cached.tmt) updatePatchTMTUI(cached.tmt);
           if (Array.isArray(cached.tones)) {
             cached.tones.forEach((toneData, tIdx) => {
@@ -7909,7 +8175,7 @@ Click to cycle to: ${nextTheme.name}`;
       refreshDeviceList();
     });
     window.addEventListener("focus", () => {
-      if (midi.isConnected) {
+      if (midi.isConnected && !isSyncInProgress) {
         requestSoundMode(midi, getDeviceId()).then((detectedMode) => {
           if (detectedMode && detectedMode !== currentSoundMode) {
             setSynthesizerMode(detectedMode, false);

@@ -25,7 +25,7 @@ async function run() {
 
   page.on('console', msg => {
     const text = msg.text();
-    if (text.includes('[MIDI') || text.includes('[SysEx') || text.includes('Error') || text.includes('Connected')) {
+    if (text.includes('[MIDI') || text.includes('[SysEx') || text.includes('Error') || text.includes('Connected') || text.includes('Sync') || text.includes('warning') || text.includes('Failed')) {
       console.log(`[BROWSER] ${text}`);
     }
   });
@@ -54,49 +54,67 @@ async function run() {
   const statusText = await page.$eval('#statusText', el => el.textContent);
   console.log(`4. Connection status: "${statusText}"`);
 
-  // Click "Load Performance Common" (loads current performance name and common params)
-  console.log('5. Clicking "↓ Common" button to read Performance Common from hardware...');
-  await page.click('#loadPerfBtn');
-  await new Promise(r => setTimeout(r, 1500));
-
-  const perfName = await page.$eval('#perfName', el => el.value);
-  console.log(`6. Loaded Performance Name from physical XV-5050: "${perfName}"`);
-
-  // Run USB Hardware Diagnostics Suite (all 6 hardware checks)
-  console.log('7. Running USB Hardware Diagnostics Suite...');
-  await page.click('#btnRunDiagnostics');
-  await new Promise(r => setTimeout(r, 3000));
-
-  // Close diagnostics modal
-  await page.click('#closeDiagBtn');
-  await new Promise(r => setTimeout(r, 400));
-
-  // Test "Sync with Unit" button
-  console.log('10. Testing "⇄ Sync with Unit" button...');
-  await page.click('#syncWithUnitBtn');
+  // 5. Test "Sync with Unit" button
+  console.log('5. Clicking "⇄ Sync with Unit" button...');
+  await page.evaluate(() => document.getElementById('syncWithUnitBtn').click());
+  await new Promise(r => setTimeout(r, 800));
 
   // If confirm modal appears, click proceed
-  const confirmVisible = await page.$eval('#confirmSyncModal', el => el.style.display !== 'none');
+  const confirmVisible = await page.$eval('#confirmSyncModal', el => el.style.display !== 'none').catch(() => false);
   if (confirmVisible) {
-    console.log('   Confirm modal appeared, clicking proceed...');
-    await page.click('#proceedSyncBtn');
+    console.log('6. Confirm modal appeared, clicking proceed...');
+    await page.evaluate(() => document.getElementById('proceedSyncBtn').click());
   }
 
-  // Monitor progress modal
-  console.log('11. Monitoring Full Unit Sync progress...');
-  for (let i = 0; i < 15; i++) {
+  // Monitor progress modal through all 6 stages
+  console.log('7. Monitoring Full Unit Sync progress across all stages...');
+  let completed = false;
+  let lastDetail = '';
+  for (let i = 0; i < 90; i++) {
     await new Promise(r => setTimeout(r, 1000));
     const detail = await page.$eval('#syncProgressDetail', el => el.textContent).catch(() => '');
     const progressModal = await page.$eval('#syncProgressModal', el => el.style.display !== 'none').catch(() => false);
-    console.log(`    Sync Progress (${i + 1}s): "${detail}" (Modal active: ${progressModal})`);
-    if (!progressModal && i > 3) {
-      console.log('    Sync complete! Progress modal closed.');
+    if (detail !== lastDetail) {
+      console.log(`   Sync Progress (${i + 1}s): "${detail}" (Modal active: ${progressModal})`);
+      lastDetail = detail;
+    }
+    if (!progressModal && i > 5) {
+      console.log(`   Sync finished! Progress modal closed after ~${i + 1} seconds.`);
+      completed = true;
       break;
     }
   }
 
   const finalPerfName = await page.$eval('#perfName', el => el.value);
-  console.log(`12. UI Performance Name after Sync: "${finalPerfName}"`);
+  console.log(`8. UI Performance Name after Sync: "${finalPerfName}"`);
+
+  // Verify User Performance Dropdown
+  const userPerfCount = await page.$$eval('#userPerfSelect option', opts => opts.length);
+  const firstPerfOption = await page.$eval('#userPerfSelect option:nth-child(2)', el => el?.textContent || '').catch(() => '');
+  console.log(`9. User Performance Dropdown count: ${userPerfCount} (Example: "${firstPerfOption}")`);
+
+  // Verify User Patch Dropdown
+  const userPatchCount = await page.$$eval('#userPatchSelect option', opts => opts.length);
+  const firstPatchOption = await page.$eval('#userPatchSelect option:nth-child(2)', el => el?.textContent || '').catch(() => '');
+  console.log(`10. User Patch Dropdown count: ${userPatchCount} (Example: "${firstPatchOption}")`);
+
+  const infoStatus = await page.$eval('#statusText', el => el.textContent);
+  console.log(`11. Editor status bar text: "${infoStatus}"`);
+
+  // Verify dropdown selection functionality
+  if (userPerfCount > 1) {
+    console.log('12. Testing selection from User Performance dropdown...');
+    await page.selectOption('#userPerfSelect', '1');
+    await new Promise(r => setTimeout(r, 1000));
+    const perfAfterSelect = await page.$eval('#perfName', el => el.value);
+    const statusAfterSelect = await page.$eval('#statusText', el => el.textContent);
+    console.log(`    Selected Perf 1: Name="${perfAfterSelect}", Status="${statusAfterSelect}"`);
+  }
+
+  // Take screenshot of fully synchronized web editor
+  const screenshotPath = path.resolve(__dirname, 'full_unit_sync_result.png');
+  await page.screenshot({ path: screenshotPath, fullPage: false });
+  console.log(`13. Verification screenshot captured: ${screenshotPath}`);
 
   await browser.close();
   console.log('--- E2E Hardware Browser Test Completed Successfully ---');

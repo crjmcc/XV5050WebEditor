@@ -305,12 +305,14 @@ async function connectMidi() {
     toggleSystemDrawer(false); // Roll up drawer once connected to maximize studio workspace
 
     // Query active Sound Mode from hardware Setup (01 00 00 00)
-    requestSoundMode(midi, getDeviceId()).then(mode => {
-      if (mode === 1 || mode === 2) {
-        setSynthesizerMode(mode, false);
-        setStatus(`Connected to XV-5050 (${mode === 1 ? 'PATCH Mode' : 'PERFORMANCE Mode'})`);
-      }
-    }).catch(() => {});
+    if (!isSyncInProgress) {
+      requestSoundMode(midi, getDeviceId()).then(mode => {
+        if (mode === 1 || mode === 2) {
+          setSynthesizerMode(mode, false);
+          setStatus(`Connected to XV-5050 (${mode === 1 ? 'PATCH Mode' : 'PERFORMANCE Mode'})`);
+        }
+      }).catch(() => {});
+    }
   } else {
     setStatus('Connection failed — verify device selection');
   }
@@ -653,7 +655,7 @@ function bindPerformanceCommonControls() {
   if ($('sysEqBassFreq')) {
     $('sysEqBassFreq').addEventListener('change', () => {
       if (!midi.isConnected) return;
-      sendSystemEqParam(midi, 'EQ_LOW_FREQ', parseInt($('sysEqBassFreq').value, 10), getDeviceId());
+      sendSystemEqParam(midi, 'EQ1_LOW_FREQ', parseInt($('sysEqBassFreq').value, 10), getDeviceId());
     });
   }
 
@@ -664,7 +666,7 @@ function bindPerformanceCommonControls() {
       $('sysEqBassGainVal').textContent = (db > 0 ? `+${db}` : `${db}`) + ' dB';
       if (!midi.isConnected) return;
       sendThrottled('sysEqBassGain', () => {
-        sendSystemEqParam(midi, 'EQ_LOW_GAIN', val, getDeviceId());
+        sendSystemEqParam(midi, 'EQ1_LOW_GAIN', val, getDeviceId());
       });
     });
   }
@@ -672,7 +674,7 @@ function bindPerformanceCommonControls() {
   if ($('sysEqTrebleFreq')) {
     $('sysEqTrebleFreq').addEventListener('change', () => {
       if (!midi.isConnected) return;
-      sendSystemEqParam(midi, 'EQ_HIGH_FREQ', parseInt($('sysEqTrebleFreq').value, 10), getDeviceId());
+      sendSystemEqParam(midi, 'EQ1_HIGH_FREQ', parseInt($('sysEqTrebleFreq').value, 10), getDeviceId());
     });
   }
 
@@ -683,7 +685,7 @@ function bindPerformanceCommonControls() {
       $('sysEqTrebleGainVal').textContent = (db > 0 ? `+${db}` : `${db}`) + ' dB';
       if (!midi.isConnected) return;
       sendThrottled('sysEqTrebleGain', () => {
-        sendSystemEqParam(midi, 'EQ_HIGH_GAIN', val, getDeviceId());
+        sendSystemEqParam(midi, 'EQ1_HIGH_GAIN', val, getDeviceId());
       });
     });
   }
@@ -2716,7 +2718,7 @@ function switchToTab(target) {
   });
 
   // Query hardware sound mode when switching tabs to stay in sync with physical unit
-  if ((target === 'performance' || target === 'patch') && midi.isConnected) {
+  if ((target === 'performance' || target === 'patch') && midi.isConnected && !isSyncInProgress) {
     requestSoundMode(midi, getDeviceId()).then(detectedMode => {
       if (detectedMode && detectedMode !== currentSoundMode) {
         setSynthesizerMode(detectedMode, false);
@@ -2736,6 +2738,7 @@ function initTabs() {
 // =============================================================================
 
 let isEdited = false;
+let isSyncInProgress = false;
 
 function markEdited() {
   if (!isEdited) {
@@ -2772,6 +2775,11 @@ function initEditTracking() {
 }
 
 async function handleSyncWithUnit() {
+  if (isSyncInProgress) {
+    setStatus('Unit sync is already in progress...');
+    return;
+  }
+
   if (!midi.sysexEnabled) {
     const hasAccess = await midi.requestAccess();
     if (hasAccess) refreshDeviceList();
@@ -2935,6 +2943,21 @@ window.loadSyncedUserPerf = async function(index) {
       setStatus(`Reading complete User Performance ${index} from XV-5050 hardware...`);
       const fullPerf = await requestEntireUserPerformance(midi, index, getDeviceId());
       if (fullPerf.common) updatePerformanceCommonUI(fullPerf.common);
+      if (fullPerf.mfxA) {
+        perfMfxCache.A = fullPerf.mfxA;
+        updatePerfMfxBadges('A', fullPerf.mfxA.mfxType);
+      }
+      if (fullPerf.mfxB) {
+        perfMfxCache.B = fullPerf.mfxB;
+        updatePerfMfxBadges('B', fullPerf.mfxB.mfxType);
+      }
+      if (fullPerf.mfxC) {
+        perfMfxCache.C = fullPerf.mfxC;
+        updatePerfMfxBadges('C', fullPerf.mfxC.mfxType);
+      }
+      if (perfMfxCache[activePerfMfxSlot]) {
+        applyPerfMfxToUI(perfMfxCache[activePerfMfxSlot]);
+      }
       if (fullPerf.chorus) updatePerformanceChorusUI(fullPerf.chorus);
       if (fullPerf.reverb) updatePerformanceReverbUI(fullPerf.reverb);
       if (Array.isArray(fullPerf.parts)) {
@@ -2981,6 +3004,9 @@ window.loadSyncedUserPatch = async function(index) {
       setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
       const fullPatch = await requestEntireUserPatch(midi, index, getDeviceId());
       if (fullPatch.common) updatePatchCommonUI(fullPatch.common);
+      if (fullPatch.mfx || fullPatch.chorus || fullPatch.reverb) {
+        applyPatchEffectsToUI(fullPatch.mfx, fullPatch.chorus, fullPatch.reverb);
+      }
       if (fullPatch.tmt) updatePatchTMTUI(fullPatch.tmt);
       if (Array.isArray(fullPatch.tones)) {
         fullPatch.tones.forEach((toneData, tIdx) => {
@@ -3182,6 +3208,9 @@ async function executeHardwareDiagnostics() {
 }
 
 async function executeSyncWithUnit() {
+  if (isSyncInProgress) return;
+  isSyncInProgress = true;
+
   const modal = $('confirmSyncModal');
   if (modal) modal.style.display = 'none';
 
@@ -3198,67 +3227,105 @@ async function executeSyncWithUnit() {
   if (progModal) progModal.style.display = 'flex';
   setProgress(2, 'Connecting to XV-5050...');
 
+  let activeDb = null;
+  let unitDb = null;
   try {
     const devId = getDeviceId();
 
-    // Execute complete 6-stage entire unit sync
-    const unitDb = await syncEntireUnit(midi, devId, (pct, statusText, stage) => {
+    // Execute complete 6-stage entire unit sync with progressive selector updates
+    unitDb = await syncEntireUnit(midi, devId, (pct, statusText, stage, currentDb) => {
+      activeDb = currentDb;
       setProgress(pct, statusText);
+      const db = currentDb || unitDb;
+      if (db && (db.userPerformances?.length || db.userPatches?.length)) {
+        syncedUnitDb = db;
+        populateUserBankSelectors();
+      }
     });
 
     syncedUnitDb = unitDb;
 
-    // 1. Update Performance UI
-    if (unitDb.currentPerformance?.common) {
-      updatePerformanceCommonUI(unitDb.currentPerformance.common);
-      store.set('performance.common', unitDb.currentPerformance.common);
-    }
-    if (unitDb.currentPerformance?.chorus) {
-      updatePerformanceChorusUI(unitDb.currentPerformance.chorus);
-      store.set('performance.effects.chorus', unitDb.currentPerformance.chorus);
-    }
-    if (unitDb.currentPerformance?.reverb) {
-      updatePerformanceReverbUI(unitDb.currentPerformance.reverb);
-      store.set('performance.effects.reverb', unitDb.currentPerformance.reverb);
-    }
-    if (Array.isArray(unitDb.currentPerformance?.parts)) {
-      unitDb.currentPerformance.parts.forEach((p, idx) => {
-        updatePartRow(idx + 1, p);
-      });
-      store.set('performance.parts', unitDb.currentPerformance.parts);
+    // 1. Update Performance UI & 3-MFX
+    try {
+      if (unitDb.currentPerformance?.common) {
+        updatePerformanceCommonUI(unitDb.currentPerformance.common);
+        store.set('performance.common', unitDb.currentPerformance.common);
+      }
+      if (unitDb.currentPerformance?.mfxA) {
+        perfMfxCache.A = unitDb.currentPerformance.mfxA;
+        updatePerfMfxBadges('A', unitDb.currentPerformance.mfxA.mfxType);
+      }
+      if (unitDb.currentPerformance?.mfxB) {
+        perfMfxCache.B = unitDb.currentPerformance.mfxB;
+        updatePerfMfxBadges('B', unitDb.currentPerformance.mfxB.mfxType);
+      }
+      if (unitDb.currentPerformance?.mfxC) {
+        perfMfxCache.C = unitDb.currentPerformance.mfxC;
+        updatePerfMfxBadges('C', unitDb.currentPerformance.mfxC.mfxType);
+      }
+      if (perfMfxCache[activePerfMfxSlot]) {
+        applyPerfMfxToUI(perfMfxCache[activePerfMfxSlot]);
+      }
+      if (unitDb.currentPerformance?.chorus) {
+        updatePerformanceChorusUI(unitDb.currentPerformance.chorus);
+        store.set('performance.effects.chorus', unitDb.currentPerformance.chorus);
+      }
+      if (unitDb.currentPerformance?.reverb) {
+        updatePerformanceReverbUI(unitDb.currentPerformance.reverb);
+        store.set('performance.effects.reverb', unitDb.currentPerformance.reverb);
+      }
+      if (Array.isArray(unitDb.currentPerformance?.parts)) {
+        unitDb.currentPerformance.parts.forEach((p, idx) => {
+          updatePartRow(idx + 1, p);
+        });
+        store.set('performance.parts', unitDb.currentPerformance.parts);
+      }
+    } catch (e) {
+      console.warn('Non-fatal error updating performance UI:', e);
     }
 
-    // 2. Cache & Update Active Patches for All 16 Parts
-    if (Array.isArray(unitDb.activePatches)) {
-      unitDb.activePatches.forEach(ap => {
-        activePartPatchesCache[ap.part] = ap;
-      });
-      const activePart = getSelectedPart();
-      const currentPatch = activePartPatchesCache[activePart] || unitDb.activePatches[0];
-      if (currentPatch) {
-        if (currentPatch.common) {
-          updatePatchCommonUI(currentPatch.common);
-          store.set('patch.common', currentPatch.common);
-        }
-        if (currentPatch.tmt) {
-          updatePatchTMTUI(currentPatch.tmt);
-          store.set('patch.tmt', currentPatch.tmt);
-        }
-        if (Array.isArray(currentPatch.tones)) {
-          currentPatch.tones.forEach((toneData, tIdx) => {
-            store.set(`patch.tones.${tIdx}`, toneData);
-            currentToneCache[tIdx] = toneData;
-          });
-          const activeTone = currentToneCache[currentToneIndex - 1];
-          if (activeTone) updateToneUI(activeTone);
+    // 2. Cache & Update Active Patches for All 16 Parts & Patch Effects
+    try {
+      if (Array.isArray(unitDb.activePatches)) {
+        unitDb.activePatches.forEach(ap => {
+          activePartPatchesCache[ap.part] = ap;
+        });
+        const activePart = getSelectedPart();
+        const currentPatch = activePartPatchesCache[activePart] || unitDb.activePatches[0];
+        if (currentPatch) {
+          if (currentPatch.common) {
+            updatePatchCommonUI(currentPatch.common);
+            store.set('patch.common', currentPatch.common);
+          }
+          if (currentPatch.mfx || currentPatch.chorus || currentPatch.reverb) {
+            applyPatchEffectsToUI(currentPatch.mfx, currentPatch.chorus, currentPatch.reverb);
+          }
+          if (currentPatch.tmt) {
+            updatePatchTMTUI(currentPatch.tmt);
+            store.set('patch.tmt', currentPatch.tmt);
+          }
+          if (Array.isArray(currentPatch.tones)) {
+            currentPatch.tones.forEach((toneData, tIdx) => {
+              store.set(`patch.tones.${tIdx}`, toneData);
+              currentToneCache[tIdx] = toneData;
+            });
+            const activeTone = currentToneCache[currentToneIndex - 1];
+            if (activeTone) updateToneUI(activeTone);
+          }
         }
       }
+    } catch (e) {
+      console.warn('Non-fatal error updating patch UI:', e);
     }
 
     // 3. Populate User Bank Selectors and Inventory Tables
     populateUserBankSelectors();
     renderUserPerfsTable();
     renderUserPatchesTable();
+
+    if (unitDb?.setup?.soundMode) {
+      setSynthesizerMode(unitDb.setup.soundMode, false);
+    }
 
     setProgress(100, 'Entire Unit Sync Complete!');
     clearEdited();
@@ -3270,8 +3337,17 @@ async function executeSyncWithUnit() {
 
   } catch (err) {
     if (progModal) progModal.style.display = 'none';
-    setStatus(`Sync failed: ${err.message}`);
+    const fallbackDb = unitDb || activeDb;
+    if (fallbackDb && (fallbackDb.userPerformances?.length || fallbackDb.userPatches?.length)) {
+      syncedUnitDb = fallbackDb;
+      populateUserBankSelectors();
+      renderUserPerfsTable();
+      renderUserPatchesTable();
+    }
+    setStatus(`Sync completed with warning: ${err.message}`);
     console.error('Entire Unit Sync failed:', err);
+  } finally {
+    isSyncInProgress = false;
   }
 }
 
@@ -3428,6 +3504,9 @@ function init() {
       const cached = activePartPatchesCache[part];
       if (cached) {
         if (cached.common) updatePatchCommonUI(cached.common);
+        if (cached.mfx || cached.chorus || cached.reverb) {
+          applyPatchEffectsToUI(cached.mfx, cached.chorus, cached.reverb);
+        }
         if (cached.tmt) updatePatchTMTUI(cached.tmt);
         if (Array.isArray(cached.tones)) {
           cached.tones.forEach((toneData, tIdx) => {
@@ -3552,7 +3631,7 @@ function init() {
 
   // Resync sound mode when window gains focus in case user changed mode on the physical XV-5050 front panel
   window.addEventListener('focus', () => {
-    if (midi.isConnected) {
+    if (midi.isConnected && !isSyncInProgress) {
       requestSoundMode(midi, getDeviceId()).then(detectedMode => {
         if (detectedMode && detectedMode !== currentSoundMode) {
           setSynthesizerMode(detectedMode, false);

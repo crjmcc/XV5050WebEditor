@@ -37,8 +37,10 @@ import { decodeName, encodeName } from './parameters.js';
 export async function requestPatchCommon(midi, part, deviceId) {
   const base = getPatchTempAddress(part);
   const msg = buildRQ1(base, PATCH_COMMON.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePatchCommon(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePatchCommon(response.data || response);
 }
 
 /**
@@ -53,8 +55,10 @@ export async function requestPatchTMT(midi, part, deviceId) {
   const patchBase = getPatchTempAddress(part);
   const tmtAddress = getPatchTMTAddress(patchBase);
   const msg = buildRQ1(tmtAddress, PATCH_TMT.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePatchTMT(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePatchTMT(response.data || response);
 }
 
 /**
@@ -70,8 +74,10 @@ export async function requestPatchTone(midi, part, tone, deviceId) {
   const patchBase = getPatchTempAddress(part);
   const toneAddress = getToneAddress(patchBase, tone);
   const msg = buildRQ1(toneAddress, PATCH_TONE.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePatchTone(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePatchTone(response.data || response);
 }
 
 /**
@@ -86,8 +92,10 @@ export async function requestPatchMfx(midi, part = 0, deviceId) {
   const patchBase = getPatchTempAddress(part);
   const mfxAddr = getPatchMFXAddress(patchBase);
   const msg = buildRQ1(mfxAddr, PATCH_MFX.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePatchMfx(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePatchMfx(response.data || response);
 }
 
 /**
@@ -102,8 +110,10 @@ export async function requestPatchChorus(midi, part = 0, deviceId) {
   const patchBase = getPatchTempAddress(part);
   const choAddr = getPatchChorusAddress(patchBase);
   const msg = buildRQ1(choAddr, PATCH_CHORUS.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePatchChorus(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePatchChorus(response.data || response);
 }
 
 /**
@@ -118,8 +128,10 @@ export async function requestPatchReverb(midi, part = 0, deviceId) {
   const patchBase = getPatchTempAddress(part);
   const revAddr = getPatchReverbAddress(patchBase);
   const msg = buildRQ1(revAddr, PATCH_REVERB.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePatchReverb(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePatchReverb(response.data || response);
 }
 
 /**

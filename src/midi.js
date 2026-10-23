@@ -40,6 +40,12 @@ export class MidiManager {
     /** @type {boolean} */
     this._connected = false;
 
+    /** @type {number[]|null} */
+    this._sysexBuffer = null;
+
+    /** @type {Promise<any>} */
+    this._sysexQueue = Promise.resolve();
+
     // Traffic listener for SysEx monitor
     this._onTraffic = null;
 
@@ -149,6 +155,11 @@ export class MidiManager {
     this._connected = true;
     console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}" (In: ${this._input.connection}, Out: ${this._output.connection})`);
 
+    // Send warm-up identity request ping to wake USB MIDI stream endpoint
+    try {
+      this.sendRaw([0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]);
+    } catch (_) {}
+
     return true;
   }
 
@@ -163,6 +174,7 @@ export class MidiManager {
     this._output = null;
     this._connected = false;
     this._sysexBuffer = null;
+    this._sysexQueue = Promise.resolve();
   }
 
   /**
@@ -190,10 +202,10 @@ export class MidiManager {
     }
     console.log('[MIDI TX]', arr.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '));
     try {
-      this._output.send(arr);
-    } catch (err) {
-      console.warn('Output send with Array failed, trying Uint8Array:', err);
       this._output.send(uint8);
+    } catch (err) {
+      console.warn('Output send with Uint8Array failed, trying Array:', err);
+      this._output.send(arr);
     }
   }
 
@@ -203,10 +215,15 @@ export class MidiManager {
    */
   sendRaw(bytes) {
     if (!this._output) return;
+    const uint8 = (bytes instanceof Uint8Array) ? bytes : new Uint8Array(bytes);
     if (this._onTraffic) {
-      this._onTraffic('TX', bytes, Date.now());
+      this._onTraffic('TX', Array.from(uint8), Date.now());
     }
-    this._output.send(bytes);
+    try {
+      this._output.send(uint8);
+    } catch (_) {
+      this._output.send(Array.from(uint8));
+    }
   }
 
   /**
@@ -248,12 +265,69 @@ export class MidiManager {
    * Send a SysEx message and wait for the complete response within a timeout.
    * Handles multi-packet SysEx responses (e.g. Tone 265 bytes, MFX 273 bytes)
    * where the hardware sends successive DT1 packets up to 256 bytes each.
+   * Serialized via internal queue so concurrent requests never overlap on the wire.
    * 
    * @param {Uint8Array|number[]} message - SysEx message to send
    * @param {number} [timeout=3000] - Timeout in milliseconds
    * @returns {Promise<object>} Complete parsed SysEx response
    */
   sendAndReceive(message, timeout = 3000) {
+    if (!this.isConnected) {
+      return Promise.reject(new Error('MIDI ports are not connected.'));
+    }
+
+    if (!this._sysexQueue) {
+      this._sysexQueue = Promise.resolve();
+    }
+
+    const task = async () => {
+      try {
+        return await this._sendAndReceiveInternal(message, timeout);
+      } finally {
+        // Roland XV-5050 hardware recovery settling delay between consecutive SysEx transactions
+        await new Promise(r => setTimeout(r, 25));
+      }
+    };
+    const queued = this._sysexQueue.then(task, task);
+    this._sysexQueue = queued.catch(() => {});
+    return queued;
+  }
+
+  /**
+   * Send a SysEx message and wait for response with automatic retry.
+   * 
+   * @param {Uint8Array|number[]} message - SysEx message to send
+   * @param {object} [options]
+   * @param {number} [options.maxRetries=3]
+   * @param {number} [options.timeoutMs=2500]
+   * @param {number} [options.throttleMs=30]
+   * @returns {Promise<object>} Complete parsed SysEx response
+   */
+  async sendAndReceiveWithRetry(message, { maxRetries = 3, timeoutMs = 2500, throttleMs = 30 } = {}) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        if (attempt > 1) {
+          await new Promise(r => setTimeout(r, 100 * attempt));
+        } else if (throttleMs > 0) {
+          await new Promise(r => setTimeout(r, throttleMs));
+        }
+
+        const response = await this.sendAndReceive(message, timeoutMs);
+        if (!response || !response.valid) {
+          throw new Error(response?.error || 'Invalid SysEx packet received');
+        }
+        return response;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    throw new Error(`Failed after ${maxRetries + 1} attempts: ${lastError?.message || 'Unknown error'}`);
+  }
+
+  _sendAndReceiveInternal(message, timeout = 3000) {
     if (!this.isConnected) {
       return Promise.reject(new Error('MIDI ports are not connected.'));
     }

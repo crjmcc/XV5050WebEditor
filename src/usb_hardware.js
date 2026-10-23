@@ -18,6 +18,9 @@ import {
   PATCH_COMMON,
   PATCH_TMT,
   PATCH_TONE,
+  PATCH_MFX,
+  PATCH_CHORUS,
+  PATCH_REVERB,
   getUserPerformanceAddress,
   getUserPatchAddress,
   getUserRhythmAddress,
@@ -27,8 +30,8 @@ import {
   getToneAddress,
 } from './addresses.js';
 import { decodeName, encodeName } from './parameters.js';
-import { parsePerformanceCommon, parsePerformanceChorus, parsePerformanceReverb, parsePerformancePart } from './performance.js';
-import { parsePatchCommon, parsePatchTMT, parsePatchTone } from './patch.js';
+import { parsePerformanceCommon, parsePerformanceChorus, parsePerformanceReverb, parsePerformanceMfx, parsePerformancePart } from './performance.js';
+import { parsePatchCommon, parsePatchTMT, parsePatchTone, parsePatchMfx, parsePatchChorus, parsePatchReverb } from './patch.js';
 
 function extractData(resp) {
   if (!resp) return null;
@@ -45,8 +48,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function sendAndReceiveWithRetry(
   midiManager,
   requestBytes,
-  { maxRetries = 3, timeoutMs = 1500, throttleMs = 40 } = {}
+  { maxRetries = 3, timeoutMs = 2500, throttleMs = 40 } = {}
 ) {
+  if (midiManager && typeof midiManager.sendAndReceiveWithRetry === 'function') {
+    return midiManager.sendAndReceiveWithRetry(requestBytes, { maxRetries, timeoutMs, throttleMs });
+  }
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
@@ -112,6 +118,21 @@ export async function requestEntireUserPerformance(midiManager, perfIndex, devic
   );
   const common = parsePerformanceCommon(extractData(commResp));
 
+  // MFX-A/B/C (with graceful fallback)
+  let mfxA = null, mfxB = null, mfxC = null;
+  try {
+    const rA = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x20, b1, 0x02, 0x00], PERF_TEMP.MFXA.SIZE, deviceId));
+    mfxA = parsePerformanceMfx(extractData(rA));
+  } catch (_) {}
+  try {
+    const rB = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x20, b1, 0x08, 0x00], PERF_TEMP.MFXB.SIZE, deviceId));
+    mfxB = parsePerformanceMfx(extractData(rB));
+  } catch (_) {}
+  try {
+    const rC = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x20, b1, 0x0A, 0x00], PERF_TEMP.MFXC.SIZE, deviceId));
+    mfxC = parsePerformanceMfx(extractData(rC));
+  } catch (_) {}
+
   // Chorus
   const chorResp = await sendAndReceiveWithRetry(
     midiManager,
@@ -141,6 +162,9 @@ export async function requestEntireUserPerformance(midiManager, perfIndex, devic
   return {
     index: perfIndex,
     common,
+    mfxA,
+    mfxB,
+    mfxC,
     chorus,
     reverb,
     parts,
@@ -210,6 +234,21 @@ export async function requestEntireUserPatch(midiManager, patchIndex, deviceId =
   );
   const common = parsePatchCommon(extractData(commResp));
 
+  // Patch MFX, Chorus, Reverb (with graceful fallback)
+  let mfx = null, chorus = null, reverb = null;
+  try {
+    const mfxResp = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x30, b1, 0x02, 0x00], PATCH_MFX.SIZE, deviceId));
+    mfx = parsePatchMfx(extractData(mfxResp));
+  } catch (_) {}
+  try {
+    const choResp = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x30, b1, 0x04, 0x00], PATCH_CHORUS.SIZE, deviceId));
+    chorus = parsePatchChorus(extractData(choResp));
+  } catch (_) {}
+  try {
+    const revResp = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x30, b1, 0x06, 0x00], PATCH_REVERB.SIZE, deviceId));
+    reverb = parsePatchReverb(extractData(revResp));
+  } catch (_) {}
+
   // TMT
   const tmtResp = await sendAndReceiveWithRetry(
     midiManager,
@@ -232,6 +271,9 @@ export async function requestEntireUserPatch(midiManager, patchIndex, deviceId =
   return {
     index: patchIndex,
     common,
+    mfx,
+    chorus,
+    reverb,
     tmt,
     tones,
   };

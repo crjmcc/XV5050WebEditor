@@ -32,6 +32,7 @@ import {
   requestPerformanceCommon,
   requestPerformanceChorus,
   requestPerformanceReverb,
+  requestPerformanceMfx,
   requestAllParts,
   parsePerformanceCommon,
 } from './performance.js';
@@ -39,6 +40,9 @@ import {
   requestPatchCommon,
   requestPatchTMT,
   requestPatchTone,
+  requestPatchMfx,
+  requestPatchChorus,
+  requestPatchReverb,
   parsePatchCommon,
   parsePatchTone,
 } from './patch.js';
@@ -111,21 +115,21 @@ export function parseSystemEQ(data) {
 }
 
 export function parseUserPerformanceHeader(data, index) {
-  if (!data || data.length < 53) return { index, name: `User Perf ${index}` };
+  if (!data || data.length < 12) return { index, name: `User Perf ${index}` };
   return {
     index,
     raw: data,
     name: decodeName(data.slice(0, 12)) || `USER PERF ${index}`,
     soloPart: data[0x0C] ?? 0,
     mfxCtrlChannel: data[0x0D] ?? 0,
-    mfxSource: data[0x30] ?? 0,
-    chorusSource: data[0x33] ?? 0,
-    reverbSource: data[0x34] ?? 0,
+    mfxSource: (data.length > 0x30 ? data[0x30] : 0) ?? 0,
+    chorusSource: (data.length > 0x33 ? data[0x33] : 0) ?? 0,
+    reverbSource: (data.length > 0x34 ? data[0x34] : 0) ?? 0,
   };
 }
 
 export function parseUserPatchHeader(data, index) {
-  if (!data || data.length < 79) return { index, name: `User Patch ${index}` };
+  if (!data || data.length < 12) return { index, name: `User Patch ${index}` };
   return {
     index,
     raw: data,
@@ -247,14 +251,14 @@ export async function requestUserRhythmHeader(midiManager, rhythmIndex, deviceId
 export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = null) {
   const report = (pct, text, stage) => {
     if (typeof onProgress === 'function') {
-      onProgress(Math.min(100, Math.max(0, Math.round(pct))), text, stage);
+      onProgress(Math.min(100, Math.max(0, Math.round(pct))), text, stage, unitDb);
     }
   };
 
   const unitDb = {
     setup: null,
     system: { common: null, eq: null },
-    currentPerformance: { common: null, chorus: null, reverb: null, parts: [] },
+    currentPerformance: { common: null, mfxA: null, mfxB: null, mfxC: null, chorus: null, reverb: null, parts: [] },
     activePatches: [],
     userPerformances: [],
     userPatches: [],
@@ -280,9 +284,14 @@ export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = 
   report(12, 'Reading Current Performance Common...', 'current_performance');
   unitDb.currentPerformance.common = await requestPerformanceCommon(midiManager, deviceId);
 
-  report(15, 'Reading Performance Effects...', 'current_performance');
-  unitDb.currentPerformance.chorus = await requestPerformanceChorus(midiManager, deviceId);
-  unitDb.currentPerformance.reverb = await requestPerformanceReverb(midiManager, deviceId);
+  report(14, 'Reading Performance MFX Processors...', 'current_performance');
+  try { unitDb.currentPerformance.mfxA = await requestPerformanceMfx(midiManager, 'A', deviceId); } catch (_) {}
+  try { unitDb.currentPerformance.mfxB = await requestPerformanceMfx(midiManager, 'B', deviceId); } catch (_) {}
+  try { unitDb.currentPerformance.mfxC = await requestPerformanceMfx(midiManager, 'C', deviceId); } catch (_) {}
+
+  report(16, 'Reading Performance Effects...', 'current_performance');
+  try { unitDb.currentPerformance.chorus = await requestPerformanceChorus(midiManager, deviceId); } catch (_) {}
+  try { unitDb.currentPerformance.reverb = await requestPerformanceReverb(midiManager, deviceId); } catch (_) {}
 
   report(18, 'Reading 16 Performance Parts...', 'current_performance');
   unitDb.currentPerformance.parts = await requestAllParts(midiManager, deviceId, (done, total, part) => {
@@ -296,29 +305,73 @@ export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = 
   report(36, 'Reading Active Part Patches & Waveforms...', 'active_patches');
   for (let p = 1; p <= 16; p++) {
     const pct = 36 + Math.round((p / 16) * 19);
-    report(pct, `Reading Part ${p}/16 Patch & Waveforms...`, 'active_patches');
+    report(pct, `Reading Part ${p}/16 Patch & Effects...`, 'active_patches');
 
-    const pCommon = await requestPatchCommon(midiManager, p, deviceId);
-    const pTmt = await requestPatchTMT(midiManager, p, deviceId);
-    const tones = [];
-    for (let t = 1; t <= 4; t++) {
-      const toneData = await requestPatchTone(midiManager, p, t, deviceId);
-      tones.push(toneData);
+    const partInfo = unitDb.currentPerformance?.parts?.[p - 1];
+    const isRhythm = partInfo?.isRhythm || (p === 10 && partInfo?.patchBankMSB === 0x5C);
+
+    if (isRhythm) {
+      unitDb.activePatches.push({
+        part: p,
+        isRhythm: true,
+        common: { name: partInfo?.patchName || `Part ${p} (Rhythm Kit)` },
+        mfx: null,
+        chorus: null,
+        reverb: null,
+        tmt: null,
+        tones: [],
+      });
+      continue;
     }
 
-    unitDb.activePatches.push({
-      part: p,
-      common: pCommon,
-      tmt: pTmt,
-      tones,
-    });
+    try {
+      const pCommon = await requestPatchCommon(midiManager, p, deviceId);
+      let pMfx = null, pCho = null, pRev = null;
+      if (p === 1) {
+        try { pMfx = await requestPatchMfx(midiManager, p, deviceId); } catch (_) {}
+        try { pCho = await requestPatchChorus(midiManager, p, deviceId); } catch (_) {}
+        try { pRev = await requestPatchReverb(midiManager, p, deviceId); } catch (_) {}
+      }
+
+      const pTmt = await requestPatchTMT(midiManager, p, deviceId);
+      const tones = [];
+      for (let t = 1; t <= 4; t++) {
+        const toneData = await requestPatchTone(midiManager, p, t, deviceId);
+        tones.push(toneData);
+      }
+
+      unitDb.activePatches.push({
+        part: p,
+        isRhythm: false,
+        common: pCommon,
+        mfx: pMfx,
+        chorus: pCho,
+        reverb: pRev,
+        tmt: pTmt,
+        tones,
+      });
+    } catch (partErr) {
+      console.warn(`Part ${p} patch read skipped:`, partErr?.message || partErr);
+      unitDb.activePatches.push({
+        part: p,
+        isRhythm: false,
+        common: { name: partInfo?.patchName || `Part ${p}` },
+        mfx: null,
+        chorus: null,
+        reverb: null,
+        tmt: null,
+        tones: [],
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
   // Stage 4: 64 User Performances (55% - 75%)
   // ---------------------------------------------------------------------------
   report(56, 'Reading 64 User Performances...', 'user_performances');
-  unitDb.userPerformances = await requestAllUserPerformanceHeaders(midiManager, deviceId, (done, total, perf) => {
+  unitDb.userPerformances = [];
+  await requestAllUserPerformanceHeaders(midiManager, deviceId, (done, total, perf) => {
+    unitDb.userPerformances.push(perf);
     const pct = 56 + Math.round((done / total) * 19);
     report(pct, `User Performance ${done}/${total}: "${perf.name}"`, 'user_performances');
   });
@@ -327,7 +380,9 @@ export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = 
   // Stage 5: 128 User Patches (75% - 95%)
   // ---------------------------------------------------------------------------
   report(76, 'Reading 128 User Patches...', 'user_patches');
-  unitDb.userPatches = await requestAllUserPatchHeaders(midiManager, deviceId, (done, total, patch) => {
+  unitDb.userPatches = [];
+  await requestAllUserPatchHeaders(midiManager, deviceId, (done, total, patch) => {
+    unitDb.userPatches.push(patch);
     const pct = 76 + Math.round((done / total) * 19);
     report(pct, `User Patch ${done}/${total}: "${patch.name}"`, 'user_patches');
   });

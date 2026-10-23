@@ -34,8 +34,10 @@ export async function requestPerformanceCommon(midi, deviceId) {
     PERF_TEMP.COMMON.SIZE,
     deviceId
   );
-  const response = await midi.sendAndReceive(msg);
-  return parsePerformanceCommon(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePerformanceCommon(response.data || response);
 }
 
 /**
@@ -51,8 +53,10 @@ export async function requestPerformanceChorus(midi, deviceId) {
     PERF_TEMP.CHORUS.SIZE,
     deviceId
   );
-  const response = await midi.sendAndReceive(msg);
-  return parsePerformanceChorus(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePerformanceChorus(response.data || response);
 }
 
 /**
@@ -68,8 +72,10 @@ export async function requestPerformanceReverb(midi, deviceId) {
     PERF_TEMP.REVERB.SIZE,
     deviceId
   );
-  const response = await midi.sendAndReceive(msg);
-  return parsePerformanceReverb(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePerformanceReverb(response.data || response);
 }
 
 /**
@@ -83,8 +89,10 @@ export async function requestPerformanceReverb(midi, deviceId) {
 export async function requestPerformanceMfx(midi, slot = 'A', deviceId) {
   const address = getPerfMfxAddress(slot);
   const msg = buildRQ1(address, PERF_TEMP.MFXA.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return parsePerformanceMfx(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return parsePerformanceMfx(response.data || response);
 }
 
 /**
@@ -155,8 +163,10 @@ export function sendSystemEqParam(midi, paramKey, value, deviceId) {
 export async function requestPartPatchName(midi, part, deviceId) {
   const base = getPatchTempAddress(part);
   const msg = buildRQ1(base, [0x00, 0x00, 0x00, 0x0C], deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return decodeName(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return decodeName(response.data || response);
 }
 
 /**
@@ -170,14 +180,23 @@ export async function requestPartPatchName(midi, part, deviceId) {
 export async function requestPerformancePart(midi, part, deviceId) {
   const address = getPartAddress(part);
   const msg = buildRQ1(address, PERF_PART.SIZE, deviceId);
-  const response = await midi.sendAndReceive(msg);
-  const partData = parsePerformancePart(response.data);
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  const partData = parsePerformancePart(response.data || response);
+
+  // In Roland XV-5050, Part 10 with Bank MSB 0x5C (92) is a Preset Rhythm Set
+  if (part === 10 && partData.patchBankMSB === 0x5C) {
+    partData.isRhythm = true;
+    partData.patchName = 'Rhythm Kit (Part 10)';
+    return partData;
+  }
 
   try {
     const patchName = await requestPartPatchName(midi, part, deviceId);
     partData.patchName = patchName || `Part ${part}`;
   } catch (_) {
-    partData.patchName = `Part ${part}`;
+    partData.patchName = (part === 10) ? 'Rhythm Kit (Part 10)' : `Part ${part}`;
   }
 
   return partData;
@@ -233,18 +252,27 @@ export async function requestEntirePerformance(midi, deviceId, onProgress) {
   } catch (_) {}
 
   if (onProgress) onProgress('chorus', 4, 21, mfxC || mfxB || mfxA);
-  const chorus = await requestPerformanceChorus(midi, deviceId);
-  await new Promise(r => setTimeout(r, 25));
+  let chorus = null, reverb = null;
+  try {
+    chorus = await requestPerformanceChorus(midi, deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
 
-  if (onProgress) onProgress('reverb', 5, 21, chorus);
-  const reverb = await requestPerformanceReverb(midi, deviceId);
-  await new Promise(r => setTimeout(r, 25));
+  if (onProgress) onProgress('reverb', 5, 21, chorus || mfxC || mfxB || mfxA);
+  try {
+    reverb = await requestPerformanceReverb(midi, deviceId);
+    await new Promise(r => setTimeout(r, 25));
+  } catch (_) {}
 
   const parts = [];
   for (let i = 1; i <= 16; i++) {
     if (onProgress) onProgress('part', 5 + i, 21, null);
-    const partData = await requestPerformancePart(midi, i, deviceId);
-    parts.push(partData);
+    try {
+      const partData = await requestPerformancePart(midi, i, deviceId);
+      parts.push(partData);
+    } catch (_) {
+      parts.push({ part: i, patchName: `Part ${i}` });
+    }
     await new Promise(r => setTimeout(r, 25));
   }
 
@@ -355,11 +383,11 @@ export function parsePerformanceCommon(data) {
     mfxCtrlChannel: data[0x0D] ?? 0,
     mfxCtrlMidi1: data[0x0E] ?? 0,
     mfxCtrlMidi2: data[0x0F] ?? 0,
-    mfxASource: data[0x30] ?? 0,
-    mfxBSource: data[0x31] ?? 0,
-    mfxCSource: data[0x32] ?? 0,
-    chorusSource: data[0x33] ?? 0,
-    reverbSource: data[0x34] ?? 0,
+    mfxASource: (data.length > 0x30 ? data[0x30] : 0) ?? 0,
+    mfxBSource: (data.length > 0x31 ? data[0x31] : 0) ?? 0,
+    mfxCSource: (data.length > 0x32 ? data[0x32] : 0) ?? 0,
+    chorusSource: (data.length > 0x33 ? data[0x33] : 0) ?? 0,
+    reverbSource: (data.length > 0x34 ? data[0x34] : 0) ?? 0,
   };
 }
 
@@ -537,8 +565,10 @@ export function sendSoundMode(midi, mode, deviceId) {
  */
 export async function requestSoundMode(midi, deviceId) {
   const msg = buildRQ1(SETUP.BASE, [0x00, 0x00, 0x00, 0x01], deviceId);
-  const response = await midi.sendAndReceive(msg);
-  return response.data?.[0] ?? 2;
+  const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
+    : await midi.sendAndReceive(msg, 2500);
+  return (response.data || response)?.[0] ?? 2;
 }
 
 /**
