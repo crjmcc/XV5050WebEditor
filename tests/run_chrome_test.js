@@ -49,7 +49,7 @@ async function run() {
   // Click Connect button
   console.log('3. Clicking Connect button...');
   await page.click('#connectBtn');
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise(r => setTimeout(r, 1500));
 
   const statusText = await page.$eval('#statusText', el => el.textContent);
   console.log(`4. Connection status: "${statusText}"`);
@@ -101,20 +101,48 @@ async function run() {
   const infoStatus = await page.$eval('#statusText', el => el.textContent);
   console.log(`11. Editor status bar text: "${infoStatus}"`);
 
-  // Verify dropdown selection functionality
-  if (userPerfCount > 1) {
-    console.log('12. Testing selection from User Performance dropdown...');
-    await page.selectOption('#userPerfSelect', '1');
-    await new Promise(r => setTimeout(r, 1000));
-    const perfAfterSelect = await page.$eval('#perfName', el => el.value);
-    const statusAfterSelect = await page.$eval('#statusText', el => el.textContent);
-    console.log(`    Selected Perf 1: Name="${perfAfterSelect}", Status="${statusAfterSelect}"`);
-  }
+  // Verify Part 2 Instrument in 16 Parts Table
+  const part2Name = await page.$eval('#partPatchName2', el => el.textContent);
+  console.log(`11. Part 2 Instrument Name in Table: "${part2Name}"`);
+  const part2DropdownOptions = await page.$$eval('#partPatchSelect2 option', opts => opts.length);
+  console.log(`12. Part 2 Instrument Selector option count: ${part2DropdownOptions}`);
+
+  // 13. Test clicking "🎛️ Tweak" on Part 2
+  console.log('13. Testing "🎛️ Tweak" on Part 2...');
+  await page.click('#partTweak2');
+  await new Promise(r => setTimeout(r, 600));
+
+  const isPatchTabActive = await page.$eval('#patchTab', el => el.classList.contains('active'));
+  const activePartBadgeText = await page.$eval('#activePartBadge', el => el.textContent);
+  const activeHeaderName = await page.$eval('#activePatchHeaderName', el => el.textContent);
+  const stripBtn2Active = await page.$eval('#partStripBtn2', el => el.classList.contains('active'));
+  console.log(`14. Tweak Part 2 Verification: TabActive=${isPatchTabActive}, Badge="${activePartBadgeText}", HeaderName="${activeHeaderName}", StripBtn2Active=${stripBtn2Active}`);
+
+  // 15. Verify Instrument Selector on Patch & Tones Tab
+  const patchInstCount = await page.$$eval('#patchInstrumentSelect option', opts => opts.length);
+  console.log(`15. Patch & Tones Instrument Selector option count: ${patchInstCount}`);
+
+  // 16. Test "⬡ Back to Mixer" button
+  console.log('16. Clicking "⬡ Back to Mixer" button...');
+  await page.click('#btnBackToPerfMixer');
+  await new Promise(r => setTimeout(r, 500));
+  const isPerfTabActive = await page.$eval('#performanceTab', el => el.classList.contains('active'));
+  console.log(`17. Returned to Performance Mixer: TabActive=${isPerfTabActive}`);
+
+  // 18. Test LocalStorage Persistence across Page Reload
+  console.log('18. Testing LocalStorage persistence across page reload...');
+  await page.reload();
+  await new Promise(r => setTimeout(r, 1200));
+
+  const reloadedUserPatchCount = await page.$$eval('#userPatchSelect option', opts => opts.length);
+  const reloadedPart2Name = await page.$eval('#partPatchName2', el => el.textContent);
+  const reloadedStripCount = await page.$$eval('.part-strip-btn', btns => btns.length);
+  console.log(`19. Post-Reload Verification: UserPatches=${reloadedUserPatchCount}, Part2Name="${reloadedPart2Name}", PartStripButtons=${reloadedStripCount}`);
 
   // Take screenshot of fully synchronized web editor
   const screenshotPath = path.resolve(__dirname, 'full_unit_sync_result.png');
   await page.screenshot({ path: screenshotPath, fullPage: false });
-  console.log(`13. Verification screenshot captured: ${screenshotPath}`);
+  console.log(`20. Verification screenshot captured: ${screenshotPath}`);
 
   await browser.close();
   console.log('--- E2E Hardware Browser Test Completed Successfully ---');

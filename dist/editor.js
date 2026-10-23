@@ -3200,11 +3200,6 @@
     const msg = buildDT1(address, [mode & 127], deviceId);
     midi2.send(msg);
   }
-  async function requestSoundMode(midi2, deviceId) {
-    const msg = buildRQ1(SETUP.BASE, [0, 0, 0, 1], deviceId);
-    const response = midi2 && typeof midi2.sendAndReceiveWithRetry === "function" ? await midi2.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 }) : await midi2.sendAndReceive(msg, 2500);
-    return (response.data || response)?.[0] ?? 2;
-  }
   function sendActivePerformanceSelection(midi2, perfIndex, deviceId = 16, perfCtrlCh = null) {
     if (perfIndex < 1 || perfIndex > 64) {
       throw new Error(`User Performance index must be 1-64, got ${perfIndex}`);
@@ -3235,21 +3230,26 @@
     midi2.send([176, 32, 0]);
     midi2.send([192, pc]);
   }
-  function sendPartPatchSelection(midi2, part, patchIndex, deviceId = 16) {
+  function sendPartBankAndProgram(midi2, part, bankMsb, bankLsb, programNum, deviceId = 16, receiveChannel = null) {
     if (part < 1 || part > 16) {
       throw new Error(`Part number must be 1-16, got ${part}`);
     }
-    if (patchIndex < 1 || patchIndex > 128) {
-      throw new Error(`User Patch index must be 1-128, got ${patchIndex}`);
+    if (programNum < 1 || programNum > 128) {
+      throw new Error(`Program number must be 1-128, got ${programNum}`);
     }
-    const pc = patchIndex - 1 & 127;
+    const pc = programNum - 1 & 127;
+    const msb = bankMsb & 127;
+    const lsb = bankLsb & 127;
     const partAddr = [16, 0, 32 + (part - 1), 4];
-    const dt1Msg = buildDT1(partAddr, [87, 0, pc], deviceId);
+    const dt1Msg = buildDT1(partAddr, [msb, lsb, pc], deviceId);
     midi2.send(dt1Msg);
-    const ch = part - 1 & 15;
-    midi2.send([176 | ch, 0, 87]);
-    midi2.send([176 | ch, 32, 0]);
+    const ch = receiveChannel !== null && receiveChannel !== void 0 ? receiveChannel & 15 : part - 1 & 15;
+    midi2.send([176 | ch, 0, msb]);
+    midi2.send([176 | ch, 32, lsb]);
     midi2.send([192 | ch, pc]);
+  }
+  function sendPartPatchSelection(midi2, part, patchIndex, deviceId = 16, receiveChannel = null) {
+    return sendPartBankAndProgram(midi2, part, 87, 0, patchIndex, deviceId, receiveChannel);
   }
 
   // src/patch.js
@@ -4940,13 +4940,31 @@
       timestamp: Date.now()
     };
     report(2, "Reading Setup parameters...", "setup_system");
-    unitDb.setup = await requestSetup(midiManager, deviceId);
+    try {
+      unitDb.setup = await requestSetup(midiManager, deviceId);
+    } catch (err) {
+      console.warn("Setup parameters read skipped:", err?.message || err);
+      unitDb.setup = { soundMode: 2 };
+    }
     report(5, "Reading System Common...", "setup_system");
-    unitDb.system.common = await requestSystemCommon(midiManager, deviceId);
+    try {
+      unitDb.system.common = await requestSystemCommon(midiManager, deviceId);
+    } catch (err) {
+      console.warn("System Common read skipped:", err?.message || err);
+    }
     report(8, "Reading System EQ...", "setup_system");
-    unitDb.system.eq = await requestSystemEQ(midiManager, deviceId);
+    try {
+      unitDb.system.eq = await requestSystemEQ(midiManager, deviceId);
+    } catch (err) {
+      console.warn("System EQ read skipped:", err?.message || err);
+    }
     report(12, "Reading Current Performance Common...", "current_performance");
-    unitDb.currentPerformance.common = await requestPerformanceCommon(midiManager, deviceId);
+    try {
+      unitDb.currentPerformance.common = await requestPerformanceCommon(midiManager, deviceId);
+    } catch (err) {
+      console.warn("Current Performance Common read skipped:", err?.message || err);
+      unitDb.currentPerformance.common = { name: "PERFORMANCE" };
+    }
     report(14, "Reading Performance MFX Processors...", "current_performance");
     try {
       unitDb.currentPerformance.mfxA = await requestPerformanceMfx(midiManager, "A", deviceId);
@@ -5285,15 +5303,6 @@
       setStatus("Connected \u2014 ready to communicate");
       midi.onSysEx(handleIncomingSysEx);
       toggleSystemDrawer(false);
-      if (!isSyncInProgress) {
-        requestSoundMode(midi, getDeviceId()).then((mode) => {
-          if (mode === 1 || mode === 2) {
-            setSynthesizerMode(mode, false);
-            setStatus(`Connected to XV-5050 (${mode === 1 ? "PATCH Mode" : "PERFORMANCE Mode"})`);
-          }
-        }).catch(() => {
-        });
-      }
     } else {
       setStatus("Connection failed \u2014 verify device selection");
     }
@@ -5309,7 +5318,11 @@
       return;
     }
     const part = getEffectivePatchPart();
-    const channel = currentSoundMode === 1 || part === 0 ? 0 : part >= 1 && part <= 16 ? part - 1 : 0;
+    let channel = 0;
+    if (currentSoundMode !== 1 && part >= 1 && part <= 16) {
+      const chEl = $(`partChannel${part}`);
+      channel = chEl ? parseInt(chEl.value, 10) : part - 1;
+    }
     if (activeAuditionTimeout) clearTimeout(activeAuditionTimeout);
     midi.sendNoteOn(channel, 60, 100);
     setStatus(`Audition Note On: C4 (${currentSoundMode === 1 ? "Patch Mode" : `Part ${part}`}, Ch ${channel + 1})`);
@@ -6127,7 +6140,17 @@
           <span class="toggle-slider"></span>
         </label>
       </td>
-      <td style="max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;" id="partPatchName${i}">\u2014</td>
+      <td style="min-width:210px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <div style="flex:1; min-width:0;">
+            <div id="partPatchName${i}" style="font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; font-size:0.85rem;" title="Part ${i} Current Patch">\u2014</div>
+            <select id="partPatchSelect${i}" class="part-patch-select" style="width:100%; margin-top:3px; padding:2px 4px; font-size:0.75rem;" title="Select Instrument for Part ${i}">
+              <option value="">\u2014 Choose Instrument \u2014</option>
+            </select>
+          </div>
+          <button class="btn btn-sm btn-primary btn-tweak-part" id="partTweak${i}" title="Tweak Part ${i} Sound in Patch & Tones Editor" style="padding:3px 7px; font-size:0.72rem; white-space:nowrap;">\u{1F39B}\uFE0F Tweak</button>
+        </div>
+      </td>
       <td>
         <select id="partChannel${i}" style="min-width:55px;">
           ${Array.from(
@@ -6187,6 +6210,26 @@
     }
   }
   function bindPartControls(part) {
+    const tr = $(`partRow${part}`);
+    if (tr) {
+      tr.addEventListener("click", (e) => {
+        if (e.target.closest("input, select, button, label")) return;
+        selectPart(part);
+      });
+    }
+    const tweakBtn = $(`partTweak${part}`);
+    if (tweakBtn) {
+      tweakBtn.addEventListener("click", () => {
+        selectPart(part);
+        switchToTab("patch");
+      });
+    }
+    const patchSel = $(`partPatchSelect${part}`);
+    if (patchSel) {
+      patchSel.addEventListener("change", (e) => {
+        handleInstrumentSelection(part, e.target.value);
+      });
+    }
     $(`partSwitch${part}`).addEventListener("change", () => {
       if (!midi.isConnected) return;
       sendPartParam(midi, part, "RECEIVE_SWITCH", $(`partSwitch${part}`).checked ? 1 : 0, getDeviceId());
@@ -6195,12 +6238,36 @@
       if (!midi.isConnected) return;
       sendPartParam(midi, part, "RECEIVE_CHANNEL", parseInt($(`partChannel${part}`).value, 10), getDeviceId());
     });
-    for (const [elSuffix, paramKey] of [["BankMSB", "PATCH_BANK_MSB"], ["BankLSB", "PATCH_BANK_LSB"], ["PC", "PATCH_PC"]]) {
-      $(`part${elSuffix}${part}`).addEventListener("change", () => {
-        if (!midi.isConnected) return;
-        sendPartParam(midi, part, paramKey, parseInt($(`part${elSuffix}${part}`).value, 10), getDeviceId());
-      });
-    }
+    const handleBankPcInput = async () => {
+      const msb = parseInt($(`partBankMSB${part}`).value, 10) || 0;
+      const lsb = parseInt($(`partBankLSB${part}`).value, 10) || 0;
+      const pc = parseInt($(`partPC${part}`).value, 10) || 1;
+      const chEl = $(`partChannel${part}`);
+      const ch = chEl ? parseInt(chEl.value, 10) : part - 1;
+      if (midi.isConnected) {
+        sendPartBankAndProgram(midi, part, msb, lsb, pc, getDeviceId(), ch);
+        setStatus(`Sent Bank ${msb}/${lsb} PC ${pc} to Part ${part} (Ch ${ch + 1})`);
+        try {
+          const freshName = await requestPartPatchName(midi, part, getDeviceId());
+          if (freshName && freshName.trim()) {
+            const nameEl = $(`partPatchName${part}`);
+            if (nameEl) nameEl.textContent = freshName;
+            if (syncedUnitDb?.currentPerformance?.parts?.[part - 1]) {
+              syncedUnitDb.currentPerformance.parts[part - 1].patchName = freshName;
+              syncedUnitDb.currentPerformance.parts[part - 1].patchBankMSB = msb;
+              syncedUnitDb.currentPerformance.parts[part - 1].patchBankLSB = lsb;
+              syncedUnitDb.currentPerformance.parts[part - 1].patchPC = pc;
+              saveSyncedDbToStorage();
+            }
+            if (getSelectedPart() === part) updateActivePartUI(part);
+          }
+        } catch (_) {
+        }
+      }
+    };
+    $(`partBankMSB${part}`).addEventListener("change", handleBankPcInput);
+    $(`partBankLSB${part}`).addEventListener("change", handleBankPcInput);
+    $(`partPC${part}`).addEventListener("change", handleBankPcInput);
     $(`partLevel${part}`).addEventListener("input", () => {
       const val = parseInt($(`partLevel${part}`).value, 10);
       $(`partLevelVal${part}`).textContent = val;
@@ -6282,9 +6349,8 @@
       }
     });
     $(`partEditPatch${part}`).addEventListener("click", () => {
-      $("patchPartSelect").value = part;
+      selectPart(part);
       switchToTab("patch");
-      $("loadPatchBtn").click();
     });
   }
   function updatePartRow(part, data) {
@@ -6312,6 +6378,20 @@
         nameEl.textContent = data.patchName;
         nameEl.title = data.patchName;
       }
+    }
+    const partSelect = $(`partPatchSelect${part}`);
+    if (partSelect) {
+      populateInstrumentSelectOptions(partSelect, part);
+    }
+    const stripBtn = $(`partStripBtn${part}`);
+    if (stripBtn && data.patchName) {
+      stripBtn.title = `Part ${part}: ${data.patchName}`;
+    }
+    if (part === (getSelectedPart() || 1)) {
+      const headerName = $("activePatchHeaderName");
+      if (headerName && data.patchName) headerName.textContent = data.patchName;
+      const patchInstSel = $("patchInstrumentSelect");
+      if (patchInstSel) populateInstrumentSelectOptions(patchInstSel, part);
     }
   }
   var currentMatrixIndex = 1;
@@ -7364,6 +7444,22 @@
       updatePerformanceChorusUI(perf.chorus);
       updatePerformanceReverbUI(perf.reverb);
       perf.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
+      if (!syncedUnitDb) {
+        syncedUnitDb = {
+          setup: null,
+          system: { common: null, eq: null },
+          currentPerformance: perf,
+          activePatches: [],
+          userPerformances: [],
+          userPatches: [],
+          userRhythms: []
+        };
+      } else {
+        syncedUnitDb.currentPerformance = perf;
+      }
+      populateAllInstrumentSelectors();
+      renderPartNavigationStrip();
+      saveSyncedDbToStorage();
       if (progEl) progEl.textContent = "Entire performance loaded";
       setStatus(`Successfully loaded Performance: "${perf.common.name}" (Common, 3-MFX, Chorus, Reverb, 16 Parts)`);
     } catch (e) {
@@ -7383,6 +7479,23 @@
         if (progEl) progEl.textContent = `Reading Part ${done}/${total} (${partData?.patchName || ""})...`;
         if (partData) updatePartRow(done, partData);
       });
+      parts.forEach((p, idx) => updatePartRow(idx + 1, p));
+      if (!syncedUnitDb) {
+        syncedUnitDb = {
+          setup: null,
+          system: { common: null, eq: null },
+          currentPerformance: { common: null, parts },
+          activePatches: [],
+          userPerformances: [],
+          userPatches: [],
+          userRhythms: []
+        };
+      } else if (syncedUnitDb.currentPerformance) {
+        syncedUnitDb.currentPerformance.parts = parts;
+      }
+      populateAllInstrumentSelectors();
+      renderPartNavigationStrip();
+      saveSyncedDbToStorage();
       if (progEl) progEl.textContent = "All 16 parts loaded";
       setStatus("Successfully loaded all 16 performance parts and sound names");
     } catch (e) {
@@ -7397,14 +7510,6 @@
     document.querySelectorAll(".tab-content").forEach((c) => {
       c.classList.toggle("active", c.id === `${target}Tab`);
     });
-    if ((target === "performance" || target === "patch") && midi.isConnected && !isSyncInProgress) {
-      requestSoundMode(midi, getDeviceId()).then((detectedMode) => {
-        if (detectedMode && detectedMode !== currentSoundMode) {
-          setSynthesizerMode(detectedMode, false);
-        }
-      }).catch(() => {
-      });
-    }
   }
   function initTabs() {
     document.querySelectorAll(".tab-btn").forEach((btn) => {
@@ -7495,8 +7600,76 @@
     }
     executeSyncWithUnit();
   }
+  var ROLAND_BANKS = [
+    { id: "user", label: "User Patches (USER)", msb: 87, lsb: 0, count: 128, isRhythm: false },
+    { id: "pra", label: "Preset A (PR-A)", msb: 87, lsb: 64, count: 128, isRhythm: false },
+    { id: "prb", label: "Preset B (PR-B)", msb: 87, lsb: 65, count: 128, isRhythm: false },
+    { id: "prc", label: "Preset C (PR-C)", msb: 87, lsb: 66, count: 128, isRhythm: false },
+    { id: "prd", label: "Preset D (PR-D)", msb: 87, lsb: 67, count: 128, isRhythm: false },
+    { id: "pre", label: "Preset E (PR-E)", msb: 87, lsb: 68, count: 128, isRhythm: false },
+    { id: "gm2", label: "GM2 Bank (GM)", msb: 121, lsb: 0, count: 256, isRhythm: false },
+    { id: "preset_rhy", label: "Preset Rhythm Kits (PR-RHY)", msb: 86, lsb: 64, count: 8, isRhythm: true },
+    { id: "user_rhy", label: "User Rhythm Kits (USER-RHY)", msb: 86, lsb: 0, count: 4, isRhythm: true }
+  ];
+  var SYNC_CACHE_KEY = "xv5050_synced_unit_db";
   var syncedUnitDb = null;
   var activePartPatchesCache = {};
+  function saveSyncedDbToStorage() {
+    if (!syncedUnitDb) return;
+    try {
+      localStorage.setItem(SYNC_CACHE_KEY, JSON.stringify(syncedUnitDb));
+    } catch (e) {
+      console.warn("Could not save unit DB to localStorage:", e);
+    }
+  }
+  function restoreSyncedDbFromStorage() {
+    try {
+      const raw = localStorage.getItem(SYNC_CACHE_KEY);
+      if (!raw) return false;
+      const db = JSON.parse(raw);
+      if (!db || !db.userPerformances?.length && !db.userPatches?.length && !db.currentPerformance) {
+        return false;
+      }
+      syncedUnitDb = db;
+      populateUserBankSelectors();
+      populateAllInstrumentSelectors();
+      renderUserPerfsTable();
+      renderUserPatchesTable();
+      renderPartNavigationStrip();
+      if (syncedUnitDb.currentPerformance?.common) {
+        updatePerformanceCommonUI(syncedUnitDb.currentPerformance.common);
+      }
+      if (syncedUnitDb.currentPerformance?.mfxA) {
+        perfMfxCache.A = syncedUnitDb.currentPerformance.mfxA;
+        updatePerfMfxBadges("A", perfMfxCache.A.mfxType);
+      }
+      if (syncedUnitDb.currentPerformance?.mfxB) {
+        perfMfxCache.B = syncedUnitDb.currentPerformance.mfxB;
+        updatePerfMfxBadges("B", perfMfxCache.B.mfxType);
+      }
+      if (syncedUnitDb.currentPerformance?.mfxC) {
+        perfMfxCache.C = syncedUnitDb.currentPerformance.mfxC;
+        updatePerfMfxBadges("C", perfMfxCache.C.mfxType);
+      }
+      if (Array.isArray(syncedUnitDb.currentPerformance?.parts)) {
+        syncedUnitDb.currentPerformance.parts.forEach((p, idx) => updatePartRow(idx + 1, p));
+      }
+      if (Array.isArray(syncedUnitDb.activePatches)) {
+        syncedUnitDb.activePatches.forEach((ap) => {
+          activePartPatchesCache[ap.part] = ap;
+        });
+        const activePart = getSelectedPart() || 1;
+        const initialPatch = activePartPatchesCache[activePart] || syncedUnitDb.activePatches[0];
+        if (initialPatch?.common) updatePatchCommonUI(initialPatch.common);
+      }
+      updateActivePartUI(getSelectedPart() || 1);
+      setStatus("Restored synced instruments and sound database from browser storage");
+      return true;
+    } catch (err) {
+      console.warn("Failed restoring unit DB from localStorage:", err);
+      return false;
+    }
+  }
   function populateUserBankSelectors() {
     const perfSelect = $("userPerfSelect");
     if (perfSelect && syncedUnitDb?.userPerformances) {
@@ -7517,6 +7690,272 @@
         opt.textContent = `User ${String(p.index).padStart(3, "0")}: ${p.name}`;
         patchSelect.appendChild(opt);
       });
+    }
+  }
+  function populateAllInstrumentSelectors() {
+    for (let i = 1; i <= 16; i++) {
+      const sel = $(`partPatchSelect${i}`);
+      if (sel) populateInstrumentSelectOptions(sel, i);
+    }
+    const patchInstSel = $("patchInstrumentSelect");
+    if (patchInstSel) {
+      const activePart = getSelectedPart() || 1;
+      populateInstrumentSelectOptions(patchInstSel, activePart);
+    }
+  }
+  function populateInstrumentSelectOptions(selectEl, forPart = 1) {
+    if (!selectEl) return;
+    const currentVal = selectEl.value;
+    selectEl.innerHTML = '<option value="">\u2014 Select Instrument \u2014</option>';
+    const ogPerf = document.createElement("optgroup");
+    ogPerf.label = "\u2014 Performance Channels (Parts 1-16) \u2014";
+    for (let pNum = 1; pNum <= 16; pNum++) {
+      const dbPart = syncedUnitDb?.currentPerformance?.parts?.[pNum - 1];
+      const domName = $(`partPatchName${pNum}`)?.textContent?.trim();
+      const domMsb = parseInt($(`partBankMSB${pNum}`)?.value || "87", 10);
+      const domLsb = parseInt($(`partBankLSB${pNum}`)?.value || "64", 10);
+      const domPc = parseInt($(`partPC${pNum}`)?.value || "1", 10);
+      const name = dbPart?.patchName || (domName && domName !== "\u2014" ? domName : `Sound ${pNum}`);
+      const msb = dbPart?.patchBankMSB ?? domMsb;
+      const lsb = dbPart?.patchBankLSB ?? domLsb;
+      const pc = dbPart?.patchPC ?? domPc;
+      const isRhy = dbPart?.isRhythm || pNum === 10 || msb === 86;
+      const opt = document.createElement("option");
+      opt.value = `custom:${msb}:${lsb}:${pc}:${pNum}`;
+      opt.textContent = `Part ${pNum} [Ch ${pNum}]${isRhy ? " \u{1F941}" : ""}: ${name}`;
+      ogPerf.appendChild(opt);
+    }
+    selectEl.appendChild(ogPerf);
+    const ogUser = document.createElement("optgroup");
+    ogUser.label = "\u2014 Hardware User Patches (1-128) \u2014";
+    if (syncedUnitDb?.userPatches?.length) {
+      syncedUnitDb.userPatches.forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = `user:${p.index}`;
+        opt.textContent = `User ${String(p.index).padStart(3, "0")}: ${p.name}`;
+        ogUser.appendChild(opt);
+      });
+    } else {
+      for (let u = 1; u <= 128; u++) {
+        const opt = document.createElement("option");
+        opt.value = `user:${u}`;
+        opt.textContent = `User ${String(u).padStart(3, "0")} (Bank 87/0 PC ${u})`;
+        ogUser.appendChild(opt);
+      }
+    }
+    selectEl.appendChild(ogUser);
+    const ogRhythm = document.createElement("optgroup");
+    ogRhythm.label = "\u2014 Rhythm Drum Kits \u2014";
+    if (syncedUnitDb?.userRhythms?.length) {
+      syncedUnitDb.userRhythms.forEach((r) => {
+        const opt = document.createElement("option");
+        opt.value = `rhythm:user:${r.index}`;
+        opt.textContent = `User Drum ${r.index}: ${r.name}`;
+        ogRhythm.appendChild(opt);
+      });
+    } else {
+      for (let r = 1; r <= 4; r++) {
+        const opt = document.createElement("option");
+        opt.value = `rhythm:user:${r}`;
+        opt.textContent = `User Drum Kit ${r} (Bank 86/0 PC ${r})`;
+        ogRhythm.appendChild(opt);
+      }
+    }
+    for (let pr = 1; pr <= 8; pr++) {
+      const opt = document.createElement("option");
+      opt.value = `rhythm:preset:${pr}`;
+      opt.textContent = `Preset Drum Kit ${pr} (Bank 86/64 PC ${pr})`;
+      ogRhythm.appendChild(opt);
+    }
+    selectEl.appendChild(ogRhythm);
+    const ogPresets = document.createElement("optgroup");
+    ogPresets.label = "\u2014 Roland Factory Preset Banks \u2014";
+    ROLAND_BANKS.filter((b) => !b.isRhythm && b.id !== "user").forEach((b) => {
+      const opt = document.createElement("option");
+      opt.value = `bank:${b.id}:${b.msb}:${b.lsb}:1`;
+      opt.textContent = `${b.label} (Bank ${b.msb}/${b.lsb})`;
+      ogPresets.appendChild(opt);
+    });
+    selectEl.appendChild(ogPresets);
+    const curPartData = syncedUnitDb?.currentPerformance?.parts?.[forPart - 1];
+    const curMsb = curPartData?.patchBankMSB ?? parseInt($(`partBankMSB${forPart}`)?.value || "87", 10);
+    const curLsb = curPartData?.patchBankLSB ?? parseInt($(`partBankLSB${forPart}`)?.value || "64", 10);
+    const curPc = curPartData?.patchPC ?? parseInt($(`partPC${forPart}`)?.value || "1", 10);
+    if (curMsb === 87 && curLsb === 0) {
+      const userVal = `user:${curPc}`;
+      if (Array.from(selectEl.options).some((o) => o.value === userVal)) {
+        selectEl.value = userVal;
+        return;
+      }
+    }
+    if (curMsb === 86) {
+      const rVal = curLsb === 0 ? `rhythm:user:${curPc}` : `rhythm:preset:${curPc}`;
+      if (Array.from(selectEl.options).some((o) => o.value === rVal)) {
+        selectEl.value = rVal;
+        return;
+      }
+    }
+    const customVal = `custom:${curMsb}:${curLsb}:${curPc}:${forPart}`;
+    if (Array.from(selectEl.options).some((o) => o.value === customVal)) {
+      selectEl.value = customVal;
+      return;
+    }
+    const bankMatch = Array.from(selectEl.options).find((o) => o.value.startsWith("bank:") && o.value.includes(`:${curMsb}:${curLsb}:`));
+    if (bankMatch) {
+      selectEl.value = bankMatch.value;
+      return;
+    }
+    if (currentVal && Array.from(selectEl.options).some((o) => o.value === currentVal)) {
+      selectEl.value = currentVal;
+    }
+  }
+  function renderPartNavigationStrip() {
+    const container = $("partStripContainer");
+    if (!container) return;
+    container.innerHTML = "";
+    const activePart = getSelectedPart() || 1;
+    for (let i = 1; i <= 16; i++) {
+      const btn = document.createElement("button");
+      btn.className = `part-strip-btn${i === activePart ? " active" : ""}`;
+      btn.id = `partStripBtn${i}`;
+      const pData = syncedUnitDb?.currentPerformance?.parts?.[i - 1];
+      const domName = $(`partPatchName${i}`)?.textContent?.trim();
+      const isRhy = pData?.isRhythm || i === 10 || pData?.patchBankMSB === 86;
+      const soundName = pData?.patchName || (domName && domName !== "\u2014" ? domName : `Sound ${i}`);
+      btn.innerHTML = `${i}${isRhy ? " \u{1F941}" : ""}`;
+      btn.title = `Part ${i} [Ch ${i}]: ${soundName}`;
+      btn.addEventListener("click", () => {
+        selectPart(i);
+      });
+      container.appendChild(btn);
+    }
+  }
+  function selectPart(part) {
+    const partSel = $("patchPartSelect");
+    if (partSel && parseInt(partSel.value, 10) !== part) {
+      partSel.value = part;
+    }
+    for (let i = 1; i <= 16; i++) {
+      const row = $(`partRow${i}`);
+      if (row) row.classList.toggle("selected", i === part);
+      const stripBtn = $(`partStripBtn${i}`);
+      if (stripBtn) stripBtn.classList.toggle("active", i === part);
+    }
+    if (part === 0) {
+      setSynthesizerMode(1, true);
+    } else if (currentSoundMode === 1) {
+      setSynthesizerMode(2, true);
+    }
+    updateActivePartUI(part);
+    const cached = activePartPatchesCache[part];
+    if (cached) {
+      if (cached.common) updatePatchCommonUI(cached.common);
+      if (cached.mfx || cached.chorus || cached.reverb) {
+        applyPatchEffectsToUI(cached.mfx, cached.chorus, cached.reverb);
+      }
+      if (cached.tmt) updatePatchTMTUI(cached.tmt);
+      if (Array.isArray(cached.tones)) {
+        cached.tones.forEach((toneData, tIdx) => {
+          currentToneCache[tIdx] = toneData;
+        });
+        const activeTone = currentToneCache[currentToneIndex - 1];
+        if (activeTone) updateToneUI(activeTone);
+      }
+      setStatus(`Switched to synced ${part === 0 ? "Single Patch" : `Part ${part} Patch`} (${cached.common?.name || ""})`);
+    }
+  }
+  function updateActivePartUI(part) {
+    const pData = syncedUnitDb?.currentPerformance?.parts?.[part - 1];
+    const domName = $(`partPatchName${part}`)?.textContent?.trim();
+    const patchName = pData?.patchName || (domName && domName !== "\u2014" ? domName : `Part ${part} Sound`);
+    const ch = pData?.receiveChannel ?? ($(`partChannel${part}`) ? parseInt($(`partChannel${part}`).value, 10) : part - 1);
+    const badge = $("activePartBadge");
+    if (badge) badge.textContent = part === 0 ? "SOLO" : `PART ${part}`;
+    const nameHeader = $("activePatchHeaderName");
+    if (nameHeader) nameHeader.textContent = patchName;
+    const chBadge = $("activePartChannelBadge");
+    if (chBadge) chBadge.textContent = `MIDI Ch ${ch + 1}`;
+    const instSel = $("patchInstrumentSelect");
+    if (instSel) {
+      populateInstrumentSelectOptions(instSel, part);
+    }
+  }
+  async function handleInstrumentSelection(part, val) {
+    if (!val) return;
+    let bankMsb = 87;
+    let bankLsb = 0;
+    let pc = 1;
+    let name = "";
+    const parts = val.split(":");
+    const type = parts[0];
+    if (type === "user") {
+      const index = parseInt(parts[1], 10);
+      bankMsb = 87;
+      bankLsb = 0;
+      pc = index;
+      const patch = syncedUnitDb?.userPatches?.find((p) => p.index === index);
+      name = patch?.name || `User ${String(index).padStart(3, "0")}`;
+    } else if (type === "custom") {
+      bankMsb = parseInt(parts[1], 10);
+      bankLsb = parseInt(parts[2], 10);
+      pc = parseInt(parts[3], 10);
+      const srcPartNum = parseInt(parts[4] || 0, 10);
+      const srcPart = syncedUnitDb?.currentPerformance?.parts?.[srcPartNum - 1];
+      const domName = $(`partPatchName${srcPartNum}`)?.textContent?.trim();
+      name = srcPart?.patchName || (domName && domName !== "\u2014" ? domName : `Sound (B:${bankMsb}/${bankLsb} P:${pc})`);
+    } else if (type === "rhythm") {
+      const sub = parts[1];
+      const rIdx = parseInt(parts[2], 10);
+      bankMsb = 86;
+      bankLsb = sub === "user" ? 0 : 64;
+      pc = rIdx;
+      name = `${sub === "user" ? "User" : "Preset"} Drum Kit ${rIdx}`;
+    } else if (type === "bank") {
+      bankMsb = parseInt(parts[2], 10);
+      bankLsb = parseInt(parts[3], 10);
+      pc = parseInt(parts[4] || 1, 10);
+      const bank = ROLAND_BANKS.find((b) => b.id === parts[1]);
+      name = `${bank?.label || "Preset"} #${pc}`;
+    }
+    const msbEl = $(`partBankMSB${part}`);
+    const lsbEl = $(`partBankLSB${part}`);
+    const pcEl = $(`partPC${part}`);
+    if (msbEl) msbEl.value = bankMsb;
+    if (lsbEl) lsbEl.value = bankLsb;
+    if (pcEl) pcEl.value = pc;
+    const nameEl = $(`partPatchName${part}`);
+    if (nameEl) nameEl.textContent = name;
+    const chEl = $(`partChannel${part}`);
+    const receiveChannel = chEl ? parseInt(chEl.value, 10) : part - 1;
+    if (midi.isConnected) {
+      setStatus(`Assigning "${name}" to Part ${part} on XV-5050...`);
+      try {
+        sendPartBankAndProgram(midi, part, bankMsb, bankLsb, pc, getDeviceId(), receiveChannel);
+        await new Promise((r) => setTimeout(r, 80));
+        const freshName = await requestPartPatchName(midi, part, getDeviceId());
+        if (freshName && freshName.trim()) {
+          name = freshName;
+          if (nameEl) nameEl.textContent = name;
+        }
+        setStatus(`Assigned "${name}" to Part ${part} (Ch ${receiveChannel + 1})`);
+      } catch (e) {
+        console.warn("Hardware assignment notification:", e);
+        setStatus(`Assigned "${name}" to Part ${part}`);
+      }
+    } else {
+      setStatus(`Assigned "${name}" to Part ${part} (Offline)`);
+    }
+    if (syncedUnitDb?.currentPerformance?.parts?.[part - 1]) {
+      const p = syncedUnitDb.currentPerformance.parts[part - 1];
+      p.patchBankMSB = bankMsb;
+      p.patchBankLSB = bankLsb;
+      p.patchPC = pc;
+      p.patchName = name;
+      saveSyncedDbToStorage();
+    }
+    populateAllInstrumentSelectors();
+    if (getSelectedPart() === part) {
+      updateActivePartUI(part);
     }
   }
   function renderUserPerfsTable(filter = "") {
@@ -7626,9 +8065,9 @@
           setStatus(`Switching XV-5050 hardware to User Patch ${index}...`);
           sendActivePatchSelection(midi, index, getDeviceId());
         } else {
-          const activePart = getEffectivePatchPart() || 1;
-          setStatus(`Assigning User Patch ${index} to Part ${activePart} on XV-5050...`);
-          sendPartPatchSelection(midi, activePart, index, getDeviceId());
+          const activePart3 = getEffectivePatchPart() || 1;
+          setStatus(`Assigning User Patch ${index} to Part ${activePart3} on XV-5050...`);
+          sendPartPatchSelection(midi, activePart3, index, getDeviceId());
         }
         await new Promise((r) => setTimeout(r, 120));
         setStatus(`Reading complete User Patch ${index} (All 4 Tones & Waves) from XV-5050 hardware...`);
@@ -7645,6 +8084,25 @@
           const activeTone = currentToneCache[currentToneIndex - 1];
           if (activeTone) updateToneUI(activeTone);
         }
+        const activePart2 = getEffectivePatchPart() || 1;
+        const patchName = fullPatch.common?.name || `User ${String(index).padStart(3, "0")}`;
+        const nameEl2 = $(`partPatchName${activePart2}`);
+        if (nameEl2) nameEl2.textContent = patchName;
+        const msbEl = $(`partBankMSB${activePart2}`);
+        const lsbEl = $(`partBankLSB${activePart2}`);
+        const pcEl = $(`partPC${activePart2}`);
+        if (msbEl) msbEl.value = 87;
+        if (lsbEl) lsbEl.value = 0;
+        if (pcEl) pcEl.value = index;
+        if (syncedUnitDb?.currentPerformance?.parts?.[activePart2 - 1]) {
+          const p = syncedUnitDb.currentPerformance.parts[activePart2 - 1];
+          p.patchName = patchName;
+          p.patchBankMSB = 87;
+          p.patchBankLSB = 0;
+          p.patchPC = index;
+          saveSyncedDbToStorage();
+        }
+        updateActivePartUI(activePart2);
         clearEdited();
         setStatus(`Switched XV-5050 to User Patch ${index}: "${fullPatch.common?.name || ""}"`);
         return;
@@ -7660,6 +8118,10 @@
       updatePatchCommonUI(common);
       setStatus(`Loaded cached User Patch ${index}: "${patch.name}" into editor`);
     }
+    const activePart = getEffectivePatchPart() || 1;
+    const nameEl = $(`partPatchName${activePart}`);
+    if (nameEl) nameEl.textContent = patch.name;
+    updateActivePartUI(activePart);
   };
   function openWriteSlotModal(type) {
     if (!midi.isConnected) {
@@ -7840,9 +8302,11 @@
         activeDb = currentDb;
         setProgress(pct, statusText);
         const db = currentDb || unitDb;
-        if (db && (db.userPerformances?.length || db.userPatches?.length)) {
+        if (db && (db.userPerformances?.length || db.userPatches?.length || db.currentPerformance?.parts?.length)) {
           syncedUnitDb = db;
           populateUserBankSelectors();
+          populateAllInstrumentSelectors();
+          renderPartNavigationStrip();
         }
       });
       syncedUnitDb = unitDb;
@@ -7916,8 +8380,11 @@
         console.warn("Non-fatal error updating patch UI:", e);
       }
       populateUserBankSelectors();
+      populateAllInstrumentSelectors();
+      renderPartNavigationStrip();
       renderUserPerfsTable();
       renderUserPatchesTable();
+      saveSyncedDbToStorage();
       if (unitDb?.setup?.soundMode) {
         setSynthesizerMode(unitDb.setup.soundMode, false);
       }
@@ -7930,11 +8397,14 @@
     } catch (err) {
       if (progModal) progModal.style.display = "none";
       const fallbackDb = unitDb || activeDb;
-      if (fallbackDb && (fallbackDb.userPerformances?.length || fallbackDb.userPatches?.length)) {
+      if (fallbackDb && (fallbackDb.userPerformances?.length || fallbackDb.userPatches?.length || fallbackDb.currentPerformance?.parts?.length)) {
         syncedUnitDb = fallbackDb;
         populateUserBankSelectors();
+        populateAllInstrumentSelectors();
+        renderPartNavigationStrip();
         renderUserPerfsTable();
         renderUserPatchesTable();
+        saveSyncedDbToStorage();
       }
       setStatus(`Sync completed with warning: ${err.message}`);
       console.error("Entire Unit Sync failed:", err);
@@ -8057,26 +8527,37 @@ Click to cycle to: ${nextTheme.name}`;
     if (patchPartSelect) {
       patchPartSelect.addEventListener("change", () => {
         const part = parseInt(patchPartSelect.value, 10);
-        if (part === 0) {
-          setSynthesizerMode(1, true);
-        } else if (currentSoundMode === 1) {
-          setSynthesizerMode(2, true);
+        selectPart(part);
+      });
+    }
+    const patchInstSelect = $("patchInstrumentSelect");
+    if (patchInstSelect) {
+      patchInstSelect.addEventListener("change", (e) => {
+        const activePart = getEffectivePatchPart() || 1;
+        handleInstrumentSelection(activePart, e.target.value);
+      });
+    }
+    const btnBackMixer = $("btnBackToPerfMixer");
+    if (btnBackMixer) {
+      btnBackMixer.addEventListener("click", () => {
+        switchToTab("performance");
+        const activePart = getEffectivePatchPart() || 1;
+        const row = $(`partRow${activePart}`);
+        if (row) {
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          row.classList.add("selected");
         }
-        const cached = activePartPatchesCache[part];
-        if (cached) {
-          if (cached.common) updatePatchCommonUI(cached.common);
-          if (cached.mfx || cached.chorus || cached.reverb) {
-            applyPatchEffectsToUI(cached.mfx, cached.chorus, cached.reverb);
-          }
-          if (cached.tmt) updatePatchTMTUI(cached.tmt);
-          if (Array.isArray(cached.tones)) {
-            cached.tones.forEach((toneData, tIdx) => {
-              currentToneCache[tIdx] = toneData;
-            });
-            const activeTone = currentToneCache[currentToneIndex - 1];
-            if (activeTone) updateToneUI(activeTone);
-          }
-          setStatus(`Switched to synced ${part === 0 ? "Single Patch" : `Part ${part} Patch`} (${cached.common?.name || ""})`);
+      });
+    }
+    const btnSoloToggle = $("btnSoloModeToggle");
+    if (btnSoloToggle) {
+      btnSoloToggle.addEventListener("click", () => {
+        if (currentSoundMode === 1) {
+          setSynthesizerMode(2, true);
+          selectPart(1);
+        } else {
+          setSynthesizerMode(1, true);
+          selectPart(0);
         }
       });
     }
@@ -8174,18 +8655,11 @@ Click to cycle to: ${nextTheme.name}`;
       }
       refreshDeviceList();
     });
-    window.addEventListener("focus", () => {
-      if (midi.isConnected && !isSyncInProgress) {
-        requestSoundMode(midi, getDeviceId()).then((detectedMode) => {
-          if (detectedMode && detectedMode !== currentSoundMode) {
-            setSynthesizerMode(detectedMode, false);
-          }
-        }).catch(() => {
-        });
-      }
-    });
     initThemeManager();
     initMidi();
+    renderPartNavigationStrip();
+    populateAllInstrumentSelectors();
+    restoreSyncedDbFromStorage();
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

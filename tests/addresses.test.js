@@ -103,6 +103,16 @@ describe('XV-5050 Address Map Specifications', () => {
     // Channel Bank Select on Part 3's channel (Ch 3 -> index 2: 0xB2, 0xC2)
     const hasPart3PC = sent.some(m => m[0] === 0xC2 && m[1] === 0x09);
     assert.ok(hasPart3PC, 'Must transmit PC on Part 3 channel');
+
+    // Arbitrary Bank/Program Selection (e.g. Preset B Patch 3: MSB 87, LSB 65, PC 3 on Part 2 with receiveChannel Ch 1)
+    const { sendPartBankAndProgram } = await import('../src/performance.js');
+    sent.length = 0;
+    sendPartBankAndProgram(mockMidi, 2, 87, 65, 3, 0x10, 1);
+    assert.deepEqual(sent[0].slice(6, 10), [0x10, 0x00, 0x21, 0x04]);
+    assert.deepEqual(sent[0].slice(10, 13), [87, 65, 2]);
+    assert.ok(sent.some(m => m[0] === 0xB1 && m[1] === 0x00 && m[2] === 87), 'Bank MSB on Ch 2');
+    assert.ok(sent.some(m => m[0] === 0xB1 && m[1] === 0x20 && m[2] === 65), 'Bank LSB on Ch 2');
+    assert.ok(sent.some(m => m[0] === 0xC1 && m[1] === 2), 'PC on Ch 2');
   });
 });
 

@@ -976,6 +976,47 @@ input[type="range"]::-moz-range-thumb {
   font-family: var(--font-mono);
 }
 
+/* Part Strip Navigation Buttons */
+.part-strip-btn {
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.part-strip-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.part-strip-btn.active {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  font-weight: 700;
+}
+
+.parts-table tbody tr {
+  cursor: pointer;
+}
+
+.parts-table tbody tr.selected td {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.parts-table tbody tr.selected td:first-child {
+  border-left: 3px solid var(--accent);
+}
+
 /* -- Patch Panel ---------------------------------------------------------- */
 .patch-overview {
   display: grid;

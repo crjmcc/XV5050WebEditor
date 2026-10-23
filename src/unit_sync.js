@@ -270,19 +270,37 @@ export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = 
   // Stage 1: Setup & System (0% - 10%)
   // ---------------------------------------------------------------------------
   report(2, 'Reading Setup parameters...', 'setup_system');
-  unitDb.setup = await requestSetup(midiManager, deviceId);
+  try {
+    unitDb.setup = await requestSetup(midiManager, deviceId);
+  } catch (err) {
+    console.warn('Setup parameters read skipped:', err?.message || err);
+    unitDb.setup = { soundMode: 2 };
+  }
 
   report(5, 'Reading System Common...', 'setup_system');
-  unitDb.system.common = await requestSystemCommon(midiManager, deviceId);
+  try {
+    unitDb.system.common = await requestSystemCommon(midiManager, deviceId);
+  } catch (err) {
+    console.warn('System Common read skipped:', err?.message || err);
+  }
 
   report(8, 'Reading System EQ...', 'setup_system');
-  unitDb.system.eq = await requestSystemEQ(midiManager, deviceId);
+  try {
+    unitDb.system.eq = await requestSystemEQ(midiManager, deviceId);
+  } catch (err) {
+    console.warn('System EQ read skipped:', err?.message || err);
+  }
 
   // ---------------------------------------------------------------------------
   // Stage 2: Current Performance & 16 Parts (10% - 35%)
   // ---------------------------------------------------------------------------
   report(12, 'Reading Current Performance Common...', 'current_performance');
-  unitDb.currentPerformance.common = await requestPerformanceCommon(midiManager, deviceId);
+  try {
+    unitDb.currentPerformance.common = await requestPerformanceCommon(midiManager, deviceId);
+  } catch (err) {
+    console.warn('Current Performance Common read skipped:', err?.message || err);
+    unitDb.currentPerformance.common = { name: 'PERFORMANCE' };
+  }
 
   report(14, 'Reading Performance MFX Processors...', 'current_performance');
   try { unitDb.currentPerformance.mfxA = await requestPerformanceMfx(midiManager, 'A', deviceId); } catch (_) {}

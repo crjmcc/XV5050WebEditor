@@ -564,7 +564,7 @@ export function sendSoundMode(midi, mode, deviceId) {
  * @returns {Promise<number>} Sound Mode (1=PATCH, 2=PERFORM, etc.)
  */
 export async function requestSoundMode(midi, deviceId) {
-  const msg = buildRQ1(SETUP.BASE, [0x00, 0x00, 0x00, 0x01], deviceId);
+  const msg = buildRQ1(SETUP.BASE, SETUP.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
     ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
     : await midi.sendAndReceive(msg, 2500);
@@ -631,6 +631,42 @@ export function sendActivePatchSelection(midi, patchIndex, deviceId = 0x10) {
 }
 
 /**
+ * Assign any Bank and Program to a specific Performance Part (1-16) on the hardware.
+ * Transmits SysEx DT1 to Part parameters (10 00 2x 04: MSB, LSB, PC)
+ * and MIDI Bank Select (CC#0 MSB, CC#32 LSB) + Program Change on the Part's receive channel.
+ * 
+ * @param {import('./midi.js').MidiManager} midi - MIDI manager
+ * @param {number} part - Part number (1-16)
+ * @param {number} bankMsb - Bank Select MSB (0-127)
+ * @param {number} bankLsb - Bank Select LSB (0-127)
+ * @param {number} programNum - 1-based Program Number (1-128)
+ * @param {number} [deviceId=0x10] - Roland Device ID
+ * @param {number} [receiveChannel=null] - Optional MIDI channel (0-15) for the Part
+ */
+export function sendPartBankAndProgram(midi, part, bankMsb, bankLsb, programNum, deviceId = 0x10, receiveChannel = null) {
+  if (part < 1 || part > 16) {
+    throw new Error(`Part number must be 1-16, got ${part}`);
+  }
+  if (programNum < 1 || programNum > 128) {
+    throw new Error(`Program number must be 1-128, got ${programNum}`);
+  }
+  const pc = (programNum - 1) & 0x7F;
+  const msb = bankMsb & 0x7F;
+  const lsb = bankLsb & 0x7F;
+
+  // 1. SysEx DT1 to Part Parameter Area: 10 00 2x 04: [MSB, LSB, PC]
+  const partAddr = [0x10, 0x00, 0x20 + (part - 1), 0x04];
+  const dt1Msg = buildDT1(partAddr, [msb, lsb, pc], deviceId);
+  midi.send(dt1Msg);
+
+  // 2. Also send Channel Bank Select and Program Change on that Part's channel
+  const ch = (receiveChannel !== null && receiveChannel !== undefined) ? (receiveChannel & 0x0F) : ((part - 1) & 0x0F);
+  midi.send([0xB0 | ch, 0x00, msb]); // CC#0 Bank Select MSB
+  midi.send([0xB0 | ch, 0x20, lsb]); // CC#32 Bank Select LSB
+  midi.send([0xC0 | ch, pc]);         // Program Change
+}
+
+/**
  * Assign a User Patch to a specific Performance Part (1-16) on the hardware.
  * Writes to Part's parameters (10 00 2x 04: MSB=87, LSB=0, PC=patchIndex-1).
  * 
@@ -638,24 +674,10 @@ export function sendActivePatchSelection(midi, patchIndex, deviceId = 0x10) {
  * @param {number} part - Part number (1-16)
  * @param {number} patchIndex - 1-based User Patch number (1-128)
  * @param {number} [deviceId] - Roland Device ID
+ * @param {number} [receiveChannel] - Optional MIDI channel (0-15) for the Part
  */
-export function sendPartPatchSelection(midi, part, patchIndex, deviceId = 0x10) {
-  if (part < 1 || part > 16) {
-    throw new Error(`Part number must be 1-16, got ${part}`);
-  }
-  if (patchIndex < 1 || patchIndex > 128) {
-    throw new Error(`User Patch index must be 1-128, got ${patchIndex}`);
-  }
-  const pc = (patchIndex - 1) & 0x7F;
-  const partAddr = [0x10, 0x00, 0x20 + (part - 1), 0x04];
-  const dt1Msg = buildDT1(partAddr, [0x57, 0x00, pc], deviceId);
-  midi.send(dt1Msg);
-
-  // Also send Channel Bank Select and Program Change on that Part's channel
-  const ch = (part - 1) & 0x0F;
-  midi.send([0xB0 | ch, 0x00, 0x57]);
-  midi.send([0xB0 | ch, 0x20, 0x00]);
-  midi.send([0xC0 | ch, pc]);
+export function sendPartPatchSelection(midi, part, patchIndex, deviceId = 0x10, receiveChannel = null) {
+  return sendPartBankAndProgram(midi, part, 0x57, 0x00, patchIndex, deviceId, receiveChannel);
 }
 
 

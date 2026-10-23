@@ -47,6 +47,19 @@ A modern, responsive Web MIDI sound editor, effects programmer, and patch librar
 - **Tone Mix Table (TMT):** Structure types 1–10 (independent routing for Tones 1 & 2 and Tones 3 & 4), ring modulators, booster levels (+0 dB to +18 dB), and key/velocity split zones.
 - **4-Slot Modulation Matrix:** Easily route physical controllers (Mod Wheel, Aftertouch, Velocity, Pitch Bend, LFOs, Envelopes) to sound destinations (Cutoff, Resonance, Pitch, Level, Pan, Effects) with human-readable musical labels.
 
+### 🎹 Performance Channel Instrument Mapping & Part Tweaking
+- **16-Part Channel Instrument Mapping Matrix:**
+  - Full channel-by-channel sound assignment in the Performance Mixer table.
+  - Inline **Assigned Sound** selectors on every part row, populated with:
+    - **Current Performance Sounds:** All 16 channels with live patch names from hardware.
+    - **Hardware User Patches (1-128):** Real user patch names when synced, with full 128-patch direct bank selection.
+    - **Rhythm Drum Kits:** User Drum Kits (1-4) and Preset Drum Kits (1-8).
+    - **Roland Factory Preset Banks:** Direct access to PR-A, PR-B, PR-C, PR-D, PR-E, and GM2.
+  - **Inline 🎛️ Tweak Buttons:** One-click navigation from any mixer channel directly into the Sound & Tone Editor for that part.
+  - **16-Part Quick Navigation Strip:** Interactive pill buttons (`[1]` through `[16]`) with drum kit badges (🥁) and active part glow for effortless sound switching.
+  - **Back to Mixer:** Seamless `[⬡ Back to Mixer]` button to jump instantly between sound sculpting and performance mixing.
+  - **Persistent Browser Cache:** Full offline and reload persistence via browser `localStorage` (`xv5050_synced_unit_db`), so your instrument mappings and synced sounds are never lost when refreshing.
+
 ### 📚 Full Hardware Unit Synchronization & Librarian
 - **Complete 6-Stage Master Unit Sync:** Deep hardware dump reading your entire synthesizer in ~25–30 seconds:
   1. **Setup & System Parameters:** Synthesizer mode, bank MSB/LSB, master tuning, system common, and 2-band EQ.

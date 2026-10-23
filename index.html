@@ -713,12 +713,43 @@
     <!-- ======================================================================= -->
     <div class="tab-content" id="patchTab">
       
-      <!-- Part Selector Toolbar -->
-      <div class="card" style="margin-bottom: var(--space-md);">
-        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <!-- Part Sound Editor Header & Navigation Rack -->
+      <div class="card patch-header-card" style="margin-bottom: var(--space-md); padding: var(--space-md);">
+        <!-- Top Row: Part Title, Assigned Instrument Mapper, and Actions -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08);">
           <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <label for="patchPartSelect" style="font-weight:600; color:var(--text-accent);">Active Synth Part:</label>
-            <select id="patchPartSelect" style="font-size:0.85rem; font-weight:600; padding:5px 10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge badge-accent" id="activePartBadge" style="font-size:0.85rem; padding:4px 8px; font-weight:700;">PART 1</span>
+              <span id="activePatchHeaderName" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); letter-spacing:0.02em;">INIT PATCH</span>
+              <span class="badge" id="activePartChannelBadge" style="font-size:0.75rem; background:rgba(255,255,255,0.06); color:var(--text-secondary); padding:3px 6px;">MIDI Ch 1</span>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="patchInstrumentSelect" style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Assigned Sound:</label>
+              <select id="patchInstrumentSelect" style="min-width:260px; max-width:340px; padding:5px 8px; font-size:0.82rem; font-weight:600;" title="Change instrument assigned to this Part">
+                <option value="">— Select Instrument —</option>
+              </select>
+            </div>
+
+            <select id="userPatchSelect" style="display:none;" title="Select from synced hardware User Patches (1-128)">
+              <option value="">— User Patches (1-128) —</option>
+            </select>
+          </div>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <button class="btn btn-secondary btn-sm" id="btnBackToPerfMixer" title="Return to 16-Part Performance Mixer table">⬡ Back to Mixer</button>
+            <button class="btn btn-primary btn-sm" id="loadEntirePatchBtn">★ Read Sound from Hardware</button>
+            <button class="btn btn-secondary btn-sm" id="loadPatchBtn">↓ Common & TMT</button>
+            <button class="btn btn-secondary btn-sm" id="loadTonesBtn">↓ 4 Tones</button>
+            <button class="btn btn-secondary btn-sm" id="btnWritePatchSlot" title="Write current patch into a hardware User Patch slot (1-128)">⬆ Write to Slot...</button>
+          </div>
+        </div>
+
+        <!-- Bottom Row: 16-Part Quick Navigation Strip -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:600;">Switch Part:</span>
+            <select id="patchPartSelect" style="font-size:0.82rem; font-weight:600; padding:4px 8px;">
               <option value="1">Part 1 (MIDI Ch 1)</option>
               <option value="2">Part 2 (MIDI Ch 2)</option>
               <option value="3">Part 3 (MIDI Ch 3)</option>
@@ -737,16 +768,11 @@
               <option value="16">Part 16 (MIDI Ch 16)</option>
               <option value="0">Single Patch (Solo Mode)</option>
             </select>
-            <select id="userPatchSelect" style="max-width:230px; padding:6px 10px; font-size:0.85rem;" title="Select from synced hardware User Patches">
-              <option value="">— User Patches (1-128) —</option>
-            </select>
+            <div class="part-strip-container" id="partStripContainer" style="display:flex; gap:4px; flex-wrap:wrap;">
+              <!-- 16 quick buttons dynamically injected -->
+            </div>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" id="loadEntirePatchBtn">★ Load Entire Patch (All Tones & Waves)</button>
-            <button class="btn btn-secondary btn-sm" id="loadPatchBtn">↓ Common & TMT</button>
-            <button class="btn btn-secondary btn-sm" id="loadTonesBtn">↓ 4 Tones</button>
-            <button class="btn btn-secondary btn-sm" id="btnWritePatchSlot" title="Write current patch into a hardware User Patch slot (1-128)">⬆ Write to Slot...</button>
-          </div>
+          <button class="btn btn-sm btn-outline" id="btnSoloModeToggle" style="font-size:0.75rem; padding:4px 8px;">Single Patch (Solo Mode)</button>
         </div>
       </div>
 
