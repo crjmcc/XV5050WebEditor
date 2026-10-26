@@ -4489,10 +4489,13 @@ function switchToTab(target) {
     renderTrafficBuffer();
   }
 
-  if ((target === 'patch' || isDeepRequest) && midi.isConnected) {
-    const effPart = getEffectivePatchPart();
-    if (!activePartPatchesCache[effPart]) {
-      autoSyncActivePatchFromHardware(effPart);
+  if (target === 'patch' || isDeepRequest) {
+    redrawAllCurves();
+    if (midi.isConnected) {
+      const effPart = getEffectivePatchPart();
+      if (!activePartPatchesCache[effPart]) {
+        autoSyncActivePatchFromHardware(effPart);
+      }
     }
   }
 }
@@ -7614,6 +7617,7 @@ function init() {
   steppers.forEach(id => attachSelectSteppers(id));
 
   initInteractiveEnvelopes();
+  redrawAllCurves();
 }
 
 if (document.readyState === 'loading') {

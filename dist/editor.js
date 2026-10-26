@@ -4813,6 +4813,10 @@
     const layer = ensureHandlesLayer(svg, envKey);
     const params = config.getParams();
     const pts = getEnvelopePoints(config.type, params, 300, 75);
+    const pathEl = svg.querySelector(".curve-path");
+    if (pathEl) {
+      pathEl.setAttribute("d", generateEnvelopePath(config.type, params, 300, 75));
+    }
     for (let i = 1; i <= 4; i++) {
       const nodeEl = layer.querySelector(`.env-node[data-node="${i}"]`);
       if (nodeEl && pts[i]) {
@@ -14503,10 +14507,13 @@
     if (target === "monitor") {
       renderTrafficBuffer();
     }
-    if ((target === "patch" || isDeepRequest) && midi.isConnected) {
-      const effPart = getEffectivePatchPart();
-      if (!activePartPatchesCache[effPart]) {
-        autoSyncActivePatchFromHardware(effPart);
+    if (target === "patch" || isDeepRequest) {
+      redrawAllCurves();
+      if (midi.isConnected) {
+        const effPart = getEffectivePatchPart();
+        if (!activePartPatchesCache[effPart]) {
+          autoSyncActivePatchFromHardware(effPart);
+        }
       }
     }
   }
@@ -17202,6 +17209,7 @@ Click to cycle to: ${nextTheme.name}`;
     ];
     steppers.forEach((id) => attachSelectSteppers(id));
     initInteractiveEnvelopes();
+    redrawAllCurves();
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

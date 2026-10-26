@@ -312,3 +312,4 @@ Switch to the **☷ SysEx Monitor** tab to view bi-directional MIDI traffic:
 ---
 
 *Roland and XV-5050 are registered trademarks of Roland Corporation. This project is an independent open-source tool developed for musicians and sound designers.*
+

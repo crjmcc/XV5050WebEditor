@@ -12,7 +12,7 @@
  * parameter displays, and SysEx messaging in real time.
  */
 
-import { getEnvelopePoints } from './visuals.js';
+import { getEnvelopePoints, generateEnvelopePath } from './visuals.js';
 
 const ENVELOPE_CONFIGS = {
   tvf: {
@@ -271,6 +271,11 @@ export function syncEnvelopeHandles(envKey) {
   const layer = ensureHandlesLayer(svg, envKey);
   const params = config.getParams();
   const pts = getEnvelopePoints(config.type, params, 300, 75);
+
+  const pathEl = svg.querySelector('.curve-path');
+  if (pathEl) {
+    pathEl.setAttribute('d', generateEnvelopePath(config.type, params, 300, 75));
+  }
 
   for (let i = 1; i <= 4; i++) {
     const nodeEl = layer.querySelector(`.env-node[data-node="${i}"]`);
