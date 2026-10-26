@@ -38,8 +38,8 @@ export async function requestPatchCommon(midi, part, deviceId) {
   const base = getPatchTempAddress(part);
   const msg = buildRQ1(base, PATCH_COMMON.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePatchCommon(response.data || response);
 }
 
@@ -56,8 +56,8 @@ export async function requestPatchTMT(midi, part, deviceId) {
   const tmtAddress = getPatchTMTAddress(patchBase);
   const msg = buildRQ1(tmtAddress, PATCH_TMT.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePatchTMT(response.data || response);
 }
 
@@ -75,8 +75,8 @@ export async function requestPatchTone(midi, part, tone, deviceId) {
   const toneAddress = getToneAddress(patchBase, tone);
   const msg = buildRQ1(toneAddress, PATCH_TONE.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePatchTone(response.data || response);
 }
 
@@ -93,8 +93,8 @@ export async function requestPatchMfx(midi, part = 0, deviceId) {
   const mfxAddr = getPatchMFXAddress(patchBase);
   const msg = buildRQ1(mfxAddr, PATCH_MFX.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePatchMfx(response.data || response);
 }
 
@@ -111,8 +111,8 @@ export async function requestPatchChorus(midi, part = 0, deviceId) {
   const choAddr = getPatchChorusAddress(patchBase);
   const msg = buildRQ1(choAddr, PATCH_CHORUS.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePatchChorus(response.data || response);
 }
 
@@ -129,8 +129,8 @@ export async function requestPatchReverb(midi, part = 0, deviceId) {
   const revAddr = getPatchReverbAddress(patchBase);
   const msg = buildRQ1(revAddr, PATCH_REVERB.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePatchReverb(response.data || response);
 }
 
@@ -144,42 +144,48 @@ export async function requestPatchReverb(midi, part = 0, deviceId) {
  * @param {Function} [onProgress] - Callback (stage, current, total, data)
  * @returns {Promise<{common: object, mfx: object, chorus: object, reverb: object, tmt: object, tones: object[]}>}
  */
-export async function requestEntirePatch(midi, part, deviceId, onProgress) {
+export async function requestEntirePatch(midi, part = 0, deviceId, onProgress) {
   if (onProgress) onProgress('common', 0, 9, null);
   const common = await requestPatchCommon(midi, part, deviceId);
-  await new Promise(r => setTimeout(r, 25));
+  await new Promise(r => setTimeout(r, 20));
 
   let mfx = null;
-  try {
-    if (onProgress) onProgress('mfx', 1, 9, common);
-    mfx = await requestPatchMfx(midi, part, deviceId);
-    await new Promise(r => setTimeout(r, 25));
-  } catch (_) {}
-
   let chorus = null;
-  try {
-    if (onProgress) onProgress('chorus', 2, 9, mfx);
-    chorus = await requestPatchChorus(midi, part, deviceId);
-    await new Promise(r => setTimeout(r, 25));
-  } catch (_) {}
-
   let reverb = null;
-  try {
-    if (onProgress) onProgress('reverb', 3, 9, chorus);
-    reverb = await requestPatchReverb(midi, part, deviceId);
-    await new Promise(r => setTimeout(r, 25));
-  } catch (_) {}
+
+  // In Roland XV-5050, Patch MFX, Chorus, and Reverb ONLY exist in Single Patch Mode (part === 0).
+  // Performance Parts (1-16) use the Performance-level effects;
+  // requesting patch MFX/Chorus/Reverb on performance parts causes 20+ seconds of hardware retry timeouts.
+  if (part === 0) {
+    try {
+      if (onProgress) onProgress('mfx', 1, 9, common);
+      mfx = await requestPatchMfx(midi, part, deviceId);
+      await new Promise(r => setTimeout(r, 20));
+    } catch (_) {}
+
+    try {
+      if (onProgress) onProgress('chorus', 2, 9, mfx);
+      chorus = await requestPatchChorus(midi, part, deviceId);
+      await new Promise(r => setTimeout(r, 20));
+    } catch (_) {}
+
+    try {
+      if (onProgress) onProgress('reverb', 3, 9, chorus);
+      reverb = await requestPatchReverb(midi, part, deviceId);
+      await new Promise(r => setTimeout(r, 20));
+    } catch (_) {}
+  }
 
   if (onProgress) onProgress('tmt', 4, 9, reverb);
   const tmt = await requestPatchTMT(midi, part, deviceId);
-  await new Promise(r => setTimeout(r, 25));
+  await new Promise(r => setTimeout(r, 20));
 
   const tones = [];
   for (let t = 1; t <= 4; t++) {
     if (onProgress) onProgress(`tone${t}`, 4 + t, 9, null);
     const toneData = await requestPatchTone(midi, part, t, deviceId);
     tones.push(toneData);
-    await new Promise(r => setTimeout(r, 25));
+    await new Promise(r => setTimeout(r, 20));
   }
 
   return { common, mfx, chorus, reverb, tmt, tones };

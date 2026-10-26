@@ -48,7 +48,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function sendAndReceiveWithRetry(
   midiManager,
   requestBytes,
-  { maxRetries = 3, timeoutMs = 2500, throttleMs = 40 } = {}
+  { maxRetries = 1, timeoutMs = 600, throttleMs = 20 } = {}
 ) {
   if (midiManager && typeof midiManager.sendAndReceiveWithRetry === 'function') {
     return midiManager.sendAndReceiveWithRetry(requestBytes, { maxRetries, timeoutMs, throttleMs });
@@ -118,19 +118,15 @@ export async function requestEntireUserPerformance(midiManager, perfIndex, devic
   );
   const common = parsePerformanceCommon(extractData(commResp));
 
-  // MFX-A/B/C (with graceful fallback)
+  // MFX-A (Roland XV-5050 hardware features 1 COSM multi-effects processor)
   let mfxA = null, mfxB = null, mfxC = null;
   try {
-    const rA = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x20, b1, 0x02, 0x00], PERF_TEMP.MFXA.SIZE, deviceId));
+    const rA = await sendAndReceiveWithRetry(
+      midiManager,
+      buildRQ1([0x20, b1, 0x02, 0x00], PERF_TEMP.MFXA.SIZE, deviceId),
+      { maxRetries: 1, timeoutMs: 600, throttleMs: 20 }
+    );
     mfxA = parsePerformanceMfx(extractData(rA));
-  } catch (_) {}
-  try {
-    const rB = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x20, b1, 0x08, 0x00], PERF_TEMP.MFXB.SIZE, deviceId));
-    mfxB = parsePerformanceMfx(extractData(rB));
-  } catch (_) {}
-  try {
-    const rC = await sendAndReceiveWithRetry(midiManager, buildRQ1([0x20, b1, 0x0A, 0x00], PERF_TEMP.MFXC.SIZE, deviceId));
-    mfxC = parsePerformanceMfx(extractData(rC));
   } catch (_) {}
 
   // Chorus

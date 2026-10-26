@@ -35,8 +35,8 @@ export async function requestPerformanceCommon(midi, deviceId) {
     deviceId
   );
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePerformanceCommon(response.data || response);
 }
 
@@ -54,8 +54,8 @@ export async function requestPerformanceChorus(midi, deviceId) {
     deviceId
   );
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePerformanceChorus(response.data || response);
 }
 
@@ -73,8 +73,8 @@ export async function requestPerformanceReverb(midi, deviceId) {
     deviceId
   );
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePerformanceReverb(response.data || response);
 }
 
@@ -90,8 +90,8 @@ export async function requestPerformanceMfx(midi, slot = 'A', deviceId) {
   const address = getPerfMfxAddress(slot);
   const msg = buildRQ1(address, PERF_TEMP.MFXA.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return parsePerformanceMfx(response.data || response);
 }
 
@@ -164,8 +164,8 @@ export async function requestPartPatchName(midi, part, deviceId) {
   const base = getPatchTempAddress(part);
   const msg = buildRQ1(base, [0x00, 0x00, 0x00, 0x0C], deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return decodeName(response.data || response);
 }
 
@@ -181,8 +181,8 @@ export async function requestPerformancePart(midi, part, deviceId) {
   const address = getPartAddress(part);
   const msg = buildRQ1(address, PERF_PART.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   const partData = parsePerformancePart(response.data || response);
 
   // In Roland XV-5050, Part 10 with Bank MSB 0x5C (92) is a Preset Rhythm Set
@@ -234,46 +234,38 @@ export async function requestAllParts(midi, deviceId, onProgress) {
 export async function requestEntirePerformance(midi, deviceId, onProgress) {
   if (onProgress) onProgress('common', 0, 19, null);
   const common = await requestPerformanceCommon(midi, deviceId);
-  await new Promise(r => setTimeout(r, 25));
+  await new Promise(r => setTimeout(r, 20));
 
-  if (onProgress) onProgress('mfxA', 1, 21, common);
+  if (onProgress) onProgress('mfxA', 1, 19, common);
   let mfxA = null, mfxB = null, mfxC = null;
   try {
     mfxA = await requestPerformanceMfx(midi, 'A', deviceId);
-    await new Promise(r => setTimeout(r, 25));
-  } catch (_) {}
-  try {
-    mfxB = await requestPerformanceMfx(midi, 'B', deviceId);
-    await new Promise(r => setTimeout(r, 25));
-  } catch (_) {}
-  try {
-    mfxC = await requestPerformanceMfx(midi, 'C', deviceId);
-    await new Promise(r => setTimeout(r, 25));
+    await new Promise(r => setTimeout(r, 20));
   } catch (_) {}
 
-  if (onProgress) onProgress('chorus', 4, 21, mfxC || mfxB || mfxA);
+  if (onProgress) onProgress('chorus', 2, 19, mfxA);
   let chorus = null, reverb = null;
   try {
     chorus = await requestPerformanceChorus(midi, deviceId);
-    await new Promise(r => setTimeout(r, 25));
+    await new Promise(r => setTimeout(r, 20));
   } catch (_) {}
 
-  if (onProgress) onProgress('reverb', 5, 21, chorus || mfxC || mfxB || mfxA);
+  if (onProgress) onProgress('reverb', 3, 19, chorus || mfxA);
   try {
     reverb = await requestPerformanceReverb(midi, deviceId);
-    await new Promise(r => setTimeout(r, 25));
+    await new Promise(r => setTimeout(r, 20));
   } catch (_) {}
 
   const parts = [];
   for (let i = 1; i <= 16; i++) {
-    if (onProgress) onProgress('part', 5 + i, 21, null);
+    if (onProgress) onProgress('part', 3 + i, 19, null);
     try {
       const partData = await requestPerformancePart(midi, i, deviceId);
       parts.push(partData);
     } catch (_) {
       parts.push({ part: i, patchName: `Part ${i}` });
     }
-    await new Promise(r => setTimeout(r, 25));
+    await new Promise(r => setTimeout(r, 20));
   }
 
   return { common, mfxA, mfxB, mfxC, chorus, reverb, parts };
@@ -566,8 +558,8 @@ export function sendSoundMode(midi, mode, deviceId) {
 export async function requestSoundMode(midi, deviceId) {
   const msg = buildRQ1(SETUP.BASE, SETUP.SIZE, deviceId);
   const response = (midi && typeof midi.sendAndReceiveWithRetry === 'function')
-    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 3, timeoutMs: 2500, throttleMs: 30 })
-    : await midi.sendAndReceive(msg, 2500);
+    ? await midi.sendAndReceiveWithRetry(msg, { maxRetries: 1, timeoutMs: 600, throttleMs: 20 })
+    : await midi.sendAndReceive(msg, 600);
   return (response.data || response)?.[0] ?? 2;
 }
 
@@ -580,27 +572,31 @@ export async function requestSoundMode(midi, deviceId) {
  * @param {number} perfIndex - 1-based User Performance number (1-64)
  * @param {number} [deviceId] - Roland Device ID
  */
-export function sendActivePerformanceSelection(midi, perfIndex, deviceId = 0x10, perfCtrlCh = null) {
-  if (perfIndex < 1 || perfIndex > 64) {
+export function sendActivePerformanceSelection(midi, perfIndex, deviceId = 0x10, perfCtrlCh = null, bank = 'USER') {
+  const isPra = String(bank).toUpperCase() === 'PR-A' || String(bank).toLowerCase() === 'pra';
+  const isPrb = String(bank).toUpperCase() === 'PR-B' || String(bank).toLowerCase() === 'prb';
+  const maxIdx = isPrb ? 32 : 64;
+  if (perfIndex < 1 || perfIndex > maxIdx) {
     throw new Error(`User Performance index must be 1-64, got ${perfIndex}`);
   }
   const pc = (perfIndex - 1) & 0x7F;
+  const bankMsb = 0x55; // 85 = Performance Bank
+  const bankLsb = isPra ? 0x40 : (isPrb ? 0x41 : 0x00); // 0 = USER, 64 = PR-A, 65 = PR-B
+
   // 1. SysEx DT1 to Setup Area: PERF_BANK_MSB, PERF_BANK_LSB, PERF_PROGRAM_NUM
-  // Address: 01 00 00 04, Data: 0x55 (85 = User Perf Bank), 0x00, pc
   const setupAddress = [0x01, 0x00, 0x00, 0x04];
-  const dt1Msg = buildDT1(setupAddress, [0x55, 0x00, pc], deviceId);
+  const dt1Msg = buildDT1(setupAddress, [bankMsb, bankLsb, pc], deviceId);
   midi.send(dt1Msg);
 
   // 2. Standard MIDI Bank Select + Program Change
-  // Default Performance Control Channel is Channel 16 (0-indexed: 15) and Channel 1 (0-indexed: 0)
   const channels = new Set([15, 0]);
   if (typeof perfCtrlCh === 'number' && perfCtrlCh >= 0 && perfCtrlCh <= 15) {
     channels.add(perfCtrlCh);
   }
   for (const ch of channels) {
-    midi.send([0xB0 | ch, 0x00, 0x55]); // Bank Select MSB (85 = User Performance)
-    midi.send([0xB0 | ch, 0x20, 0x00]); // Bank Select LSB (0)
-    midi.send([0xC0 | ch, pc]);         // Program Change
+    midi.send([0xB0 | ch, 0x00, bankMsb]);
+    midi.send([0xB0 | ch, 0x20, bankLsb]);
+    midi.send([0xC0 | ch, pc]);
   }
 }
 
@@ -679,5 +675,35 @@ export function sendPartBankAndProgram(midi, part, bankMsb, bankLsb, programNum,
 export function sendPartPatchSelection(midi, part, patchIndex, deviceId = 0x10, receiveChannel = null) {
   return sendPartBankAndProgram(midi, part, 0x57, 0x00, patchIndex, deviceId, receiveChannel);
 }
+
+/**
+ * Authentic Roland Factory Preset Performances catalog for the XV-5050.
+ * PR-A: 64 factory presets (Bank 85 / 64)
+ * PR-B: 32 factory presets (Bank 85 / 65)
+ */
+export const ROLAND_PRESET_PERFORMANCES = {
+  'PR-A': [
+    'Two+Ensemble', 'Enchanted XV', 'Double Helix', 'Blue Mutes', 'Wedding Mass', 'Grounded Bs',
+    'Vocovox Wave', 'Lead 4x Vlns', 'PhazeWahClav', 'Digibell Pad', 'Rocker Org', 'Pianomonics',
+    'Plug n\' Play', 'Crying Solo', 'Grand XV', 'LookMaNoFret', 'TB Squelch', 'Henry VIII',
+    'Reel Slam', 'SwellEnsembl', 'Amped Wurlie', 'NewR&RBrass', 'Triumph Brs', 'McThrob',
+    'Soaring Sqr', 'Over the top', 'Power Stack', 'Contemplate', 'Rholitzer', 'Chime Bells',
+    'IslandSpirit', 'Distorted B', 'Double Steel', 'COSM Searing', 'XV Upright', 'Muscle Bass',
+    'Brassy Symph', 'BiggieBrass2', 'Peking Opera', '5th Element', 'MetaXV', 'Traffic Pad',
+    '5ths in 4ths', 'Trance Fair', 'Spectre', 'Borealis', 'Cutting X', 'Blues Harp',
+    'Brash Bass', 'Saw Grits', 'LegatoJupitr', 'Tape Orch', 'FatSynBrass', 'UltraSmooth',
+    'Spread Pad', 'West End Bs', 'Phunky DC', 'Valve Job', 'BatonStrings', 'ClassicJPpad',
+    'VeloClikOrgn', 'Soft Nylon', 'Swell Strat', 'Tap Bass'
+  ],
+  'PR-B': [
+    'Dulcimar&Gtr', 'DulcitarStk', 'Tekno Loop 2', 'Rave Attack', 'SpaceCarrier', 'Terminator',
+    'Symphony JV', 'Nebular Vox', 'Humming Vox', 'Cosmic Dawn', 'Labyrinth', 'Sweeper',
+    'Stack Pad', 'Strobe Pad 2', 'Rhythmatic', 'Voyage', 'S&H Pad', 'Cyclic Pad',
+    'White Hole', 'EasternSplit', 'Tekno Asia', 'TeknoSplit 1', 'TeknoSplit 2', 'TknoPopSplit',
+    'ChildrenSplt', 'Purple Split', 'PulsingSplit', 'Pad / Lead', 'Organ / Lead', 'Bass / Lead',
+    'S&H / Pad', 'Drone / Pipe'
+  ]
+};
+
 
 

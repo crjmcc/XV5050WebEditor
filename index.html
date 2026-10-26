@@ -76,12 +76,16 @@
       <div class="system-drawer-body">
         <div class="system-grid">
           <div class="system-field">
-            <label for="midiInput">MIDI In</label>
+            <label for="midiInput">MIDI In (XV-5050)</label>
             <select id="midiInput"><option value="">— Select MIDI Input —</option></select>
           </div>
           <div class="system-field">
-            <label for="midiOutput">MIDI Out</label>
+            <label for="midiOutput">MIDI Out (XV-5050)</label>
             <select id="midiOutput"><option value="">— Select MIDI Output —</option></select>
+          </div>
+          <div class="system-field" title="Route Renoise patterns or external keyboard through the Web Editor to the XV-5050 simultaneously">
+            <label for="midiDawThru">DAW Thru In (e.g. loopMIDI)</label>
+            <select id="midiDawThru"><option value="">— None (Disabled) —</option></select>
           </div>
           <div class="system-field system-field-device-id">
             <label for="deviceId">Device ID</label>
@@ -104,11 +108,73 @@
               <option value="31">Device 32</option>
             </select>
           </div>
+          <div class="system-field">
+            <label for="srxSlotASelect">SRX Slot A Board</label>
+            <select id="srxSlotASelect" title="Select installed Roland SRX Expansion Board in Slot A">
+              <option value="NONE">— None Installed —</option>
+              <option value="SRX-01">SRX-01: Dynamic Drum Kits</option>
+              <option value="SRX-02">SRX-02: Concert Piano</option>
+              <option value="SRX-03">SRX-03: Studio SRX</option>
+              <option value="SRX-04">SRX-04: Symphonique Strings</option>
+              <option value="SRX-05">SRX-05: Supreme Dance</option>
+              <option value="SRX-06">SRX-06: Complete Orchestra</option>
+              <option value="SRX-07">SRX-07: Ultimate Keys</option>
+              <option value="SRX-08">SRX-08: Platinum Trax</option>
+              <option value="SRX-09">SRX-09: World Collection</option>
+              <option value="SRX-10">SRX-10: Big Brass Ensemble</option>
+              <option value="SRX-11">SRX-11: Complete Piano</option>
+              <option value="SRX-12">SRX-12: Classic EPs</option>
+            </select>
+          </div>
+
+          <div class="system-field">
+            <label for="srxSlotBSelect">SRX Slot B Board</label>
+            <select id="srxSlotBSelect" title="Select installed Roland SRX Expansion Board in Slot B">
+              <option value="NONE">— None Installed —</option>
+              <option value="SRX-01">SRX-01: Dynamic Drum Kits</option>
+              <option value="SRX-02">SRX-02: Concert Piano</option>
+              <option value="SRX-03">SRX-03: Studio SRX</option>
+              <option value="SRX-04">SRX-04: Symphonique Strings</option>
+              <option value="SRX-05">SRX-05: Supreme Dance</option>
+              <option value="SRX-06">SRX-06: Complete Orchestra</option>
+              <option value="SRX-07">SRX-07: Ultimate Keys</option>
+              <option value="SRX-08">SRX-08: Platinum Trax</option>
+              <option value="SRX-09">SRX-09: World Collection</option>
+              <option value="SRX-10">SRX-10: Big Brass Ensemble</option>
+              <option value="SRX-11">SRX-11: Complete Piano</option>
+              <option value="SRX-12">SRX-12: Classic EPs</option>
+            </select>
+          </div>
+
           <div class="system-btn-group">
             <button class="btn btn-primary btn-sm" id="connectBtn">Connect</button>
             <button class="btn btn-sm" id="refreshBtn">↻ Refresh</button>
             <button class="btn btn-secondary btn-sm" id="btnAutoDetectId" title="Scan and auto-detect XV-5050 Device ID">🔍 Detect ID</button>
             <button class="btn btn-secondary btn-sm" id="btnRunDiagnostics" title="Run comprehensive USB hardware diagnostic tests">⚡ USB Diagnostics</button>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Scale Tune / Microtuning:</span>
+            <select id="scaleTemperamentSelect" style="font-size: 0.8rem; padding: 3px 6px;">
+              <option value="equal">Equal Temperament (Standard 12-TET)</option>
+              <option value="justMajor">Just Intonation (Major C)</option>
+              <option value="justMinor">Just Intonation (Minor C)</option>
+              <option value="pythagorean">Pythagorean Scale</option>
+              <option value="meantone">Meantone (1/4 Comma)</option>
+              <option value="werckmeister">Werckmeister III</option>
+              <option value="kirnberger">Kirnberger III</option>
+              <option value="arabicRast">Arabic Quarter-Tone (Rast)</option>
+              <option value="arabicBayati">Arabic Quarter-Tone (Bayati)</option>
+            </select>
+            <button class="btn btn-secondary btn-xs" id="btnApplyScaleTemperament" title="Send selected microtonal scale tuning to active Part">Send Scale to Part</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <label style="font-size: 0.74rem; display: flex; align-items: center; gap: 5px; color: var(--text-secondary); cursor: pointer;" title="Automatically close Windows MIDI driver when switching to Renoise/other apps, and re-acquire when returning">
+              <input type="checkbox" id="chkAutoReleaseMidi">
+              <span>Auto-Release Driver on Blur (Multi-App Sharing)</span>
+            </label>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Table 1-3-5 (12-Tone Microtonal Cents)</span>
           </div>
         </div>
       </div>
@@ -118,6 +184,7 @@
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="performance" id="tabPerformance">⬡ Performance</button>
       <button class="tab-btn" data-tab="patch" id="tabPatch">♦ Patch & Tones</button>
+      <button class="tab-btn" data-tab="drumKit" id="tabDrumKit">🥁 Drum Kit Editor</button>
       <button class="tab-btn" data-tab="librarian" id="tabLibrarian">📁 Librarian & SYX</button>
       <button class="tab-btn" data-tab="monitor" id="tabMonitor">☷ SysEx Monitor</button>
     </div>
@@ -129,12 +196,20 @@
       
       <!-- Performance Common & Effects -->
       <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">⬡</span> Performance Common & Routing</span>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <!-- Left: Title & Preset Selector cluster -->
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <span class="card-title" style="margin-bottom:0;"><span class="icon">⬡</span> Performance Common & Routing</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="userPerfSelect" style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Preset:</label>
+              <select id="userPerfSelect" style="min-width:240px; max-width:320px; padding:4px 8px; font-size:0.84rem; font-weight:600;" title="Select from synced hardware User Performances">
+                <option value="">— User Performances (1-64) —</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Right: Action buttons -->
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <select id="userPerfSelect" style="max-width:230px; padding:4px 8px; font-size:0.82rem;" title="Select from synced hardware User Performances">
-              <option value="">— User Performances (1-64) —</option>
-            </select>
             <button class="btn btn-primary btn-sm" id="loadEntirePerfBtn">★ Load Entire Performance</button>
             <button class="btn btn-secondary btn-sm" id="loadPerfBtn">↓ Common</button>
             <button class="btn btn-secondary btn-sm" id="loadPerfFxBtn">↓ Chorus/Reverb</button>
@@ -432,7 +507,7 @@
                 </span>
               </button>
             </div>
-            <span class="mfx-active-slot-indicator" id="activeSlotIndicator">Editing MFX-A (SysEx 10 00 02 00)</span>
+            <span class="mfx-active-slot-indicator" id="activeSlotIndicator">Editing MFX-A</span>
           </div>
 
           <!-- Active MFX Slot Global & Routing Bar -->
@@ -475,7 +550,7 @@
 
           <!-- Dynamic 12-Parameter Grid for Selected Algorithm -->
           <div class="mfx-section-subtitle">
-            <span>Algorithm Parameters (SysEx 4-Nibble Precision)</span>
+            <span>Algorithm Effect Parameters</span>
             <span class="algo-param-count-badge" id="algoParamCountBadge">12 Parameters</span>
           </div>
           <div class="mfx-params-grid" id="perfMfxParamsGrid">
@@ -568,7 +643,7 @@
 
           <!-- MFX Modulation Matrix (4 Controller Channels) -->
           <div class="mfx-section-subtitle">
-            <span>MFX Control Matrix (Hardware SysEx Table 1-3-2)</span>
+            <span>Real-Time Modulation Matrix</span>
             <span class="algo-param-count-badge">4 Real-Time Controllers</span>
           </div>
           <div class="mfx-ctrl-grid">
@@ -689,12 +764,12 @@
                 <th>Bank MSB</th>
                 <th>Bank LSB</th>
                 <th>PC</th>
-                <th>Level</th>
-                <th>Pan</th>
-                <th>Coarse</th>
-                <th>Fine</th>
-                <th>Cho Send</th>
-                <th>Rev Send</th>
+                <th class="th-knob">Level</th>
+                <th class="th-knob">Pan</th>
+                <th class="th-knob">Coarse</th>
+                <th class="th-knob">Fine</th>
+                <th class="th-knob">Cho Send</th>
+                <th class="th-knob">Rev Send</th>
                 <th>Assign</th>
                 <th>Mute</th>
                 <th>Actions</th>
@@ -776,6 +851,186 @@
         </div>
       </div>
 
+      <!-- ======================================================================= -->
+      <!-- Modern Synth Lab: 4 Macros, Vector Morph, Spectrum & Mutator Roll-Up     -->
+      <!-- ======================================================================= -->
+      <div class="card deep-studio-rollup" id="deepStudioTab" style="margin-bottom: var(--space-md); padding: 8px 12px;">
+        <div class="card-header rollup-header" id="btnToggleDeepStudioRollup" style="cursor:pointer; user-select:none; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="card-title" style="font-size:0.88rem;"><span class="icon">✨</span> Modern Synth Lab: 4 Macros, Vector Morph, Spectrum & Mutator</span>
+            <span class="badge badge-accent" style="font-size:0.68rem; padding:2px 6px;">VITAL & SERUM INSPIRED</span>
+            <span class="badge" id="deepStudioVoiceModeBadge" style="display:none;">POLY</span>
+            <span class="badge" id="deepStudioPartBadge" style="display:none;">PART 1</span>
+            <span id="deepStudioPatchName" style="display:none;">INIT PATCH</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button class="btn btn-xs btn-primary" id="btnOpenVstTranspiler" title="Import and transpile modern Vital (.vital) or Serum (.fxp) Presets to XV-5050">⚡ Transpile VST Preset...</button>
+            <button class="btn btn-xs btn-outline" id="btnRollupToggleState">Expand ▾</button>
+          </div>
+        </div>
+
+        <div class="rollup-body" id="deepStudioRollupBody" style="display: none;">
+          <!-- Top Row: 4 Performance Macros & 4-Tone Layer Strip (One sleek horizontal rack) -->
+          <div class="deep-studio-top-rack" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; padding:4px 8px; background:rgba(0,0,0,0.22); border-radius:4px; border:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">MACROS:</span>
+              
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="font-size:0.68rem; font-weight:700; color:#00d4ff;">M1: CUTOFF</span>
+                <input type="range" id="macro1Dial" min="0" max="127" value="64" style="width:58px; height:4px;" title="Macro 1: Brightness (Cutoff Offset)">
+                <span class="macro-val-pill" id="macro1Val" style="font-size:0.68rem; padding:1px 4px;">0</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="font-size:0.68rem; font-weight:700; color:#ff9f1c;">M2: RES</span>
+                <input type="range" id="macro2Dial" min="0" max="127" value="64" style="width:58px; height:4px;" title="Macro 2: Timbre (Resonance Offset)">
+                <span class="macro-val-pill" id="macro2Val" style="font-size:0.68rem; padding:1px 4px;">0</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="font-size:0.68rem; font-weight:700; color:#2ec4b6;">M3: ENV</span>
+                <input type="range" id="macro3Dial" min="0" max="127" value="64" style="width:58px; height:4px;" title="Macro 3: Movement (Envelope Speed)">
+                <span class="macro-val-pill" id="macro3Val" style="font-size:0.68rem; padding:1px 4px;">0</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="font-size:0.68rem; font-weight:700; color:#e71d36;">M4: FX</span>
+                <input type="range" id="macro4Dial" min="0" max="127" value="64" style="width:58px; height:4px;" title="Macro 4: Space (Chorus & Reverb)">
+                <span class="macro-val-pill" id="macro4Val" style="font-size:0.68rem; padding:1px 4px;">0</span>
+              </div>
+            </div>
+
+            <!-- 4-Tone Layer Levels -->
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">TONES:</span>
+              <div class="deep-tone-pill" id="deepToneCard1" style="display:flex; align-items:center; gap:3px; font-size:0.7rem; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:3px;">
+                <span style="font-weight:700; color:var(--text-accent);">T1</span>
+                <span id="deepTone1Level" style="font-family:var(--font-mono); font-weight:600;">127</span>
+              </div>
+              <div class="deep-tone-pill" id="deepToneCard2" style="display:flex; align-items:center; gap:3px; font-size:0.7rem; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:3px;">
+                <span style="font-weight:700; color:var(--text-accent);">T2</span>
+                <span id="deepTone2Level" style="font-family:var(--font-mono); font-weight:600;">127</span>
+              </div>
+              <div class="deep-tone-pill" id="deepToneCard3" style="display:flex; align-items:center; gap:3px; font-size:0.7rem; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:3px;">
+                <span style="font-weight:700; color:var(--text-accent);">T3</span>
+                <span id="deepTone3Level" style="font-family:var(--font-mono); font-weight:600;">0</span>
+              </div>
+              <div class="deep-tone-pill" id="deepToneCard4" style="display:flex; align-items:center; gap:3px; font-size:0.7rem; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:3px;">
+                <span style="font-weight:700; color:var(--text-accent);">T4</span>
+                <span id="deepTone4Level" style="font-family:var(--font-mono); font-weight:600;">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Triad: Vector Pad (Left) + Spectrum Analyzer (Middle) + Mutator (Right) in ONE unified compact grid -->
+          <div class="deep-studio-triad-grid" style="display:grid; grid-template-columns: 130px 1.3fr 1.6fr; gap:8px; align-items:stretch;">
+            
+            <!-- Col 1: 4-Tone Vector Morphing Pad -->
+            <div class="modular-subcard" style="padding:6px; display:flex; flex-direction:column; justify-content:space-between; align-items:center;">
+              <div style="display:flex; justify-content:space-between; width:100%; font-size:0.65rem; font-weight:700; color:var(--text-muted); margin-bottom:2px;">
+                <span>VECTOR PAD</span>
+                <span id="vectorMorphPosBadge" style="font-family:var(--font-mono); font-size:0.6rem; color:var(--accent);">50%, 50%</span>
+              </div>
+              <div class="vector-pad-surface" id="vectorMorphPad" style="width:116px; height:116px; position:relative; background:#0c101c; border:1px solid #232d47; border-radius:4px; cursor:crosshair; touch-action:none;">
+                <span style="position:absolute; top:2px; left:4px; font-size:0.6rem; font-weight:700; color:var(--text-muted);">T1</span>
+                <span style="position:absolute; top:2px; right:4px; font-size:0.6rem; font-weight:700; color:var(--text-muted);">T2</span>
+                <span style="position:absolute; bottom:2px; left:4px; font-size:0.6rem; font-weight:700; color:var(--text-muted);">T3</span>
+                <span style="position:absolute; bottom:2px; right:4px; font-size:0.6rem; font-weight:700; color:var(--text-muted);">T4</span>
+                <div class="vector-puck" id="vectorMorphPuck" style="width:11px; height:11px; border-radius:50%; background:#ff7700; border:2px solid #ffffff; box-shadow:0 0 6px #ff7700; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none;"></div>
+              </div>
+              <div style="display:flex; justify-content:space-around; width:100%; font-size:0.6rem; font-family:var(--font-mono); color:var(--text-secondary); margin-top:2px;">
+                <span>T1:<b id="vectorWeightT1" style="color:#ff9f1c;">64</b></span>
+                <span>T2:<b id="vectorWeightT2" style="color:#ff9f1c;">64</b></span>
+                <span>T3:<b id="vectorWeightT3">0</b></span>
+                <span>T4:<b id="vectorWeightT4">0</b></span>
+              </div>
+            </div>
+
+            <!-- Col 2: Dynamic Harmonic Spectrum Analyzer -->
+            <div class="modular-subcard" style="padding:6px 8px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; font-weight:700; color:var(--text-muted); margin-bottom:2px;">
+                <span>~ SPECTRUM ANALYZER</span>
+                <span id="spectrumFilterBadge" style="font-size:0.6rem; color:var(--accent-cyan); font-weight:600;">LPF Active</span>
+              </div>
+              <div style="flex:1; display:flex; align-items:center; justify-content:center; background:#080c16; border-radius:4px; border:1px solid #1c2438; padding:2px;">
+                <svg id="deepSpectrumSvg" viewBox="0 0 300 85" style="width:100%; height:85px; overflow:visible;">
+                  <defs>
+                    <linearGradient id="spectrumGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.35" />
+                      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path id="deepSpectrumPath" d="M 0,85 Q 60,25 150,55 T 300,80" fill="none" stroke="#00d4ff" stroke-width="2.2" />
+                </svg>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:0.58rem; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">
+                <span>20 Hz</span>
+                <span>200 Hz</span>
+                <span>1 kHz</span>
+                <span>5 kHz</span>
+                <span>20 kHz</span>
+              </div>
+            </div>
+
+            <!-- Col 3: Intelligent Patch Mutator & Sound Breeder -->
+            <div class="modular-subcard" style="padding:6px 8px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                <span style="font-size:0.65rem; font-weight:700; color:var(--accent-warm);">🎲 PATCH GENETICS & MUTATOR</span>
+                <span class="badge" id="mutatorStatusMsg" style="font-size:0.6rem; padding:1px 4px;">Ready to mutate</span>
+              </div>
+
+              <!-- Controls: Archetype & Intensity -->
+              <div style="display:flex; gap:6px; align-items:center; margin-bottom:3px;">
+                <select id="mutatorArchetypeSelect" style="flex:1.2; font-size:0.72rem; padding:2px 4px;">
+                  <option value="general">Musical Drift (Subtle Variation)</option>
+                  <option value="ambient_pad">Ethereal Ambient Pad</option>
+                  <option value="reese_bass">Reese Sub Bass</option>
+                  <option value="poly_pluck">Poly Synth Pluck</option>
+                  <option value="vintage_keys">Vintage EP & Keys</option>
+                  <option value="evolving_texture">Evolving Texture</option>
+                  <option value="scifi_glitch">Sci-Fi Glitch</option>
+                </select>
+                <div style="flex:1; display:flex; align-items:center; gap:3px;">
+                  <label for="mutatorIntensity" style="font-size:0.65rem; color:var(--text-muted); font-weight:600;">Intensity:</label>
+                  <input type="range" id="mutatorIntensity" min="5" max="100" value="20" style="flex:1; height:3px;">
+                  <span id="mutatorIntensityVal" style="font-size:0.65rem; font-family:var(--font-mono); font-weight:700; min-width:24px;">20%</span>
+                </div>
+              </div>
+
+              <!-- Component Protection Locks -->
+              <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px; background:rgba(0,0,0,0.2); padding:2px 5px; border-radius:3px;">
+                <span style="font-weight:700; color:var(--text-muted);">LOCK:</span>
+                <label style="display:inline-flex; align-items:center; gap:2px; cursor:pointer;" title="Protect current PCM waveforms">
+                  <input type="checkbox" id="lockWaveforms"> Waves
+                </label>
+                <label style="display:inline-flex; align-items:center; gap:2px; cursor:pointer;" title="Protect TVF filter settings">
+                  <input type="checkbox" id="lockFilters"> Filters
+                </label>
+                <label style="display:inline-flex; align-items:center; gap:2px; cursor:pointer;" title="Protect ADSR envelope timings">
+                  <input type="checkbox" id="lockEnvelopes"> Envelopes
+                </label>
+                <label style="display:inline-flex; align-items:center; gap:2px; cursor:pointer;" title="Keep pitch and tuning safe">
+                  <input type="checkbox" id="lockTuning" checked> Tuning
+                </label>
+                <label style="display:inline-flex; align-items:center; gap:2px; cursor:pointer;" title="Preserve MFX, Chorus & Reverb">
+                  <input type="checkbox" id="lockEffects"> FX
+                </label>
+              </div>
+
+              <!-- Action Buttons -->
+              <div style="display:flex; gap:3px; flex-wrap:wrap; align-items:center;">
+                <button class="btn btn-xs btn-primary" id="btnMutatePatch" style="font-weight:700; padding:2px 6px;">🎲 Mutate</button>
+                <button class="btn btn-xs btn-outline" id="btnRandomizeWaves" style="padding:2px 6px;">Random Waves</button>
+                <button class="btn btn-xs btn-secondary" id="btnMutatorUndo" title="Undo mutation" style="padding:2px 5px;">↶ Undo</button>
+                <button class="btn btn-xs btn-secondary" id="btnMutatorRedo" title="Redo mutation" style="padding:2px 5px;">↷ Redo</button>
+                <button class="btn btn-xs btn-outline" id="btnMutatorCompare" style="padding:2px 5px;">A/B Compare</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- Modern 2-Column Rack: Master Parameters & Modulation Matrix -->
       <div class="patch-top-grid">
         
@@ -820,134 +1075,149 @@
               </div>
             </div>
 
-            <!-- Row 2: Level, Pan & Master Tuning -->
-            <div class="master-row">
-              <div class="compact-param-box">
-                <span class="param-label">Level</span>
-                <div class="slider-val-wrap">
-                  <input type="range" id="patchLevel" min="0" max="127" value="127">
-                  <span class="param-value" id="patchLevelVal">127</span>
-                </div>
-              </div>
-              <div class="compact-param-box">
-                <span class="param-label">Pan</span>
-                <div class="slider-val-wrap">
-                  <input type="range" id="patchPan" min="0" max="127" value="64">
-                  <span class="param-value" id="patchPanVal">C</span>
-                </div>
-              </div>
-              <div class="compact-param-box">
-                <span class="param-label">Octave</span>
-                <div class="slider-val-wrap">
-                  <input type="range" id="patchOctaveShift" min="61" max="67" value="64">
-                  <span class="param-value" id="patchOctaveShiftVal">0</span>
-                </div>
-              </div>
-              <div class="compact-param-box">
-                <span class="param-label">Coarse</span>
-                <div class="slider-val-wrap">
-                  <input type="range" id="patchCoarseTune" min="16" max="112" value="64">
-                  <span class="param-value" id="patchCoarseTuneVal">0</span>
-                </div>
-              </div>
-              <div class="compact-param-box">
-                <span class="param-label">Fine</span>
-                <div class="slider-val-wrap">
-                  <input type="range" id="patchFineTune" min="14" max="114" value="64">
-                  <span class="param-value" id="patchFineTuneVal">0</span>
-                </div>
-              </div>
+            <!-- Row 2: Master Level, Pan & Tuning Hardware Rotary Encoders -->
+            <div class="master-knob-strip">
+              <div class="master-knob-cell" id="knobWrapPatchLevel"></div>
+              <div class="master-knob-cell" id="knobWrapPatchPan"></div>
+              <div class="master-knob-cell" id="knobWrapPatchOctave"></div>
+              <div class="master-knob-cell" id="knobWrapPatchCoarseTune"></div>
+              <div class="master-knob-cell" id="knobWrapPatchFineTune"></div>
+              <div class="master-knob-cell" id="knobWrapPatchPortaTime"></div>
             </div>
 
             <!-- Row 3: Portamento & Pitch Bend Range -->
-            <div class="master-row">
-              <div class="param-group" style="flex: 0 0 auto; align-items: center;">
-                <label class="param-label">Portamento</label>
+            <div class="master-sub-row">
+              <div class="param-group" style="flex: 0 0 auto; align-items: center; flex-direction: row; gap: 8px;">
+                <label class="param-label" style="margin-bottom:0;">Portamento</label>
                 <label class="toggle">
                   <input type="checkbox" id="patchPortamento">
                   <span class="toggle-slider"></span>
                 </label>
               </div>
-              <div class="compact-param-box" style="flex: 1.5;">
-                <span class="param-label">Porta Time</span>
-                <div class="slider-val-wrap">
-                  <input type="range" id="patchPortaTime" min="0" max="127" value="0">
-                  <span class="param-value" id="patchPortaTimeVal">0</span>
-                </div>
-              </div>
-              <div class="compact-param-box" style="flex: 1;">
+              <div class="stepper-param-box" style="flex: 1; max-width: 130px;">
                 <span class="param-label">Bend Up</span>
-                <input type="number" id="patchBendUp" min="0" max="48" value="2" style="padding: 3px 6px; font-size: 0.82rem;">
+                <input type="number" id="patchBendUp" min="0" max="48" value="2" style="padding: 2px 6px; font-size: 0.8rem; text-align: center;">
               </div>
-              <div class="compact-param-box" style="flex: 1;">
+              <div class="stepper-param-box" style="flex: 1; max-width: 130px;">
                 <span class="param-label">Bend Down</span>
-                <input type="number" id="patchBendDown" min="0" max="48" value="2" style="padding: 3px 6px; font-size: 0.82rem;">
+                <input type="number" id="patchBendDown" min="0" max="48" value="2" style="padding: 2px 6px; font-size: 0.8rem; text-align: center;">
               </div>
+            </div>
+
+            <!-- Hidden underlying inputs preserved for full SysEx & automated test compatibility -->
+            <div style="display:none;" aria-hidden="true">
+              <input type="range" id="patchLevel" min="0" max="127" value="127">
+              <span id="patchLevelVal">127</span>
+              <input type="range" id="patchPan" min="0" max="127" value="64">
+              <span id="patchPanVal">C</span>
+              <input type="range" id="patchOctaveShift" min="61" max="67" value="64">
+              <span id="patchOctaveShiftVal">0</span>
+              <input type="range" id="patchCoarseTune" min="16" max="112" value="64">
+              <span id="patchCoarseTuneVal">0</span>
+              <input type="range" id="patchFineTune" min="14" max="114" value="64">
+              <span id="patchFineTuneVal">0</span>
+              <input type="range" id="patchPortaTime" min="0" max="127" value="0">
+              <span id="patchPortaTimeVal">0</span>
             </div>
           </div>
         </div>
 
-        <!-- Right: Modulation Matrix (Matrix Control 1–4) -->
+        <!-- Right: Modulation Matrix Grid (4 Matrix Sources × 4 Destinations) -->
         <div class="card patch-matrix-card">
           <div class="card-header" style="margin-bottom: 6px; padding-bottom: 4px;">
             <span class="card-title"><span class="icon">☵</span> Modulation Matrix</span>
-            <div class="sub-tab-bar" style="margin-bottom: 0;">
-              <button class="sub-tab-btn active" id="btnMatrix1" data-matrix="1">M1</button>
-              <button class="sub-tab-btn" id="btnMatrix2" data-matrix="2">M2</button>
-              <button class="sub-tab-btn" id="btnMatrix3" data-matrix="3">M3</button>
-              <button class="sub-tab-btn" id="btnMatrix4" data-matrix="4">M4</button>
-            </div>
+            <span class="badge" style="font-size:0.68rem; color:var(--text-muted);">4 SOURCES × 4 DESTINATIONS</span>
           </div>
 
-          <div class="matrix-source-row">
-            <label class="param-label" for="matrixSource" style="margin-bottom:0;">Control Source:</label>
-            <select id="matrixSource" style="font-size:0.8rem; padding:4px 8px; flex:1; max-width:260px;">
-              <!-- Populated dynamically with friendly names -->
-            </select>
+          <div class="matrix-grid-table-wrap">
+            <table class="matrix-grid-table" id="matrixGridTable">
+              <thead>
+                <tr class="matrix-grid-header-row">
+                  <th class="matrix-th-param">DESTINATION</th>
+                  <th class="matrix-th-col">
+                    <span class="matrix-col-pill">M1</span>
+                    <select id="matrix1Source" class="matrix-source-select" title="Matrix 1 Control Source"></select>
+                  </th>
+                  <th class="matrix-th-col">
+                    <span class="matrix-col-pill">M2</span>
+                    <select id="matrix2Source" class="matrix-source-select" title="Matrix 2 Control Source"></select>
+                  </th>
+                  <th class="matrix-th-col">
+                    <span class="matrix-col-pill">M3</span>
+                    <select id="matrix3Source" class="matrix-source-select" title="Matrix 3 Control Source"></select>
+                  </th>
+                  <th class="matrix-th-col">
+                    <span class="matrix-col-pill">M4</span>
+                    <select id="matrix4Source" class="matrix-source-select" title="Matrix 4 Control Source"></select>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Row 1: Dest 1 -->
+                <tr class="matrix-grid-dest-row">
+                  <td class="matrix-td-param">
+                    <div class="matrix-param-cell">
+                      <span class="dest-badge">DEST 1</span>
+                      <select id="matrixDestRow1" class="matrix-dest-select" title="Destination 1 Parameter"></select>
+                    </div>
+                  </td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_1_1" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_2_1" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_3_1" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_4_1" class="matrix-knob-cell"></div></td>
+                </tr>
+                <!-- Row 2: Dest 2 -->
+                <tr class="matrix-grid-dest-row">
+                  <td class="matrix-td-param">
+                    <div class="matrix-param-cell">
+                      <span class="dest-badge">DEST 2</span>
+                      <select id="matrixDestRow2" class="matrix-dest-select" title="Destination 2 Parameter"></select>
+                    </div>
+                  </td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_1_2" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_2_2" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_3_2" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_4_2" class="matrix-knob-cell"></div></td>
+                </tr>
+                <!-- Row 3: Dest 3 -->
+                <tr class="matrix-grid-dest-row">
+                  <td class="matrix-td-param">
+                    <div class="matrix-param-cell">
+                      <span class="dest-badge">DEST 3</span>
+                      <select id="matrixDestRow3" class="matrix-dest-select" title="Destination 3 Parameter"></select>
+                    </div>
+                  </td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_1_3" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_2_3" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_3_3" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_4_3" class="matrix-knob-cell"></div></td>
+                </tr>
+                <!-- Row 4: Dest 4 -->
+                <tr class="matrix-grid-dest-row">
+                  <td class="matrix-td-param">
+                    <div class="matrix-param-cell">
+                      <span class="dest-badge">DEST 4</span>
+                      <select id="matrixDestRow4" class="matrix-dest-select" title="Destination 4 Parameter"></select>
+                    </div>
+                  </td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_1_4" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_2_4" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_3_4" class="matrix-knob-cell"></div></td>
+                  <td class="matrix-td-amount"><div id="matrixKnob_4_4" class="matrix-knob-cell"></div></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <div class="matrix-dest-grid" id="matrixDestsContainer">
-            <!-- 2x2 Grid of Destination Slots -->
-            <div class="matrix-dest-box">
-              <div class="dest-slot-header">
-                <span class="dest-badge">DEST 1</span>
-                <select id="matrixDest1"></select>
-              </div>
-              <div class="slider-val-wrap">
-                <input type="range" id="matrixSens1" min="1" max="127" value="64">
-                <span class="param-value" id="matrixSens1Val">0</span>
-              </div>
-            </div>
-            <div class="matrix-dest-box">
-              <div class="dest-slot-header">
-                <span class="dest-badge">DEST 2</span>
-                <select id="matrixDest2"></select>
-              </div>
-              <div class="slider-val-wrap">
-                <input type="range" id="matrixSens2" min="1" max="127" value="64">
-                <span class="param-value" id="matrixSens2Val">0</span>
-              </div>
-            </div>
-            <div class="matrix-dest-box">
-              <div class="dest-slot-header">
-                <span class="dest-badge">DEST 3</span>
-                <select id="matrixDest3"></select>
-              </div>
-              <div class="slider-val-wrap">
-                <input type="range" id="matrixSens3" min="1" max="127" value="64">
-                <span class="param-value" id="matrixSens3Val">0</span>
-              </div>
-            </div>
-            <div class="matrix-dest-box">
-              <div class="dest-slot-header">
-                <span class="dest-badge">DEST 4</span>
-                <select id="matrixDest4"></select>
-              </div>
-              <div class="slider-val-wrap">
-                <input type="range" id="matrixSens4" min="1" max="127" value="64">
-                <span class="param-value" id="matrixSens4Val">0</span>
-              </div>
-            </div>
+          <!-- Hidden Compatibility Fallback Nodes -->
+          <div style="display:none;" aria-hidden="true">
+            <button id="btnMatrix1"></button><button id="btnMatrix2"></button>
+            <button id="btnMatrix3"></button><button id="btnMatrix4"></button>
+            <select id="matrixSource"></select>
+            <select id="matrixDest1"></select><input id="matrixSens1"><span id="matrixSens1Val"></span>
+            <select id="matrixDest2"></select><input id="matrixSens2"><span id="matrixSens2Val"></span>
+            <select id="matrixDest3"></select><input id="matrixSens3"><span id="matrixSens3Val"></span>
+            <select id="matrixDest4"></select><input id="matrixSens4"><span id="matrixSens4Val"></span>
           </div>
         </div>
 
@@ -980,26 +1250,19 @@
                 <!-- Dynamically populated -->
               </select>
             </div>
-            <div class="compact-param-box">
-              <span class="param-label">Dry Level</span>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxDryLevel" min="0" max="127" value="127">
-                <span class="param-value" id="patchMfxDryLevelVal">127</span>
-              </div>
+            <div class="mfx-common-knobs-strip">
+              <div class="mfx-knob-cell" id="knobWrapPatchMfxDryLevel"></div>
+              <div class="mfx-knob-cell" id="knobWrapPatchMfxChorusSend"></div>
+              <div class="mfx-knob-cell" id="knobWrapPatchMfxReverbSend"></div>
             </div>
-            <div class="compact-param-box">
-              <span class="param-label">Chorus Send</span>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxChorusSend" min="0" max="127" value="0">
-                <span class="param-value" id="patchMfxChorusSendVal">0</span>
-              </div>
-            </div>
-            <div class="compact-param-box">
-              <span class="param-label">Reverb Send</span>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxReverbSend" min="0" max="127" value="0">
-                <span class="param-value" id="patchMfxReverbSendVal">0</span>
-              </div>
+            <!-- Hidden inputs preserved for full SysEx & test compatibility -->
+            <div style="display:none;" aria-hidden="true">
+              <input type="range" id="patchMfxDryLevel" min="0" max="127" value="127">
+              <span id="patchMfxDryLevelVal">127</span>
+              <input type="range" id="patchMfxChorusSend" min="0" max="127" value="0">
+              <span id="patchMfxChorusSendVal">0</span>
+              <input type="range" id="patchMfxReverbSend" min="0" max="127" value="0">
+              <span id="patchMfxReverbSendVal">0</span>
             </div>
             <div class="param-group" style="min-width: 90px;">
               <label class="param-label" for="patchMfxOutputAssign">Output Assign</label>
@@ -1012,106 +1275,82 @@
 
           <!-- Dynamic 12-Parameter Grid for Patch MFX -->
           <div class="mfx-section-subtitle">
-            <span>Algorithm Parameters (SysEx 4-Nibble Precision)</span>
+            <span>Algorithm Effect Parameters</span>
             <span class="algo-param-count-badge" id="patchAlgoParamCountBadge">12 Parameters</span>
           </div>
           <div class="mfx-params-grid" id="patchMfxParamsGrid">
-            <!-- 12 Parameter Blocks for Patch MFX -->
+            <!-- 12 Compact Rotary Knob Parameter Blocks for Patch MFX -->
             <div class="mfx-param-box" id="patchMfxParamBox1">
               <label class="param-label" id="patchMfxParamLabel1">Param 1</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam1" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal1">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam1"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam1" min="0" max="127" value="64"><span id="patchMfxParamVal1">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox2">
               <label class="param-label" id="patchMfxParamLabel2">Param 2</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam2" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal2">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam2"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam2" min="0" max="127" value="64"><span id="patchMfxParamVal2">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox3">
               <label class="param-label" id="patchMfxParamLabel3">Param 3</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam3" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal3">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam3"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam3" min="0" max="127" value="64"><span id="patchMfxParamVal3">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox4">
               <label class="param-label" id="patchMfxParamLabel4">Param 4</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam4" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal4">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam4"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam4" min="0" max="127" value="64"><span id="patchMfxParamVal4">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox5">
               <label class="param-label" id="patchMfxParamLabel5">Param 5</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam5" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal5">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam5"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam5" min="0" max="127" value="64"><span id="patchMfxParamVal5">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox6">
               <label class="param-label" id="patchMfxParamLabel6">Param 6</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam6" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal6">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam6"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam6" min="0" max="127" value="64"><span id="patchMfxParamVal6">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox7">
               <label class="param-label" id="patchMfxParamLabel7">Param 7</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam7" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal7">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam7"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam7" min="0" max="127" value="64"><span id="patchMfxParamVal7">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox8">
               <label class="param-label" id="patchMfxParamLabel8">Param 8</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam8" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal8">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam8"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam8" min="0" max="127" value="64"><span id="patchMfxParamVal8">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox9">
               <label class="param-label" id="patchMfxParamLabel9">Param 9</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam9" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal9">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam9"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam9" min="0" max="127" value="64"><span id="patchMfxParamVal9">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox10">
               <label class="param-label" id="patchMfxParamLabel10">Param 10</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam10" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal10">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam10"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam10" min="0" max="127" value="64"><span id="patchMfxParamVal10">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox11">
               <label class="param-label" id="patchMfxParamLabel11">Param 11</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam11" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal11">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam11"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam11" min="0" max="127" value="64"><span id="patchMfxParamVal11">64</span></div>
             </div>
             <div class="mfx-param-box" id="patchMfxParamBox12">
               <label class="param-label" id="patchMfxParamLabel12">Param 12</label>
-              <div class="slider-val-wrap">
-                <input type="range" id="patchMfxParam12" min="0" max="127" value="64">
-                <span class="param-value" id="patchMfxParamVal12">64</span>
-              </div>
+              <div id="knobWrapPatchMfxParam12"></div>
+              <div style="display:none;"><input type="range" id="patchMfxParam12" min="0" max="127" value="64"><span id="patchMfxParamVal12">64</span></div>
             </div>
           </div>
 
-          <!-- Patch Chorus & Reverb Processors -->
+          <!-- Patch Chorus & Reverb Processors (Compact Balanced Studio Strip) -->
           <div class="mfx-section-subtitle" style="margin-top: 14px;">
             <span>Patch Dedicated Chorus & Reverb Processors</span>
           </div>
           <div class="effects-grid">
             <div class="fx-panel">
-              <div class="fx-panel-title">Patch Chorus</div>
-              <div class="param-grid">
-                <div class="param-group">
+              <div class="fx-panel-title">Patch Dedicated Chorus</div>
+              <div class="fx-panel-compact-strip">
+                <div class="param-group" style="min-width: 100px;">
                   <label class="param-label" for="patchChorusType">Type</label>
                   <select id="patchChorusType">
                     <option value="0">OFF</option>
@@ -1120,19 +1359,36 @@
                     <option value="3">GM2 CHORUS</option>
                   </select>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="patchChorusLevel">Level</label>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="range" id="patchChorusLevel" min="0" max="127" value="64">
-                    <span class="param-value" id="patchChorusLevelVal">64</span>
-                  </div>
+                <div class="fx-knob-cluster">
+                  <div id="knobWrapPatchChorusLevel"></div>
+                  <div id="knobWrapPatchChorusRate"></div>
+                  <div id="knobWrapPatchChorusDepth"></div>
+                  <div id="knobWrapPatchChorusRevSend"></div>
+                </div>
+                <div class="param-group" style="min-width: 80px;">
+                  <label class="param-label" for="patchChorusOutputAssign">Output</label>
+                  <select id="patchChorusOutputAssign">
+                    <option value="0">A</option><option value="1">B</option>
+                    <option value="2">C</option><option value="3">D</option>
+                  </select>
+                </div>
+                <!-- Hidden inputs preserved for SysEx & test compatibility -->
+                <div style="display:none;" aria-hidden="true">
+                  <input type="range" id="patchChorusLevel" min="0" max="127" value="64">
+                  <span id="patchChorusLevelVal">64</span>
+                  <input type="range" id="patchChorusRate" min="0" max="127" value="32">
+                  <span id="patchChorusRateVal">32</span>
+                  <input type="range" id="patchChorusDepth" min="0" max="127" value="64">
+                  <span id="patchChorusDepthVal">64</span>
+                  <input type="range" id="patchChorusRevSend" min="0" max="127" value="0">
+                  <span id="patchChorusRevSendVal">0</span>
                 </div>
               </div>
             </div>
             <div class="fx-panel">
-              <div class="fx-panel-title">Patch Reverb</div>
-              <div class="param-grid">
-                <div class="param-group">
+              <div class="fx-panel-title">Patch Dedicated Reverb</div>
+              <div class="fx-panel-compact-strip">
+                <div class="param-group" style="min-width: 100px;">
                   <label class="param-label" for="patchReverbType">Type</label>
                   <select id="patchReverbType">
                     <option value="0">OFF</option>
@@ -1143,12 +1399,26 @@
                     <option value="5">GM2 REVERB</option>
                   </select>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="patchReverbLevel">Level</label>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="range" id="patchReverbLevel" min="0" max="127" value="64">
-                    <span class="param-value" id="patchReverbLevelVal">64</span>
-                  </div>
+                <div class="fx-knob-cluster">
+                  <div id="knobWrapPatchReverbLevel"></div>
+                  <div id="knobWrapPatchReverbTime"></div>
+                  <div id="knobWrapPatchReverbHfDamp"></div>
+                </div>
+                <div class="param-group" style="min-width: 80px;">
+                  <label class="param-label" for="patchReverbOutputAssign">Output</label>
+                  <select id="patchReverbOutputAssign">
+                    <option value="0">A</option><option value="1">B</option>
+                    <option value="2">C</option><option value="3">D</option>
+                  </select>
+                </div>
+                <!-- Hidden inputs preserved for SysEx & test compatibility -->
+                <div style="display:none;" aria-hidden="true">
+                  <input type="range" id="patchReverbLevel" min="0" max="127" value="64">
+                  <span id="patchReverbLevelVal">64</span>
+                  <input type="range" id="patchReverbTime" min="0" max="127" value="64">
+                  <span id="patchReverbTimeVal">64</span>
+                  <input type="range" id="patchReverbHfDamp" min="0" max="17" value="17">
+                  <span id="patchReverbHfDampVal">17</span>
                 </div>
               </div>
             </div>
@@ -1228,71 +1498,80 @@
           </div>
         </div>
 
-        <!-- Tone On/Off Switches -->
-        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--border);">
-          <div class="param-label" style="margin-bottom: var(--space-sm);">Active Tone Generators</div>
-          <div class="tone-switches" id="toneSwitches">
-            <div class="tone-switch active" data-tone="1">
-              <span class="tone-label">TONE 1</span>
-              <label class="toggle">
-                <input type="checkbox" id="tone1Switch" checked>
-                <span class="toggle-slider"></span>
-              </label>
+        <!-- Tone On/Off Switches & TMT Zones Row -->
+        <div class="tone-top-row-strip">
+          <div class="tone-switches-block">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom: 6px;">
+              <span class="param-label" style="margin:0; font-weight:700; color:var(--text-primary);">Tone Playback Switches</span>
+              <span class="badge" style="font-size:0.65rem; color:var(--text-muted);">MUTE / UNMUTE IN SOUND</span>
             </div>
-            <div class="tone-switch active" data-tone="2">
-              <span class="tone-label">TONE 2</span>
-              <label class="toggle">
-                <input type="checkbox" id="tone2Switch" checked>
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="tone-switch" data-tone="3">
-              <span class="tone-label">TONE 3</span>
-              <label class="toggle">
-                <input type="checkbox" id="tone3Switch">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="tone-switch" data-tone="4">
-              <span class="tone-label">TONE 4</span>
-              <label class="toggle">
-                <input type="checkbox" id="tone4Switch">
-                <span class="toggle-slider"></span>
-              </label>
+            <div class="tone-switches" id="toneSwitches" title="Enable or mute tone sound generators for keyboard playback. Click card to switch edit target.">
+              <div class="tone-switch active" data-tone="1" title="Tone 1 Sound Generator: ON/OFF. Click to edit Tone 1.">
+                <span class="tone-label">TONE 1</span>
+                <label class="toggle">
+                  <input type="checkbox" id="tone1Switch" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="tone-playback-state playing" id="tonePlaybackState1">SOUNDING</span>
+              </div>
+              <div class="tone-switch active" data-tone="2" title="Tone 2 Sound Generator: ON/OFF. Click to edit Tone 2.">
+                <span class="tone-label">TONE 2</span>
+                <label class="toggle">
+                  <input type="checkbox" id="tone2Switch" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="tone-playback-state playing" id="tonePlaybackState2">SOUNDING</span>
+              </div>
+              <div class="tone-switch" data-tone="3" title="Tone 3 Sound Generator: ON/OFF. Click to edit Tone 3.">
+                <span class="tone-label">TONE 3</span>
+                <label class="toggle">
+                  <input type="checkbox" id="tone3Switch">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="tone-playback-state muted" id="tonePlaybackState3">MUTED</span>
+              </div>
+              <div class="tone-switch" data-tone="4" title="Tone 4 Sound Generator: ON/OFF. Click to edit Tone 4.">
+                <span class="tone-label">TONE 4</span>
+                <label class="toggle">
+                  <input type="checkbox" id="tone4Switch">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="tone-playback-state muted" id="tonePlaybackState4">MUTED</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Key & Velocity Zones per tone -->
-        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--border);">
-          <div class="param-label" style="margin-bottom: var(--space-sm);">TMT Keyboard & Velocity Zones (Tone <span id="currentZoneToneLabel">1</span>)</div>
-          <div class="param-grid">
-            <div class="param-group">
-              <label class="param-label" for="tmtKeyLower">Key Range Lower</label>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="range" id="tmtKeyLower" min="0" max="127" value="0">
-                <span class="param-value" id="tmtKeyLowerVal">C-1</span>
-              </div>
+          <div class="tone-tmt-block">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; flex-wrap:wrap; gap:6px;">
+              <div class="param-label" style="margin:0;">TMT Keyboard &amp; Velocity Zones (Tone <span id="currentZoneToneLabel">1</span>)</div>
+              <span style="font-size:0.7rem; color:var(--text-muted);">Defines active key range &amp; dynamic velocity window for this tone</span>
             </div>
-            <div class="param-group">
-              <label class="param-label" for="tmtKeyUpper">Key Range Upper</label>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="range" id="tmtKeyUpper" min="0" max="127" value="127">
-                <span class="param-value" id="tmtKeyUpperVal">G9</span>
+            <div class="tmt-split-strip">
+              <div class="tmt-zone-group">
+                <span class="tmt-zone-heading">Pitch Range:</span>
+                <div class="compact-fader-wrap" title="Lower Keyboard Limit (C-1 to G9): Lowest MIDI note that triggers this tone generator">
+                  <span class="param-label" style="min-width:55px;">Key Low:</span>
+                  <input type="range" id="tmtKeyLower" min="0" max="127" value="0">
+                  <span class="param-value" id="tmtKeyLowerVal">C-1</span>
+                </div>
+                <div class="compact-fader-wrap" title="Upper Keyboard Limit (C-1 to G9): Highest MIDI note that triggers this tone generator">
+                  <span class="param-label" style="min-width:55px;">Key High:</span>
+                  <input type="range" id="tmtKeyUpper" min="0" max="127" value="127">
+                  <span class="param-value" id="tmtKeyUpperVal">G9</span>
+                </div>
               </div>
-            </div>
-            <div class="param-group">
-              <label class="param-label" for="tmtVelLower">Velocity Lower</label>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="range" id="tmtVelLower" min="1" max="127" value="1">
-                <span class="param-value" id="tmtVelLowerVal">1</span>
-              </div>
-            </div>
-            <div class="param-group">
-              <label class="param-label" for="tmtVelUpper">Velocity Upper</label>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="range" id="tmtVelUpper" min="1" max="127" value="127">
-                <span class="param-value" id="tmtVelUpperVal">127</span>
+              <div class="tmt-zone-group">
+                <span class="tmt-zone-heading">Velocity Window:</span>
+                <div class="compact-fader-wrap" title="Minimum Velocity Threshold (1-127): Lowest MIDI velocity required to trigger this tone">
+                  <span class="param-label" style="min-width:55px;">Vel Low:</span>
+                  <input type="range" id="tmtVelLower" min="1" max="127" value="1">
+                  <span class="param-value" id="tmtVelLowerVal">1</span>
+                </div>
+                <div class="compact-fader-wrap" title="Maximum Velocity Threshold (1-127): Highest MIDI velocity that will trigger this tone">
+                  <span class="param-label" style="min-width:55px;">Vel High:</span>
+                  <input type="range" id="tmtVelUpper" min="1" max="127" value="127">
+                  <span class="param-value" id="tmtVelUpperVal">127</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1301,110 +1580,130 @@
 
       <!-- Tone Generator Blocks (Tones 1-4) with Deep Stage 2 Controls -->
       <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">♫</span> Deep Tone Generator Engine</span>
-          <div class="tone-tab-selector">
-            <button class="btn btn-sm active" id="btnSelectTone1">Tone 1</button>
-            <button class="btn btn-sm" id="btnSelectTone2">Tone 2</button>
-            <button class="btn btn-sm" id="btnSelectTone3">Tone 3</button>
-            <button class="btn btn-sm" id="btnSelectTone4">Tone 4</button>
+        <div class="card-header tone-engine-header">
+          <div class="tone-engine-title-wrap">
+            <span class="card-title"><span class="icon">♫</span> Deep Tone Generator Engine</span>
+            <span class="tone-focus-badge" id="toneFocusBadge">EDIT TARGET: TONE 1</span>
+          </div>
+          <div class="tone-tab-selector-cluster">
+            <span class="tone-selector-label">EDIT TARGET:</span>
+            <div class="tone-tab-selector" role="radiogroup" aria-label="Tone Edit Target">
+              <button class="btn btn-sm active tone-tab-btn" id="btnSelectTone1" data-tone="1" title="Edit Tone 1 parameters">
+                <span class="tone-status-dot on" id="toneStatusDot1"></span>Tone 1
+              </button>
+              <button class="btn btn-sm tone-tab-btn" id="btnSelectTone2" data-tone="2" title="Edit Tone 2 parameters">
+                <span class="tone-status-dot on" id="toneStatusDot2"></span>Tone 2
+              </button>
+              <button class="btn btn-sm tone-tab-btn" id="btnSelectTone3" data-tone="3" title="Edit Tone 3 parameters">
+                <span class="tone-status-dot off" id="toneStatusDot3"></span>Tone 3
+              </button>
+              <button class="btn btn-sm tone-tab-btn" id="btnSelectTone4" data-tone="4" title="Edit Tone 4 parameters">
+                <span class="tone-status-dot off" id="toneStatusDot4"></span>Tone 4
+              </button>
+              <button class="btn btn-sm btn-link-all tone-tab-btn" id="btnSelectToneAll" title="Master Switch: Edit TVF Filter, Envelopes & Tuning across ALL 4 tones simultaneously">
+                <span class="icon">⚡</span> ALL TONES (LINK)
+              </button>
+            </div>
           </div>
         </div>
 
         <div id="toneEditorContainer">
           
-          <!-- Tone Basic & Wave Engine -->
-          <div style="margin-bottom: var(--space-md); padding-bottom: var(--space-md); border-bottom: 1px solid var(--border);">
-            <div style="font-weight:600; color:var(--text-accent); margin-bottom:8px; font-size:0.9rem;">Basic Tuning & Wave Engine</div>
-            <div class="param-grid">
-              <div class="param-group">
-                <label class="param-label" for="toneLevel">Tone Level</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="toneLevel" min="0" max="127" value="127">
-                  <span class="param-value" id="toneLevelVal">127</span>
+          <!-- Modular 2-Panel Rack: Basic Tuning & Waveform Engine -->
+          <div class="tone-wave-tuning-rack">
+            <!-- Box A: Voice Level & Pitch Tuning -->
+            <div class="modular-subcard" style="display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+              <div class="modular-subcard-title" style="margin-bottom:0;">
+                <span>Voice Level &amp; Tuning</span>
+                <span class="badge" style="font-size:0.65rem;" id="currentToneNameDisplay">TONE 1</span>
+              </div>
+              <div class="tone-knobs-strip">
+                <div class="master-knob-cell" id="knobWrapToneLevel"></div>
+                <div class="master-knob-cell" id="knobWrapTonePan"></div>
+                <div class="master-knob-cell" id="knobWrapToneCoarse"></div>
+                <div class="master-knob-cell" id="knobWrapToneFine"></div>
+              </div>
+              <div style="display:none;" aria-hidden="true">
+                <input type="range" id="toneLevel" min="0" max="127" value="127"><span id="toneLevelVal">127</span>
+                <input type="range" id="tonePan" min="0" max="127" value="64"><span id="tonePanVal">C</span>
+                <input type="range" id="toneCoarseTune" min="16" max="112" value="64"><span id="toneCoarseTuneVal">0</span>
+                <input type="range" id="toneFineTune" min="14" max="114" value="64"><span id="toneFineTuneVal">0</span>
+              </div>
+            </div>
+
+            <!-- Box B: PCM Waveform Source & Modulation -->
+            <div class="modular-subcard">
+              <div class="modular-subcard-title">
+                <span>PCM Waveform Engine & Modulation</span>
+                <span class="badge" style="font-size:0.65rem;" id="waveBankBadge">1,083 WAVES</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <div class="param-group" style="flex:1.8; min-width:180px;">
+                    <label class="param-label" for="waveGroup">Wave Group</label>
+                    <select id="waveGroup" style="font-size:0.8rem; padding:3px 6px;" title="Waveform Group: Select between internal Roland ROM waveforms or installed SRX expansion boards">
+                      <option value="INT">INT: Internal PCM (1,083 Waves)</option>
+                      <option value="SRX-A">SRX Slot A Expansion Board</option>
+                      <option value="SRX-B">SRX Slot B Expansion Board</option>
+                    </select>
+                  </div>
+                  <div class="param-group" style="flex:1; min-width:90px;">
+                    <label class="param-label" for="waveGain">Wave Gain</label>
+                    <select id="waveGain" style="font-size:0.8rem; padding:3px 6px;" title="Wave Gain (-6 dB, 0 dB, +6 dB, +12 dB): Digital input gain before entering the TVF filter">
+                      <option value="0">-6 dB</option>
+                      <option value="1" selected>0 dB</option>
+                      <option value="2">+6 dB</option>
+                      <option value="3">+12 dB</option>
+                    </select>
+                  </div>
+                  <div class="param-group" style="flex:0 0 auto; align-items:center;">
+                    <label class="param-label">Tempo Sync</label>
+                    <label class="toggle" title="Wave Tempo Sync: Locks waveform cycle rate to system / MIDI tempo for rhythmic sweeps">
+                      <input type="checkbox" id="waveTempoSync">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                  <div class="param-group">
+                    <label class="param-label" for="waveNumberL">Wave L (Left / Mono)</label>
+                    <select id="waveNumberL" style="font-size:0.8rem; width:100%; padding:3px 6px;" title="Primary PCM Waveform: Left channel or mono Roland sample source for this tone"></select>
+                    <span class="param-value" id="waveNameL" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">—</span>
+                  </div>
+                  <div class="param-group">
+                    <label class="param-label" for="waveNumberR">Wave R (Right / Stereo)</label>
+                    <select id="waveNumberR" style="font-size:0.8rem; width:100%; padding:3px 6px;" title="Stereo Partner Waveform: Right channel sample paired with Wave L for true stereo multisamples (or OFF for mono)">
+                      <option value="0">OFF</option>
+                    </select>
+                    <span class="param-value" id="waveNameR" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">OFF</span>
+                  </div>
+                </div>
+
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-top:4px; border-top:1px solid rgba(255,255,255,0.05);">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label class="param-label" style="margin:0;" title="Frequency Cross Modulation (FXM): Modulates the waveform with a sub-oscillator for metallic, bell-like, or dirty harmonic edge">FXM:</label>
+                    <label class="toggle" title="Toggle Frequency Cross Modulation">
+                      <input type="checkbox" id="waveFxmSwitch">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label class="param-label" for="waveFxmColor" style="margin:0;" title="FXM Color (1-4): Harmonic coloration of the cross-modulation oscillator">Color:</label>
+                    <select id="waveFxmColor" style="font-size:0.75rem; padding:2px 4px;" title="Harmonic coloration ratio (1-4)">
+                      <option value="0">1</option><option value="1">2</option>
+                      <option value="2">3</option><option value="3">4</option>
+                    </select>
+                  </div>
+                  <div class="compact-fader-wrap" style="flex:1;" title="FXM Depth (0-16): Intensity of cross-modulation applied to the PCM waveform">
+                    <span class="param-label" style="min-width:38px;">Depth:</span>
+                    <input type="range" id="waveFxmDepth" min="0" max="16" value="0">
+                    <span class="param-value" id="waveFxmDepthVal">0</span>
+                  </div>
                 </div>
               </div>
-              <div class="param-group">
-                <label class="param-label" for="tonePan">Tone Pan</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="tonePan" min="0" max="127" value="64">
-                  <span class="param-value" id="tonePanVal">C</span>
-                </div>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="toneCoarseTune">Coarse Tune</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="toneCoarseTune" min="16" max="112" value="64">
-                  <span class="param-value" id="toneCoarseTuneVal">0</span>
-                </div>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="toneFineTune">Fine Tune</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="toneFineTune" min="14" max="114" value="64">
-                  <span class="param-value" id="toneFineTuneVal">0</span>
-                </div>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="waveGroup">Wave Group</label>
-                <select id="waveGroup">
-                  <option value="0">INT</option>
-                  <option value="1">SR-JV80</option>
-                  <option value="2">SRX</option>
-                  <option value="3">SAMPLE</option>
-                </select>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="waveNumberL">Waveform L (Mono)</label>
-                <select id="waveNumberL" style="font-size:0.82rem; width:100%;">
-                  <!-- Populated dynamically with all 1083 internal waveforms -->
-                </select>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="waveNumberR">Waveform R</label>
-                <select id="waveNumberR" style="font-size:0.82rem; width:100%;">
-                  <option value="0">OFF</option>
-                  <!-- Populated dynamically -->
-                </select>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="waveGain">Wave Gain</label>
-                <select id="waveGain">
-                  <option value="0">-6 dB</option>
-                  <option value="1" selected>0 dB</option>
-                  <option value="2">+6 dB</option>
-                  <option value="3">+12 dB</option>
-                </select>
-              </div>
-              <div class="param-group">
-                <label class="param-label">FXM Switch</label>
-                <label class="toggle">
-                  <input type="checkbox" id="waveFxmSwitch">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="waveFxmColor">FXM Color</label>
-                <select id="waveFxmColor">
-                  <option value="0">1</option>
-                  <option value="1">2</option>
-                  <option value="2">3</option>
-                  <option value="3">4</option>
-                </select>
-              </div>
-              <div class="param-group">
-                <label class="param-label" for="waveFxmDepth">FXM Depth</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="waveFxmDepth" min="0" max="16" value="0">
-                  <span class="param-value" id="waveFxmDepthVal">0</span>
-                </div>
-              </div>
-              <div class="param-group">
-                <label class="param-label">Tempo Sync</label>
-                <label class="toggle">
-                  <input type="checkbox" id="waveTempoSync">
-                  <span class="toggle-slider"></span>
-                </label>
+            </div>
+          </div>
               </div>
             </div>
           </div>
@@ -1417,6 +1716,7 @@
               <div class="synth-module-header">
                 <div class="synth-module-title">
                   <span class="module-icon">∿</span> TVF Filter & Envelope
+                  <span class="curve-badge tone-target-pill" id="filterToneBadge">Tone 1</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px;">
                   <span class="curve-badge" id="filterRespBadge">LPF</span>
@@ -1438,179 +1738,67 @@
                 </div>
               </div>
               <div class="compact-controls-grid">
-                <div class="param-group">
-                  <label class="param-label" for="toneFilterType">Filter Type</label>
-                  <select id="toneFilterType">
-                    <option value="0">OFF</option>
-                    <option value="1">LPF (Low Pass)</option>
-                    <option value="2">BPF (Band Pass)</option>
-                    <option value="3">HPF (High Pass)</option>
-                    <option value="4">PKG (Peaking)</option>
-                    <option value="5">LPF2</option>
-                    <option value="6">LPF3</option>
-                  </select>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="toneCutoff">Cutoff</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="toneCutoff" min="0" max="127" value="127">
-                    <span class="param-value" id="toneCutoffVal">127</span>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                  <div class="param-group" style="flex:1; min-width:125px;">
+                    <label class="param-label" for="toneFilterType">Filter Type</label>
+                    <select id="toneFilterType">
+                      <option value="0">OFF</option>
+                      <option value="1">LPF (Low Pass)</option>
+                      <option value="2">BPF (Band Pass)</option>
+                      <option value="3">HPF (High Pass)</option>
+                      <option value="4">PKG (Peaking)</option>
+                      <option value="5">LPF2</option>
+                      <option value="6">LPF3</option>
+                    </select>
+                  </div>
+                  <div class="param-group" style="flex:1; min-width:135px;">
+                    <label class="param-label" for="tvfFilterDrive" title="Structure Booster: Overdrives Tone into TVF filter stage (+0 dB, +6 dB, +12 dB, +18 dB)">Pre-Filter Drive (Booster)</label>
+                    <select id="tvfFilterDrive" title="Structure Booster: Overdrives Tone into TVF filter stage (+0 dB, +6 dB, +12 dB, +18 dB)">
+                      <option value="0">0 dB (Clean)</option>
+                      <option value="1">+6 dB (Warm Drive)</option>
+                      <option value="2">+12 dB (Crunch Drive)</option>
+                      <option value="3">+18 dB (Heavy Fuzz)</option>
+                    </select>
+                  </div>
+                  <div class="param-group" style="flex:1; min-width:115px;">
+                    <label class="param-label" for="tvfWaveGain" title="Wave Gain (-6 dB, 0 dB, +6 dB, +12 dB): Input gain before entering TVF filter">Wave Gain (Pre-Drive)</label>
+                    <select id="tvfWaveGain" title="Wave Gain (-6 dB, 0 dB, +6 dB, +12 dB): Input gain before entering TVF filter">
+                      <option value="0">-6 dB</option>
+                      <option value="1" selected>0 dB</option>
+                      <option value="2">+6 dB</option>
+                      <option value="3">+12 dB</option>
+                    </select>
                   </div>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="toneResonance">Resonance</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="toneResonance" min="0" max="127" value="0">
-                    <span class="param-value" id="toneResonanceVal">0</span>
-                  </div>
+                <div class="synth-knobs-grid">
+                  <div class="master-knob-cell" id="knobWrapToneCutoff"></div>
+                  <div class="master-knob-cell" id="knobWrapToneResonance"></div>
+                  <div class="master-knob-cell" id="knobWrapTvfEnvDepth"></div>
+                  <div class="master-knob-cell" id="knobWrapTvfEnvT1"></div>
+                  <div class="master-knob-cell" id="knobWrapTvfEnvT2"></div>
+                  <div class="master-knob-cell" id="knobWrapTvfEnvT3"></div>
+                  <div class="master-knob-cell" id="knobWrapTvfEnvT4"></div>
+                  <div class="master-knob-cell" id="knobWrapTvfEnvL3"></div>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvfEnvDepth">Env Depth</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvfEnvDepth" min="1" max="127" value="64">
-                    <span class="param-value" id="tvfEnvDepthVal">0</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvfEnvT1">Attack (T1)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvfEnvT1" min="0" max="127" value="15">
-                    <span class="param-value" id="tvfEnvT1Val">15</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvfEnvT4">Release (T4)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvfEnvT4" min="0" max="127" value="40">
-                    <span class="param-value" id="tvfEnvT4Val">40</span>
-                  </div>
+                <div style="display:none;" aria-hidden="true">
+                  <input type="range" id="toneCutoff" min="0" max="127" value="127"><span id="toneCutoffVal">127</span>
+                  <input type="range" id="toneResonance" min="0" max="127" value="0"><span id="toneResonanceVal">0</span>
+                  <input type="range" id="tvfEnvDepth" min="1" max="127" value="64"><span id="tvfEnvDepthVal">0</span>
+                  <input type="range" id="tvfEnvT1" min="0" max="127" value="15"><span id="tvfEnvT1Val">15</span>
+                  <input type="range" id="tvfEnvT2" min="0" max="127" value="25"><span id="tvfEnvT2Val">25</span>
+                  <input type="range" id="tvfEnvT3" min="0" max="127" value="40"><span id="tvfEnvT3Val">40</span>
+                  <input type="range" id="tvfEnvT4" min="0" max="127" value="40"><span id="tvfEnvT4Val">40</span>
+                  <input type="range" id="tvfEnvL3" min="0" max="127" value="60"><span id="tvfEnvL3Val">60</span>
                 </div>
               </div>
             </div>
 
-            <!-- Module 2: TVA Amplifier & Envelope -->
-            <div class="synth-module-card">
-              <div class="synth-module-header">
-                <div class="synth-module-title">
-                  <span class="module-icon">⚡</span> TVA Amp & Envelope
-                </div>
-                <span class="curve-badge" id="tvaEnvBadge">Level: 127</span>
-              </div>
-              <div class="mini-scope-card">
-                <svg class="curve-svg" id="tvaEnvSvg" viewBox="0 0 300 75" preserveAspectRatio="none">
-                  <path class="curve-path" id="tvaEnvPath" fill="none" stroke="#00d4ff" stroke-width="2" d="M 10 70 L 75 15 L 150 25 L 225 35 L 290 70" />
-                </svg>
-              </div>
-              <div class="compact-controls-grid">
-                <div class="param-group">
-                  <label class="param-label" for="toneTvaLevel">TVA Level</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="toneTvaLevel" min="0" max="127" value="127">
-                    <span class="param-value" id="toneTvaLevelVal">127</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvaEnvT1">Attack (T1)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvaEnvT1" min="0" max="127" value="10">
-                    <span class="param-value" id="tvaEnvT1Val">10</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvaEnvT2">Decay 1 (T2)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvaEnvT2" min="0" max="127" value="20">
-                    <span class="param-value" id="tvaEnvT2Val">20</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvaEnvT3">Decay 2 (T3)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvaEnvT3" min="0" max="127" value="40">
-                    <span class="param-value" id="tvaEnvT3Val">40</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvaEnvT4">Release (T4)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvaEnvT4" min="0" max="127" value="30">
-                    <span class="param-value" id="tvaEnvT4Val">30</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="tvaEnvL3">Sustain (L3)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="tvaEnvL3" min="0" max="127" value="70">
-                    <span class="param-value" id="tvaEnvL3Val">70</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Module 3: Pitch & Pitch Envelope -->
-            <div class="synth-module-card">
-              <div class="synth-module-header">
-                <div class="synth-module-title">
-                  <span class="module-icon">♩</span> Pitch Envelope
-                </div>
-                <span class="curve-badge" id="pitchEnvBadge">Depth: 0 semi</span>
-              </div>
-              <div class="mini-scope-card">
-                <svg class="curve-svg" id="pitchEnvSvg" viewBox="0 0 300 75" preserveAspectRatio="none">
-                  <path class="curve-path" id="pitchEnvPath" fill="none" stroke="#00d4ff" stroke-width="2" d="M 10 38 L 75 38 L 150 38 L 225 38 L 290 38" />
-                </svg>
-              </div>
-              <div class="compact-controls-grid">
-                <div class="param-group">
-                  <label class="param-label" for="pitchEnvDepth">Env Depth</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="pitchEnvDepth" min="52" max="76" value="64">
-                    <span class="param-value" id="pitchEnvDepthVal">0</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="pitchEnvT1">Attack (T1)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="pitchEnvT1" min="0" max="127" value="20">
-                    <span class="param-value" id="pitchEnvT1Val">20</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="pitchEnvT2">Time 2</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="pitchEnvT2" min="0" max="127" value="20">
-                    <span class="param-value" id="pitchEnvT2Val">20</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="pitchEnvT3">Time 3</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="pitchEnvT3" min="0" max="127" value="40">
-                    <span class="param-value" id="pitchEnvT3Val">40</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="pitchEnvT4">Release (T4)</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="pitchEnvT4" min="0" max="127" value="40">
-                    <span class="param-value" id="pitchEnvT4Val">40</span>
-                  </div>
-                </div>
-                <div class="param-group">
-                  <label class="param-label" for="pitchEnvL1">Level 1</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="pitchEnvL1" min="1" max="127" value="64">
-                    <span class="param-value" id="pitchEnvL1Val">0</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Module 4: Dual LFO Generators -->
+            <!-- Module 2: Dual LFO Generators -->
             <div class="synth-module-card">
               <div class="synth-module-header">
                 <div class="synth-module-title">
                   <span class="module-icon">∾</span> LFO Generators
+                  <span class="curve-badge tone-target-pill" id="lfoToneBadge">Tone 1</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px;">
                   <div class="lfo-pill-toggle">
@@ -1626,7 +1814,7 @@
                 </svg>
               </div>
               <div class="compact-controls-grid">
-                <div class="param-group">
+                <div class="param-group" style="grid-column: 1 / -1; max-width: 220px; justify-self: center;">
                   <label class="param-label" for="lfoForm">Waveform</label>
                   <select id="lfoForm">
                     <option value="0">TRI (Triangle)</option>
@@ -1641,40 +1829,87 @@
                     <option value="9">STEP2</option>
                   </select>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="lfoRate">Rate</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="lfoRate" min="0" max="127" value="64">
-                    <span class="param-value" id="lfoRateVal">64</span>
-                  </div>
+                <div class="synth-knobs-grid" style="grid-column: 1 / -1; width: 100%;">
+                  <div class="master-knob-cell" id="knobWrapLfoRate"></div>
+                  <div class="master-knob-cell" id="knobWrapLfoPitchDepth"></div>
+                  <div class="master-knob-cell" id="knobWrapLfoTvfDepth"></div>
+                  <div class="master-knob-cell" id="knobWrapLfoTvaDepth"></div>
+                  <div class="master-knob-cell" id="knobWrapLfoPanDepth"></div>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="lfoPitchDepth">Pitch Depth</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="lfoPitchDepth" min="1" max="127" value="64">
-                    <span class="param-value" id="lfoPitchDepthVal">0</span>
-                  </div>
+                <div style="display:none;" aria-hidden="true">
+                  <input type="range" id="lfoRate" min="0" max="127" value="64"><span id="lfoRateVal">64</span>
+                  <input type="range" id="lfoPitchDepth" min="1" max="127" value="64"><span id="lfoPitchDepthVal">0</span>
+                  <input type="range" id="lfoTvfDepth" min="1" max="127" value="64"><span id="lfoTvfDepthVal">0</span>
+                  <input type="range" id="lfoTvaDepth" min="1" max="127" value="64"><span id="lfoTvaDepthVal">0</span>
+                  <input type="range" id="lfoPanDepth" min="1" max="127" value="64"><span id="lfoPanDepthVal">0</span>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="lfoTvfDepth">TVF Depth</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="lfoTvfDepth" min="1" max="127" value="64">
-                    <span class="param-value" id="lfoTvfDepthVal">0</span>
-                  </div>
+              </div>
+            </div>
+
+            <!-- Module 3: TVA Amplifier & Envelope -->
+            <div class="synth-module-card">
+              <div class="synth-module-header">
+                <div class="synth-module-title">
+                  <span class="module-icon">⚡</span> TVA Amp & Envelope
+                  <span class="curve-badge tone-target-pill" id="tvaToneBadge">Tone 1</span>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="lfoTvaDepth">TVA Depth</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="lfoTvaDepth" min="1" max="127" value="64">
-                    <span class="param-value" id="lfoTvaDepthVal">0</span>
-                  </div>
+                <span class="curve-badge" id="tvaEnvBadge">Level: 127</span>
+              </div>
+              <div class="mini-scope-card">
+                <svg class="curve-svg" id="tvaEnvSvg" viewBox="0 0 300 75" preserveAspectRatio="none">
+                  <path class="curve-path" id="tvaEnvPath" fill="none" stroke="#00d4ff" stroke-width="2" d="M 10 70 L 75 15 L 150 25 L 225 35 L 290 70" />
+                </svg>
+              </div>
+              <div class="compact-controls-grid">
+                <div class="synth-knobs-grid">
+                  <div class="master-knob-cell" id="knobWrapToneTvaLevel"></div>
+                  <div class="master-knob-cell" id="knobWrapTvaEnvT1"></div>
+                  <div class="master-knob-cell" id="knobWrapTvaEnvT2"></div>
+                  <div class="master-knob-cell" id="knobWrapTvaEnvT3"></div>
+                  <div class="master-knob-cell" id="knobWrapTvaEnvT4"></div>
+                  <div class="master-knob-cell" id="knobWrapTvaEnvL3"></div>
                 </div>
-                <div class="param-group">
-                  <label class="param-label" for="lfoPanDepth">Pan Depth</label>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="range" id="lfoPanDepth" min="1" max="127" value="64">
-                    <span class="param-value" id="lfoPanDepthVal">0</span>
-                  </div>
+                <div style="display:none;" aria-hidden="true">
+                  <input type="range" id="toneTvaLevel" min="0" max="127" value="127"><span id="toneTvaLevelVal">127</span>
+                  <input type="range" id="tvaEnvT1" min="0" max="127" value="10"><span id="tvaEnvT1Val">10</span>
+                  <input type="range" id="tvaEnvT2" min="0" max="127" value="20"><span id="tvaEnvT2Val">20</span>
+                  <input type="range" id="tvaEnvT3" min="0" max="127" value="40"><span id="tvaEnvT3Val">40</span>
+                  <input type="range" id="tvaEnvT4" min="0" max="127" value="30"><span id="tvaEnvT4Val">30</span>
+                  <input type="range" id="tvaEnvL3" min="0" max="127" value="70"><span id="tvaEnvL3Val">70</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Module 4: Pitch & Pitch Envelope -->
+            <div class="synth-module-card">
+              <div class="synth-module-header">
+                <div class="synth-module-title">
+                  <span class="module-icon">♩</span> Pitch Envelope
+                  <span class="curve-badge tone-target-pill" id="pitchToneBadge">Tone 1</span>
+                </div>
+                <span class="curve-badge" id="pitchEnvBadge">Depth: 0 semi</span>
+              </div>
+              <div class="mini-scope-card">
+                <svg class="curve-svg" id="pitchEnvSvg" viewBox="0 0 300 75" preserveAspectRatio="none">
+                  <path class="curve-path" id="pitchEnvPath" fill="none" stroke="#00d4ff" stroke-width="2" d="M 10 38 L 75 38 L 150 38 L 225 38 L 290 38" />
+                </svg>
+              </div>
+              <div class="compact-controls-grid">
+                <div class="synth-knobs-grid">
+                  <div class="master-knob-cell" id="knobWrapPitchEnvDepth"></div>
+                  <div class="master-knob-cell" id="knobWrapPitchEnvT1"></div>
+                  <div class="master-knob-cell" id="knobWrapPitchEnvT2"></div>
+                  <div class="master-knob-cell" id="knobWrapPitchEnvT3"></div>
+                  <div class="master-knob-cell" id="knobWrapPitchEnvT4"></div>
+                  <div class="master-knob-cell" id="knobWrapPitchEnvL1"></div>
+                </div>
+                <div style="display:none;" aria-hidden="true">
+                  <input type="range" id="pitchEnvDepth" min="52" max="76" value="64"><span id="pitchEnvDepthVal">0</span>
+                  <input type="range" id="pitchEnvT1" min="0" max="127" value="20"><span id="pitchEnvT1Val">20</span>
+                  <input type="range" id="pitchEnvT2" min="0" max="127" value="20"><span id="pitchEnvT2Val">20</span>
+                  <input type="range" id="pitchEnvT3" min="0" max="127" value="40"><span id="pitchEnvT3Val">40</span>
+                  <input type="range" id="pitchEnvT4" min="0" max="127" value="40"><span id="pitchEnvT4Val">40</span>
+                  <input type="range" id="pitchEnvL1" min="1" max="127" value="64"><span id="pitchEnvL1Val">0</span>
                 </div>
               </div>
             </div>
@@ -1683,6 +1918,253 @@
 
         </div>
       </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- 🥁 Drum Kit Editor Tab (Scrollable Octave Pad Grid Layout)               -->
+    <!-- Owner's Manual Chapter 2 (pp. 55-63) & Per-Key Drum Designer            -->
+    <!-- ======================================================================= -->
+    <div class="tab-content" id="drumKitTab">
+      
+      <!-- Drum Kit Header Card -->
+      <div class="card" style="margin-bottom: var(--space-sm); padding: 8px var(--space-md);">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="badge badge-accent" style="font-size:0.8rem; padding:3px 7px; font-weight:700;">DRUM KIT DESIGNER</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="drumKitSelect" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Active Kit:</label>
+              <select id="drumKitSelect" style="font-size:0.82rem; font-weight:600; padding:3px 6px; min-width:210px;">
+                <option value="USER:1">User Kit 1 (Tight Studio)</option>
+                <option value="USER:2">User Kit 2 (Hip-Hop 808)</option>
+                <option value="USER:3">User Kit 3 (XV WayHipKit)</option>
+                <option value="USER:4">User Kit 4 (XV Jazz Kit)</option>
+                <option value="PR-A:1">Preset Kit 1 (Standard Kit 1)</option>
+                <option value="PR-A:2">Preset Kit 2 (Standard Kit 2)</option>
+                <option value="PR-A:3">Preset Kit 3 (Power Drum Kit)</option>
+                <option value="PR-A:4">Preset Kit 4 (Electronic Kit)</option>
+                <option value="PR-A:5">Preset Kit 5 (Analog 808/909)</option>
+                <option value="PR-A:6">Preset Kit 6 (Jazz Drum Kit)</option>
+                <option value="PR-A:7">Preset Kit 7 (Brush Drum Kit)</option>
+                <option value="PR-A:8">Preset Kit 8 (Orchestral Perc)</option>
+              </select>
+              <button class="btn btn-xs btn-outline" id="btnRenameDrumKit" title="Rename active drum kit">✎ Rename Kit</button>
+            </div>
+            <span class="badge" style="background:rgba(255,255,255,0.06); font-size:0.72rem;">Part 10 (MIDI Ch 10)</span>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button class="btn btn-secondary btn-xs" id="btnDrumBackToMixer">⬡ Back to Mixer</button>
+            <button class="btn btn-primary btn-xs" id="btnAuditionSelectedDrum">▶ Audition Selected Key</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable Octave Pad Grid Layout (Triggering Drum Notes) -->
+      <div class="card" style="margin-bottom: var(--space-sm); padding: 8px 12px;">
+        <div class="card-header" style="margin-bottom:6px; padding-bottom:4px;">
+          <span class="card-title" style="font-size:0.88rem;"><span class="icon">🥁</span> Scrollable Octave Pad Grid</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button class="btn btn-xs btn-outline" id="btnPrevDrumOctave">◀ Prev Octave</button>
+            <span class="badge badge-accent" id="drumOctaveRangeBadge" style="font-size:0.75rem;">Octave 1: Kicks & Snares (B1 - A#2)</span>
+            <button class="btn btn-xs btn-outline" id="btnNextDrumOctave">Next Octave ▶</button>
+          </div>
+        </div>
+
+        <!-- Octave Bank Pill Strip -->
+        <div class="drum-octave-strip" id="drumOctaveStrip" style="margin-bottom:6px;">
+          <button class="drum-octave-btn active" data-octave="1">Oct 1: Kicks & Snares (B1 - A#2)</button>
+          <button class="drum-octave-btn" data-octave="2">Oct 2: Toms & Cymbals (B2 - A#3)</button>
+          <button class="drum-octave-btn" data-octave="3">Oct 3: Bongos & Congas (B3 - A#4)</button>
+          <button class="drum-octave-btn" data-octave="4">Oct 4: Latin Percussion (B4 - A#5)</button>
+          <button class="drum-octave-btn" data-octave="5">Oct 5: Bells & FX (B5 - D7)</button>
+        </div>
+
+        <!-- Dynamic Pad Grid Container (12-16 Compact Pads per Octave Bank) -->
+        <div class="drum-pad-grid" id="drumPadGridContainer">
+          <!-- Populated dynamically by JS with compact interactive pads -->
+        </div>
+        
+        <div style="font-size:0.7rem; color:var(--text-muted); text-align:center;">
+          Click any pad to audition and inspect/edit its sound parameters below.
+        </div>
+      </div>
+
+      <!-- Per-Key Drum Sound Designer Panel with Rotary Knobs -->
+      <div class="card" id="drumKeyDesignerCard" style="padding: 10px 14px;">
+        <div class="card-header" style="padding-bottom: 6px; margin-bottom: 6px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="card-title" style="font-size:0.88rem;"><span class="icon">♫</span> Per-Key Sound Designer</span>
+            <span class="badge badge-accent" id="drumSelectedNoteBadge" style="font-size:0.82rem; font-weight:700;">Note 36: C2 - Bass Drum 1</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button class="btn btn-xs btn-outline" id="btnResetDrumHit" title="Reset this drum hit name and sound parameters to factory Roland GM default">↺ Reset Hit</button>
+            <button class="btn btn-xs btn-primary" id="btnAuditionCurrentKey">▶ Audition Key</button>
+          </div>
+        </div>
+
+        <!-- Drum Hit Custom Rename & Library Quick Picker Bar -->
+        <div class="drum-hit-bar">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label for="drumHitNameInput" style="font-size:0.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Hit Name:</label>
+            <input type="text" id="drumHitNameInput" class="drum-hit-name-input" maxlength="16" placeholder="Drum Hit Name" value="Bass Drum 1" title="Rename this drum hit">
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label for="drumHitCatSelect" style="font-size:0.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Category:</label>
+            <select id="drumHitCatSelect" style="font-size:0.78rem; padding:3px 6px; background:var(--bg-card); border:1px solid var(--border); color:var(--text-primary); border-radius:4px;">
+              <option value="Kick">Kick</option>
+              <option value="Snare">Snare</option>
+              <option value="Hi-Hat">Hi-Hat</option>
+              <option value="Tom">Tom</option>
+              <option value="Cymbal">Cymbal</option>
+              <option value="Perc">Percussion</option>
+              <option value="Latin">Latin</option>
+              <option value="FX">Sound FX</option>
+            </select>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+            <label for="drumHitLibrarySelect" style="font-size:0.72rem; color:var(--accent); font-weight:700; text-transform:uppercase;">⚡ Replace from Library:</label>
+            <select id="drumHitLibrarySelect" style="font-size:0.78rem; padding:3px 8px; min-width:210px; background:rgba(255,119,0,0.08); border:1px solid var(--accent); color:var(--text-primary); border-radius:4px; font-weight:600;">
+              <option value="">— Choose Drum Hit Preset —</option>
+              <!-- Populated dynamically with DRUM_HIT_LIBRARY options + SRX expansion hits -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Modern Compact Modular Rotary Knob Rack (5 Logical Clusters) -->
+        <div class="drum-designer-rack" style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 2fr 1.1fr; gap:8px;">
+          <!-- Cluster 1: Wave Source & Board -->
+          <div class="modular-subcard" style="padding:6px 8px;">
+            <div class="modular-subcard-title" style="margin-bottom:4px; font-size:0.68rem;">
+              <span>PCM Wave Source</span>
+              <span class="badge" style="font-size:0.58rem;">WAVE</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <div class="param-group">
+                <label class="param-label" for="drumWaveGroup" style="font-size:0.7rem;">Wave Group</label>
+                <select id="drumWaveGroup" style="font-size:0.75rem; padding:2px 4px;">
+                  <option value="0">INT (Internal 1083)</option>
+                  <option value="1">SR-JV80</option>
+                  <option value="2">SRX Slot A</option>
+                  <option value="3">SRX Slot B</option>
+                </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="drumWaveNumber" style="font-size:0.7rem;">Waveform (L/Mono)</label>
+                <select id="drumWaveNumber" style="font-size:0.75rem; width:100%; padding:2px 4px;">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div class="param-group">
+                <label class="param-label" for="drumWaveGain" style="font-size:0.7rem;">Wave Gain</label>
+                <select id="drumWaveGain" style="font-size:0.75rem; padding:2px 4px;">
+                  <option value="0">-6 dB</option>
+                  <option value="1" selected>0 dB</option>
+                  <option value="2">+6 dB</option>
+                  <option value="3">+12 dB</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cluster 2: Pitch & Tuning Rotary Knobs -->
+          <div class="modular-subcard" style="padding:6px 8px;">
+            <div class="modular-subcard-title" style="margin-bottom:4px; font-size:0.68rem;">
+              <span>Pitch & Tuning</span>
+              <span class="badge" style="font-size:0.58rem;">PITCH</span>
+            </div>
+            <div class="rotary-knob-rack" style="display:flex; justify-content:space-around; align-items:center; min-height:76px;">
+              <div id="knobWrapCoarseTune"></div>
+              <div id="knobWrapFineTune"></div>
+            </div>
+          </div>
+
+          <!-- Cluster 3: TVF Filter Knobs & Type -->
+          <div class="modular-subcard" style="padding:6px 8px;">
+            <div class="modular-subcard-title" style="margin-bottom:4px; font-size:0.68rem;">
+              <span>TVF Filter</span>
+              <span class="badge" style="font-size:0.58rem;">FILTER</span>
+            </div>
+            <div class="param-group" style="margin-bottom:4px;">
+              <select id="drumFilterType" style="font-size:0.72rem; width:100%; padding:2px 4px;">
+                <option value="0">OFF (Bypass)</option>
+                <option value="1" selected>LPF (Low Pass)</option>
+                <option value="2">BPF (Band Pass)</option>
+                <option value="3">HPF (High Pass)</option>
+                <option value="4">PKG (Peaking)</option>
+              </select>
+            </div>
+            <div class="rotary-knob-rack" style="display:flex; justify-content:space-around; align-items:center;">
+              <div id="knobWrapCutoff"></div>
+              <div id="knobWrapResonance"></div>
+            </div>
+          </div>
+
+          <!-- Cluster 4: Amplitude & Envelope Knobs -->
+          <div class="modular-subcard" style="padding:6px 8px;">
+            <div class="modular-subcard-title" style="margin-bottom:4px; font-size:0.68rem;">
+              <span>Amp & Envelope</span>
+              <span class="badge" style="font-size:0.58rem;">AMP & ENV</span>
+            </div>
+            <div class="rotary-knob-rack" style="display:flex; justify-content:space-around; align-items:center; min-height:76px;">
+              <div id="knobWrapLevel"></div>
+              <div id="knobWrapPan"></div>
+              <div id="knobWrapDecay"></div>
+              <div id="knobWrapRelease"></div>
+            </div>
+          </div>
+
+          <!-- Cluster 5: Mute Group & FX Sends Knobs -->
+          <div class="modular-subcard" style="padding:6px 8px;">
+            <div class="modular-subcard-title" style="margin-bottom:4px; font-size:0.68rem;">
+              <span>Choke & FX</span>
+              <span class="badge" style="font-size:0.58rem;">ROUTING</span>
+            </div>
+            <div class="param-group" style="margin-bottom:4px;">
+              <select id="drumMuteGroup" style="font-size:0.72rem; width:100%; padding:2px 4px;">
+                <option value="0">OFF (No Mute)</option>
+                <option value="1">Group 1 (Hi-Hat Choke)</option>
+                <option value="2">Group 2 (Conga Choke)</option>
+                <option value="3">Group 3 (Whistle Choke)</option>
+                <option value="4">Group 4 (Guiro Choke)</option>
+                <option value="5">Group 5 (Cuica Choke)</option>
+                <option value="6">Group 6 (Triangle Choke)</option>
+                <option value="7">Group 7 (Surdo Choke)</option>
+              </select>
+            </div>
+            <div class="rotary-knob-rack" style="display:flex; justify-content:space-around; align-items:center;">
+              <div id="knobWrapChorusSend"></div>
+              <div id="knobWrapReverbSend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden input bridges for backward compatibility & direct automation -->
+        <div style="display:none;" aria-hidden="true">
+          <input type="range" id="drumCoarseTune" min="0" max="127" value="64">
+          <span id="drumCoarseTuneVal">C4</span>
+          <input type="range" id="drumFineTune" min="14" max="114" value="64">
+          <span id="drumFineTuneVal">0</span>
+          <input type="range" id="drumCutoff" min="0" max="127" value="127">
+          <span id="drumCutoffVal">127</span>
+          <input type="range" id="drumResonance" min="0" max="127" value="0">
+          <span id="drumResonanceVal">0</span>
+          <input type="range" id="drumLevel" min="0" max="127" value="127">
+          <span id="drumLevelVal">127</span>
+          <input type="range" id="drumPan" min="0" max="127" value="64">
+          <span id="drumPanVal">C</span>
+          <input type="range" id="drumTvaDecay" min="0" max="127" value="60">
+          <span id="drumTvaDecayVal">60</span>
+          <input type="range" id="drumTvaRelease" min="0" max="127" value="20">
+          <span id="drumTvaReleaseVal">20</span>
+          <input type="range" id="drumChorusSend" min="0" max="127" value="0">
+          <span id="drumChorusSendVal">0</span>
+          <input type="range" id="drumReverbSend" min="0" max="127" value="40">
+          <span id="drumReverbSendVal">40</span>
+        </div>
+      </div>
+
     </div>
 
     <!-- ======================================================================= -->
@@ -1714,6 +2196,89 @@
         </div>
 
         <div id="syxImportStatus" style="font-size:0.9rem; font-weight:500; min-height:24px;"></div>
+      </div>
+
+      <!-- Modern VST Preset Transpiler (Vital & Serum to Roland XV-5050) -->
+      <div class="card" id="vstTranspilerCard">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">⚡</span> Modern VST Preset Transpiler (Vital &amp; Serum to XV-5050)</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="font-size:0.8rem; color:var(--text-secondary);">Preset Demos:</span>
+            <select id="vstDemoPresetSelect" style="max-width:240px; padding:4px 8px; font-size:0.82rem;" title="Select pre-analyzed demo preset to preview transposition">
+              <option value="">— Load Demo VST Preset —</option>
+              <option value="vital_cyberpunk_reese">Cyberpunk Reese Bass (Vital)</option>
+              <option value="serum_hypersaw_pluck">Euphoric Trance Pluck (Serum)</option>
+              <option value="vital_ambient_pad">Ethereal Cosmic Pad (Vital)</option>
+            </select>
+          </div>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:var(--space-md);">
+          Drag and drop modern synth patches (<strong>Vital <code>.vital</code></strong>, <strong>Steinberg / Serum <code>.fxp</code></strong>, or Synth <code>.json</code>).
+          The transpiler maps wavetables to Roland XV-5050 PCM waveforms, recreates multi-oscillator detunes across 4 Tones, adapts cutoff/resonance to Roland TVF filters, maps ADSR envelopes to 4-point TVA curves, and routes stereo sends.
+        </p>
+
+        <!-- Transpiler Dropzone -->
+        <div class="dropzone" id="vstDropzone" style="margin-bottom:var(--space-md); padding: var(--space-lg);">
+          <div class="dropzone-icon">⚡</div>
+          <div style="font-weight:600; font-size:1.05rem; color:var(--text-primary); margin-bottom:4px;">
+            Drag &amp; Drop .vital, .fxp, or Synth JSON Here, or Click to Browse
+          </div>
+          <div style="font-size:0.82rem; color:var(--text-secondary);">
+            Instant timbral analysis, waveform reconstruction &amp; 4-Tone translation
+          </div>
+          <input type="file" id="vstFileInput" accept=".vital,.fxp,.json,.txt" style="display:none;">
+        </div>
+
+        <!-- Status / Error message -->
+        <div id="vstTranspileStatus" style="font-size:0.88rem; font-weight:500; min-height:22px; margin-bottom:var(--space-sm);"></div>
+
+        <!-- Transpilation Result Card / Report (hidden until preset parsed or demo selected) -->
+        <div id="vstResultContainer" style="display:none; background:rgba(0, 0, 0, 0.25); border:1px solid var(--border); border-radius:var(--radius-md); padding:14px; margin-bottom:var(--space-md);">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-weight:700; font-size:1rem; color:var(--accent);" id="vstResultPatchName">CYBERREESE</span>
+              <span style="font-size:0.8rem; color:var(--text-muted); margin-left:8px;" id="vstResultEngine">Vital Spectral Wavetable Synth</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary btn-sm" id="btnLoadTranspiledPatch" title="Load directly into Active Patch Editor">♦ Load into Patch Editor</button>
+              <button class="btn btn-sync btn-sm" id="btnSendTranspiledToSynth" title="Send directly to Roland XV-5050 Temporary Patch Buffer via SysEx">⚡ Send to XV-5050</button>
+              <button class="btn btn-secondary btn-sm" id="btnExportTranspiledSyx" title="Download as Roland XV-5050 .SYX file">⤓ Export .SYX</button>
+            </div>
+          </div>
+
+          <!-- 4-Tone Breakdown & Synthesis Mapping Details -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-bottom:12px;">
+            <div style="background:var(--bg-secondary); padding:8px 10px; border-radius:var(--radius-sm); border-left:3px solid #ff7b00;">
+              <div style="font-size:0.75rem; font-weight:700; color:#ff7b00; text-transform:uppercase;">Tone 1 (Lead Osc)</div>
+              <div style="font-size:0.82rem; font-weight:600; margin-top:2px;" id="vstTone1Wave">Wave #1: Synth Saw 1</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);" id="vstTone1Params">Level: 114 | Pan: L1 | Tune: -12st</div>
+            </div>
+            <div style="background:var(--bg-secondary); padding:8px 10px; border-radius:var(--radius-sm); border-left:3px solid #00d4ff;">
+              <div style="font-size:0.75rem; font-weight:700; color:#00d4ff; text-transform:uppercase;">Tone 2 (Detune/Spread)</div>
+              <div style="font-size:0.82rem; font-weight:600; margin-top:2px;" id="vstTone2Wave">Wave #4: Synth Pulse 1</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);" id="vstTone2Params">Level: 108 | Pan: R1 | Detune: +4c</div>
+            </div>
+            <div style="background:var(--bg-secondary); padding:8px 10px; border-radius:var(--radius-sm); border-left:3px solid #4ade80;">
+              <div style="font-size:0.75rem; font-weight:700; color:#4ade80; text-transform:uppercase;">Tone 3 (Sub-Osc)</div>
+              <div style="font-size:0.82rem; font-weight:600; margin-top:2px;" id="vstTone3Wave">Wave #7: Sine 1</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);" id="vstTone3Params">Level: 127 | Pan: Mid | Tune: -24st</div>
+            </div>
+            <div style="background:var(--bg-secondary); padding:8px 10px; border-radius:var(--radius-sm); border-left:3px solid #c084fc;">
+              <div style="font-size:0.75rem; font-weight:700; color:#c084fc; text-transform:uppercase;">Tone 4 (Noise/Attack)</div>
+              <div style="font-size:0.82rem; font-weight:600; margin-top:2px;" id="vstTone4Wave">Disabled / Off</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);" id="vstTone4Params">Level: 0 | Transpiled Noise Burst</div>
+            </div>
+          </div>
+
+          <!-- Acoustic & Synthesis Shaping Metrics -->
+          <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:0.8rem; color:var(--text-secondary); background:var(--bg-tertiary); padding:8px 12px; border-radius:var(--radius-sm);">
+            <div><strong style="color:var(--text-primary);">Filter:</strong> <span id="vstReportFilter">TVF LPF (Cutoff: 65, Res: 32)</span></div>
+            <div><strong style="color:var(--text-primary);">Envelopes:</strong> <span id="vstReportEnv">TVA (A:1, D:75, S:114, R:45)</span></div>
+            <div><strong style="color:var(--text-primary);">Effects Sends:</strong> <span id="vstReportFx">Chorus: 44, Reverb: 19</span></div>
+            <div><strong style="color:var(--text-primary);">Voice Mode:</strong> <span id="vstReportVoice">Mono (Portamento: 15)</span></div>
+          </div>
+        </div>
       </div>
 
       <!-- Synced Hardware Inventory (64 User Performances & 128 User Patches) -->

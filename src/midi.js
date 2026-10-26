@@ -31,6 +31,9 @@ export class MidiManager {
     /** @type {MIDIOutput|null} */
     this._output = null;
 
+    /** @type {MIDIInput|null} */
+    this._dawInput = null;
+
     /** @type {Function|null} */
     this._onMessage = null;
 
@@ -146,8 +149,8 @@ export class MidiManager {
       if (output.open && output.connection !== 'open') {
         await output.open();
       }
-      // Windows WinMM settling delay so driver thread & buffers are fully armed
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Brief settling pause for Windows WinMM driver thread
+      await new Promise(resolve => setTimeout(resolve, 50));
     } catch (err) {
       console.warn('Port open warning:', err);
     }
@@ -155,26 +158,92 @@ export class MidiManager {
     this._connected = true;
     console.log(`[MIDI] Connected: Input="${this._input.name}" Output="${this._output.name}" (In: ${this._input.connection}, Out: ${this._output.connection})`);
 
-    // Send warm-up identity request ping to wake USB MIDI stream endpoint
-    try {
-      this.sendRaw([0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]);
-    } catch (_) {}
-
     return true;
   }
 
   /**
-   * Disconnect current MIDI input and output ports.
+   * Disconnect current MIDI input and output ports and release OS handles.
    */
-  disconnect() {
+  async disconnect() {
     if (this._input) {
       this._input.onmidimessage = null;
+      try {
+        if (typeof this._input.close === 'function') {
+          await this._input.close();
+        }
+      } catch (_) {}
       this._input = null;
     }
-    this._output = null;
+    if (this._output) {
+      try {
+        if (typeof this._output.close === 'function') {
+          await this._output.close();
+        }
+      } catch (_) {}
+      this._output = null;
+    }
+    if (this._dawInput) {
+      this._dawInput.onmidimessage = null;
+      try {
+        if (typeof this._dawInput.close === 'function') {
+          await this._dawInput.close();
+        }
+      } catch (_) {}
+      this._dawInput = null;
+    }
     this._connected = false;
     this._sysexBuffer = null;
     this._sysexQueue = Promise.resolve();
+  }
+
+  /**
+   * Set a secondary MIDI input port for DAW / Controller pass-through (e.g. Renoise via loopMIDI).
+   * Voice messages (Note on/off, CC, pitch bend, clock) are forwarded to the XV-5050 output in real-time.
+   * 
+   * @param {string|null} dawInputId - Port ID of virtual input
+   */
+  async setDawThruInput(dawInputId) {
+    if (this._dawInput) {
+      this._dawInput.onmidimessage = null;
+      try {
+        if (typeof this._dawInput.close === 'function') {
+          await this._dawInput.close();
+        }
+      } catch (_) {}
+      this._dawInput = null;
+    }
+
+    if (!dawInputId || !this._midiAccess) return false;
+
+    const input = this._midiAccess.inputs.get(dawInputId);
+    if (!input) return false;
+
+    this._dawInput = input;
+    this._dawInput.onmidimessage = (event) => {
+      // Forward incoming DAW note/CC/pitchbend/clock events directly to synth output
+      if (this._output && event?.data) {
+        try {
+          this._output.send(event.data);
+          if (this._onTraffic) {
+            this._onTraffic('THRU', Array.from(event.data), Date.now());
+          }
+        } catch (_) {}
+      }
+    };
+
+    try {
+      if (input.open && input.connection !== 'open') {
+        await input.open();
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  /**
+   * @returns {string} Name of active DAW pass-through input device
+   */
+  get dawInputName() {
+    return this._dawInput?.name || '';
   }
 
   /**
@@ -458,7 +527,10 @@ export class MidiManager {
     if (this._onTraffic) {
       this._onTraffic('RX', dataArr, Date.now());
     }
-    console.log('[MIDI RX]', dataArr.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '));
+    // Only log SysEx to console to prevent console buffer choke during note playback
+    if (data[0] === 0xF0) {
+      console.log('[SysEx RX]', dataArr.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '));
+    }
 
     // SysEx handling: if data starts with 0xF0, reset any uncompleted buffer and start fresh
     if (data[0] === 0xF0) {

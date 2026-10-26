@@ -344,13 +344,6 @@ export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = 
 
     try {
       const pCommon = await requestPatchCommon(midiManager, p, deviceId);
-      let pMfx = null, pCho = null, pRev = null;
-      if (p === 1) {
-        try { pMfx = await requestPatchMfx(midiManager, p, deviceId); } catch (_) {}
-        try { pCho = await requestPatchChorus(midiManager, p, deviceId); } catch (_) {}
-        try { pRev = await requestPatchReverb(midiManager, p, deviceId); } catch (_) {}
-      }
-
       const pTmt = await requestPatchTMT(midiManager, p, deviceId);
       const tones = [];
       for (let t = 1; t <= 4; t++) {
@@ -362,9 +355,9 @@ export async function syncEntireUnit(midiManager, deviceId = 0x10, onProgress = 
         part: p,
         isRhythm: false,
         common: pCommon,
-        mfx: pMfx,
-        chorus: pCho,
-        reverb: pRev,
+        mfx: null,
+        chorus: null,
+        reverb: null,
         tmt: pTmt,
         tones,
       });

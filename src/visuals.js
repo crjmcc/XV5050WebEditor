@@ -16,7 +16,7 @@
  * @param {number} [height=120] - SVG viewport height in pixels
  * @returns {string} SVG path 'd' attribute
  */
-export function generateEnvelopePath(type, params = {}, width = 300, height = 120) {
+export function getEnvelopePoints(type, params = {}, width = 300, height = 120) {
   const pad = 10;
   const drawW = width - pad * 2;
   const drawH = height - pad * 2;
@@ -41,17 +41,13 @@ export function generateEnvelopePath(type, params = {}, width = 300, height = 12
       return midY - (val / 63) * (drawH / 2);
     };
 
-    const y0 = toY(params.l0 ?? 64);
-    const y1 = toY(params.l1 ?? 64);
-    const y2 = toY(params.l2 ?? 64);
-    const y3 = toY(params.l3 ?? 64);
-    const y4 = toY(params.l4 ?? 64);
-
-    return `M ${x0.toFixed(1)} ${y0.toFixed(1)} ` +
-           `L ${x1.toFixed(1)} ${y1.toFixed(1)} ` +
-           `L ${x2.toFixed(1)} ${y2.toFixed(1)} ` +
-           `L ${x3.toFixed(1)} ${y3.toFixed(1)} ` +
-           `L ${x4.toFixed(1)} ${y4.toFixed(1)}`;
+    return [
+      { x: x0, y: toY(params.l0 ?? 64) },
+      { x: x1, y: toY(params.l1 ?? 64) },
+      { x: x2, y: toY(params.l2 ?? 64) },
+      { x: x3, y: toY(params.l3 ?? 64) },
+      { x: x4, y: toY(params.l4 ?? 64) }
+    ];
   }
 
   if (type === 'tvf') {
@@ -59,32 +55,35 @@ export function generateEnvelopePath(type, params = {}, width = 300, height = 12
     const baseY = pad + drawH;
     const toY = (lvl) => baseY - ((lvl ?? 0) / 127) * drawH;
 
-    const y1 = toY(params.l1 ?? 127);
-    const y2 = toY(params.l2 ?? 100);
-    const y3 = toY(params.l3 ?? 60);
-    const y4 = toY(params.l4 ?? 0);
-
-    return `M ${x0.toFixed(1)} ${baseY.toFixed(1)} ` +
-           `L ${x1.toFixed(1)} ${y1.toFixed(1)} ` +
-           `L ${x2.toFixed(1)} ${y2.toFixed(1)} ` +
-           `L ${x3.toFixed(1)} ${y3.toFixed(1)} ` +
-           `L ${x4.toFixed(1)} ${y4.toFixed(1)}`;
+    return [
+      { x: x0, y: baseY },
+      { x: x1, y: toY(params.l1 ?? 127) },
+      { x: x2, y: toY(params.l2 ?? 100) },
+      { x: x3, y: toY(params.l3 ?? 60) },
+      { x: x4, y: toY(params.l4 ?? 0) }
+    ];
   }
 
   // TVA: Amp envelope (0 to 127), returns to 0 after T4
   const baseY = pad + drawH;
   const toY = (lvl) => baseY - ((lvl ?? 0) / 127) * drawH;
 
-  const y1 = toY(params.l1 ?? 127);
-  const y2 = toY(params.l2 ?? 90);
-  const y3 = toY(params.l3 ?? 70);
-  const y4 = baseY; // release back to silence
+  return [
+    { x: x0, y: baseY },
+    { x: x1, y: toY(params.l1 ?? 127) },
+    { x: x2, y: toY(params.l2 ?? 90) },
+    { x: x3, y: toY(params.l3 ?? 70) },
+    { x: x4, y: baseY }
+  ];
+}
 
-  return `M ${x0.toFixed(1)} ${baseY.toFixed(1)} ` +
-         `L ${x1.toFixed(1)} ${y1.toFixed(1)} ` +
-         `L ${x2.toFixed(1)} ${y2.toFixed(1)} ` +
-         `L ${x3.toFixed(1)} ${y3.toFixed(1)} ` +
-         `L ${x4.toFixed(1)} ${y4.toFixed(1)}`;
+export function generateEnvelopePath(type, params = {}, width = 300, height = 120) {
+  const pts = getEnvelopePoints(type, params, width, height);
+  return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} ` +
+         `L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)} ` +
+         `L ${pts[2].x.toFixed(1)} ${pts[2].y.toFixed(1)} ` +
+         `L ${pts[3].x.toFixed(1)} ${pts[3].y.toFixed(1)} ` +
+         `L ${pts[4].x.toFixed(1)} ${pts[4].y.toFixed(1)}`;
 }
 
 /**
