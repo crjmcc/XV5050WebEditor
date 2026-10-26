@@ -10720,6 +10720,7 @@
 
   // src/app.js
   var midi = new MidiManager();
+  if (typeof window !== "undefined") window.midiManager = midi;
   var store = createStore();
   var $ = (id) => document.getElementById(id);
   var currentToneIndex = 1;
@@ -10822,6 +10823,9 @@
     const el = $("patchPartSelect");
     const val = el ? parseInt(el.value, 10) : 1;
     return val >= 0 && val <= 16 ? val : 1;
+  }
+  function currentPart() {
+    return getEffectivePatchPart();
   }
   function setSynthesizerMode(mode, sendToHardware = true) {
     const previousMode = currentSoundMode;
@@ -12904,6 +12908,8 @@
   }
   function dispatchToneParam(paramKey, val, throttled = true, throttleKey = null) {
     const targets = getActiveToneTargets();
+    const part = currentPart();
+    const devId = getDeviceId();
     for (const t of targets) {
       if (currentToneCache[t - 1]) {
         updateToneCacheProperty(currentToneCache[t - 1], paramKey, val);
@@ -12912,16 +12918,18 @@
         if (throttled) {
           const key = throttleKey ? `${throttleKey}_${t}` : `tone_${t}_${paramKey}`;
           sendThrottled(key, () => {
-            sendPatchToneParam(midi, currentPart(), t, paramKey, val, getDeviceId());
+            sendPatchToneParam(midi, part, t, paramKey, val, devId);
           });
         } else {
-          sendPatchToneParam(midi, currentPart(), t, paramKey, val, getDeviceId());
+          sendPatchToneParam(midi, part, t, paramKey, val, devId);
         }
       }
     }
   }
   function dispatchToneLFOParam(lfoNum, paramKey, val, throttled = true, throttleKey = null) {
     const targets = getActiveToneTargets();
+    const part = currentPart();
+    const devId = getDeviceId();
     for (const t of targets) {
       if (currentToneCache[t - 1]) {
         const propMap = {
@@ -12940,10 +12948,10 @@
         if (throttled) {
           const key = throttleKey ? `${throttleKey}_${t}` : `tone_lfo_${t}_${lfoNum}_${paramKey}`;
           sendThrottled(key, () => {
-            sendToneLFOParam(midi, currentPart(), t, lfoNum, paramKey, val, getDeviceId());
+            sendToneLFOParam(midi, part, t, lfoNum, paramKey, val, devId);
           });
         } else {
-          sendToneLFOParam(midi, currentPart(), t, lfoNum, paramKey, val, getDeviceId());
+          sendToneLFOParam(midi, part, t, lfoNum, paramKey, val, devId);
         }
       }
     }
@@ -13291,12 +13299,11 @@
     }
   }
   function bindPatchControls() {
-    const currentPart2 = () => getEffectivePatchPart();
     populateMatrixDropdowns();
     populateWaveDropdowns();
     $("patchName").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchName(midi, currentPart2(), $("patchName").value, getDeviceId());
+      sendPatchName(midi, currentPart(), $("patchName").value, getDeviceId());
       setStatus("Sent patch name");
     });
     const sliders = [
@@ -13313,38 +13320,38 @@
         $(s.valEl).textContent = s.format(val);
         if (!midi.isConnected) return;
         sendThrottled(`patch_common_${s.param}`, () => {
-          sendPatchCommonParam(midi, currentPart2(), s.param, val, getDeviceId());
+          sendPatchCommonParam(midi, currentPart(), s.param, val, getDeviceId());
         });
       });
       $(s.el).addEventListener("change", () => {
         const val = parseInt($(s.el).value, 10);
         if (!midi.isConnected) return;
-        sendPatchCommonParam(midi, currentPart2(), s.param, val, getDeviceId());
+        sendPatchCommonParam(midi, currentPart(), s.param, val, getDeviceId());
       });
     }
     $("patchLegato").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchCommonParam(midi, currentPart2(), "LEGATO_SWITCH", $("patchLegato").checked ? 1 : 0, getDeviceId());
+      sendPatchCommonParam(midi, currentPart(), "LEGATO_SWITCH", $("patchLegato").checked ? 1 : 0, getDeviceId());
     });
     $("patchPortamento").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchCommonParam(midi, currentPart2(), "PORTAMENTO_SWITCH", $("patchPortamento").checked ? 1 : 0, getDeviceId());
+      sendPatchCommonParam(midi, currentPart(), "PORTAMENTO_SWITCH", $("patchPortamento").checked ? 1 : 0, getDeviceId());
     });
     $("patchMonoPoly").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchCommonParam(midi, currentPart2(), "MONO_POLY", parseInt($("patchMonoPoly").value, 10), getDeviceId());
+      sendPatchCommonParam(midi, currentPart(), "MONO_POLY", parseInt($("patchMonoPoly").value, 10), getDeviceId());
     });
     $("patchOutputAssign").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchCommonParam(midi, currentPart2(), "OUTPUT_ASSIGN", parseInt($("patchOutputAssign").value, 10), getDeviceId());
+      sendPatchCommonParam(midi, currentPart(), "OUTPUT_ASSIGN", parseInt($("patchOutputAssign").value, 10), getDeviceId());
     });
     $("patchBendUp").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchCommonParam(midi, currentPart2(), "BEND_RANGE_UP", parseInt($("patchBendUp").value, 10), getDeviceId());
+      sendPatchCommonParam(midi, currentPart(), "BEND_RANGE_UP", parseInt($("patchBendUp").value, 10), getDeviceId());
     });
     $("patchBendDown").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchCommonParam(midi, currentPart2(), "BEND_RANGE_DOWN", parseInt($("patchBendDown").value, 10), getDeviceId());
+      sendPatchCommonParam(midi, currentPart(), "BEND_RANGE_DOWN", parseInt($("patchBendDown").value, 10), getDeviceId());
     });
     populateMatrixGridDropdowns();
     for (let m = 1; m <= 4; m++) {
@@ -13373,7 +13380,7 @@
             }
             if (!midi.isConnected) return;
             sendThrottled(`matrixSens_${m}_${d}`, () => {
-              sendMatrixControlParam(midi, currentPart2(), m, `SENS_${d}`, val, getDeviceId());
+              sendMatrixControlParam(midi, currentPart(), m, `SENS_${d}`, val, getDeviceId());
             });
           }
         });
@@ -13391,7 +13398,7 @@
             if (compSrc) compSrc.value = val;
           }
           if (!midi.isConnected) return;
-          sendMatrixControlParam(midi, currentPart2(), m, "SOURCE", val, getDeviceId());
+          sendMatrixControlParam(midi, currentPart(), m, "SOURCE", val, getDeviceId());
         });
       }
     }
@@ -13409,7 +13416,7 @@
           if (compDest) compDest.value = val;
           if (!midi.isConnected) return;
           for (let m = 1; m <= 4; m++) {
-            sendMatrixControlParam(midi, currentPart2(), m, `DEST_${d}`, val, getDeviceId());
+            sendMatrixControlParam(midi, currentPart(), m, `DEST_${d}`, val, getDeviceId());
           }
         });
       }
@@ -13435,7 +13442,7 @@
         const gridSrc = $(`matrix${currentMatrixIndex}Source`);
         if (gridSrc) gridSrc.value = val;
         if (!midi.isConnected) return;
-        sendMatrixControlParam(midi, currentPart2(), currentMatrixIndex, "SOURCE", val, getDeviceId());
+        sendMatrixControlParam(midi, currentPart(), currentMatrixIndex, "SOURCE", val, getDeviceId());
       });
     }
     for (let d = 1; d <= 4; d++) {
@@ -13447,7 +13454,7 @@
           const rowDest = $(`matrixDestRow${d}`);
           if (rowDest) rowDest.value = val;
           if (!midi.isConnected) return;
-          sendMatrixControlParam(midi, currentPart2(), currentMatrixIndex, `DEST_${d}`, val, getDeviceId());
+          sendMatrixControlParam(midi, currentPart(), currentMatrixIndex, `DEST_${d}`, val, getDeviceId());
         });
       }
       const legacySens = $(`matrixSens${d}`);
@@ -13461,89 +13468,89 @@
           if (knob) knob.setValue(val, false);
           if (!midi.isConnected) return;
           sendThrottled(`matrixSens_${currentMatrixIndex}_${d}`, () => {
-            sendMatrixControlParam(midi, currentPart2(), currentMatrixIndex, `SENS_${d}`, val, getDeviceId());
+            sendMatrixControlParam(midi, currentPart(), currentMatrixIndex, `SENS_${d}`, val, getDeviceId());
           });
         });
         legacySens.addEventListener("change", () => {
           const val = parseInt(legacySens.value, 10);
           if (!midi.isConnected) return;
-          sendMatrixControlParam(midi, currentPart2(), currentMatrixIndex, `SENS_${d}`, val, getDeviceId());
+          sendMatrixControlParam(midi, currentPart(), currentMatrixIndex, `SENS_${d}`, val, getDeviceId());
         });
       }
     }
     $("struct12").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchTMTParam(midi, currentPart2(), "STRUCTURE_TYPE_1_2", parseInt($("struct12").value, 10), getDeviceId());
+      sendPatchTMTParam(midi, currentPart(), "STRUCTURE_TYPE_1_2", parseInt($("struct12").value, 10), getDeviceId());
     });
     $("booster12").addEventListener("change", () => {
       if ($("tvfFilterDrive") && (currentToneIndex === 1 || currentToneIndex === 2 || isAllTonesLinked)) {
         $("tvfFilterDrive").value = $("booster12").value;
       }
       if (!midi.isConnected) return;
-      sendPatchTMTParam(midi, currentPart2(), "BOOSTER_1_2", parseInt($("booster12").value, 10), getDeviceId());
+      sendPatchTMTParam(midi, currentPart(), "BOOSTER_1_2", parseInt($("booster12").value, 10), getDeviceId());
     });
     $("struct34").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchTMTParam(midi, currentPart2(), "STRUCTURE_TYPE_3_4", parseInt($("struct34").value, 10), getDeviceId());
+      sendPatchTMTParam(midi, currentPart(), "STRUCTURE_TYPE_3_4", parseInt($("struct34").value, 10), getDeviceId());
     });
     $("booster34").addEventListener("change", () => {
       if ($("tvfFilterDrive") && (currentToneIndex === 3 || currentToneIndex === 4)) {
         $("tvfFilterDrive").value = $("booster34").value;
       }
       if (!midi.isConnected) return;
-      sendPatchTMTParam(midi, currentPart2(), "BOOSTER_3_4", parseInt($("booster34").value, 10), getDeviceId());
+      sendPatchTMTParam(midi, currentPart(), "BOOSTER_3_4", parseInt($("booster34").value, 10), getDeviceId());
     });
     $("tmtVelCtrl").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendPatchTMTParam(midi, currentPart2(), "TMT_VEL_CONTROL", parseInt($("tmtVelCtrl").value, 10), getDeviceId());
+      sendPatchTMTParam(midi, currentPart(), "TMT_VEL_CONTROL", parseInt($("tmtVelCtrl").value, 10), getDeviceId());
     });
     $("tmtKeyLower").addEventListener("input", () => {
       const val = parseInt($("tmtKeyLower").value, 10);
       $("tmtKeyLowerVal").textContent = formatKeyNote(val);
       if (!midi.isConnected) return;
       sendThrottled(`tmtKeyLower_${currentToneIndex}`, () => {
-        sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "KEY_LOWER", val, getDeviceId());
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_LOWER", val, getDeviceId());
       });
     });
     $("tmtKeyLower").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "KEY_LOWER", parseInt($("tmtKeyLower").value, 10), getDeviceId());
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_LOWER", parseInt($("tmtKeyLower").value, 10), getDeviceId());
     });
     $("tmtKeyUpper").addEventListener("input", () => {
       const val = parseInt($("tmtKeyUpper").value, 10);
       $("tmtKeyUpperVal").textContent = formatKeyNote(val);
       if (!midi.isConnected) return;
       sendThrottled(`tmtKeyUpper_${currentToneIndex}`, () => {
-        sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "KEY_UPPER", val, getDeviceId());
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_UPPER", val, getDeviceId());
       });
     });
     $("tmtKeyUpper").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "KEY_UPPER", parseInt($("tmtKeyUpper").value, 10), getDeviceId());
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "KEY_UPPER", parseInt($("tmtKeyUpper").value, 10), getDeviceId());
     });
     $("tmtVelLower").addEventListener("input", () => {
       const val = parseInt($("tmtVelLower").value, 10);
       $("tmtVelLowerVal").textContent = val;
       if (!midi.isConnected) return;
       sendThrottled(`tmtVelLower_${currentToneIndex}`, () => {
-        sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "VEL_LOWER", val, getDeviceId());
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_LOWER", val, getDeviceId());
       });
     });
     $("tmtVelLower").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "VEL_LOWER", parseInt($("tmtVelLower").value, 10), getDeviceId());
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_LOWER", parseInt($("tmtVelLower").value, 10), getDeviceId());
     });
     $("tmtVelUpper").addEventListener("input", () => {
       const val = parseInt($("tmtVelUpper").value, 10);
       $("tmtVelUpperVal").textContent = val;
       if (!midi.isConnected) return;
       sendThrottled(`tmtVelUpper_${currentToneIndex}`, () => {
-        sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "VEL_UPPER", val, getDeviceId());
+        sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_UPPER", val, getDeviceId());
       });
     });
     $("tmtVelUpper").addEventListener("change", () => {
       if (!midi.isConnected) return;
-      sendTMTKeyRangeParam(midi, currentPart2(), currentToneIndex, "VEL_UPPER", parseInt($("tmtVelUpper").value, 10), getDeviceId());
+      sendTMTKeyRangeParam(midi, currentPart(), currentToneIndex, "VEL_UPPER", parseInt($("tmtVelUpper").value, 10), getDeviceId());
     });
     for (let t = 1; t <= 4; t++) {
       $(`tone${t}Switch`).addEventListener("change", () => {
@@ -13562,7 +13569,7 @@
         }
         if (currentPatchTMTData) currentPatchTMTData[`tone${t}Switch`] = on ? 1 : 0;
         if (!midi.isConnected) return;
-        sendToneSwitch(midi, currentPart2(), t, on, getDeviceId());
+        sendToneSwitch(midi, currentPart(), t, on, getDeviceId());
         setStatus(`Tone ${t} ${on ? "SOUNDING (Unmuted)" : "MUTED (Silent)"}`);
       });
     }
@@ -13634,11 +13641,11 @@
         cached.waveNumberL = numL;
         cached.waveNumberR = numR;
         if (midi.isConnected) {
-          sendPatchToneParam(midi, currentPart2(), t, "WAVE_GROUP_TYPE", grp, getDeviceId());
-          sendPatchToneParam(midi, currentPart2(), t, "WAVE_GROUP_ID", grpId, getDeviceId());
-          sendPatchToneParam(midi, currentPart2(), t, "WAVE_NUMBER_L", numL, getDeviceId());
+          sendPatchToneParam(midi, currentPart(), t, "WAVE_GROUP_TYPE", grp, getDeviceId());
+          sendPatchToneParam(midi, currentPart(), t, "WAVE_GROUP_ID", grpId, getDeviceId());
+          sendPatchToneParam(midi, currentPart(), t, "WAVE_NUMBER_L", numL, getDeviceId());
           if (numR > 0) {
-            sendPatchToneParam(midi, currentPart2(), t, "WAVE_NUMBER_R", numR, getDeviceId());
+            sendPatchToneParam(midi, currentPart(), t, "WAVE_NUMBER_R", numR, getDeviceId());
           }
         }
       }
@@ -13662,7 +13669,7 @@
       for (const t of targets) {
         if (currentToneCache[t - 1]) currentToneCache[t - 1].waveNumberL = val;
         if (midi.isConnected) {
-          sendPatchToneParam(midi, currentPart2(), t, "WAVE_NUMBER_L", val, getDeviceId());
+          sendPatchToneParam(midi, currentPart(), t, "WAVE_NUMBER_L", val, getDeviceId());
         }
       }
     });
@@ -13677,7 +13684,7 @@
       for (const t of targets) {
         if (currentToneCache[t - 1]) currentToneCache[t - 1].waveNumberR = val;
         if (midi.isConnected) {
-          sendPatchToneParam(midi, currentPart2(), t, "WAVE_NUMBER_R", val, getDeviceId());
+          sendPatchToneParam(midi, currentPart(), t, "WAVE_NUMBER_R", val, getDeviceId());
         }
       }
     });
@@ -13705,11 +13712,11 @@
           structVal = 3;
           if (structEl) structEl.value = structVal;
           if (midi.isConnected) {
-            sendPatchTMTParam(midi, currentPart2(), structParam, structVal, getDeviceId());
+            sendPatchTMTParam(midi, currentPart(), structParam, structVal, getDeviceId());
           }
         }
         if (midi.isConnected) {
-          sendPatchTMTParam(midi, currentPart2(), boosterParam, driveVal, getDeviceId());
+          sendPatchTMTParam(midi, currentPart(), boosterParam, driveVal, getDeviceId());
         }
       };
       if (isAllTonesLinked) {
@@ -13853,7 +13860,7 @@
           setStatus("Not connected");
           return;
         }
-        const part = currentPart2();
+        const part = currentPart();
         setStatus(`Loading entire patch for Part ${part} (Common, TMT, and all 4 Tones)...`);
         try {
           const patch = await requestEntirePatch(midi, part, getDeviceId(), (stage, cur, total) => {
@@ -13877,7 +13884,7 @@
         setStatus("Not connected");
         return;
       }
-      const part = currentPart2();
+      const part = currentPart();
       setStatus(`Loading Patch Common & TMT for Part ${part}...`);
       try {
         const common = await requestPatchCommon(midi, part, getDeviceId());
@@ -13894,7 +13901,7 @@
         setStatus("Not connected");
         return;
       }
-      const part = currentPart2();
+      const part = currentPart();
       setStatus(`Loading 4 tones for Part ${part}...`);
       try {
         for (let t = 1; t <= 4; t++) {

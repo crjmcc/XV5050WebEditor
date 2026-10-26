@@ -139,7 +139,8 @@ Clicking the **🎛️ Tweak** button on any part immediately switches to the Pa
 At the top of the Deep Tone Generator Engine:
 - **Tone Toggle Switches (`TONE 1` – `TONE 4`):** Turn tone voice generation ON or OFF in the sound engine.
 - **Tone Target Radios (`Tone 1` | `Tone 2` | `Tone 3` | `Tone 4`):** Selects which specific tone is currently displayed and manipulated in the module cards below.
-- **ALL Master Tone Switch:** When active, modifying any filter cutoff, resonance, envelope time, level, or tuning control automatically updates **all active tones simultaneously**. This allows dramatic filter sweeps and envelope re-shaping across the entire layered sound with a single gesture.
+- **ALL Master Tone Switch:** When active, modifying any filter cutoff, resonance, envelope time, level, or tuning control automatically updates **all active tones simultaneously**. This operates seamlessly across both Single Patch mode and any Performance Part (Parts 1–16) by dynamically recalculating Roland hardware temporary patch buffer base addresses (`11 00 00 00` through `11 E0 00 00`), allowing instant unified tone filtering across complex multi-timbral layers.
+- **Proportional Envelope Visualization:** TVF, TVA, Pitch, and LFO cards feature compact, proportional 320px scopes that preserve clean envelope aspect ratios without horizontal stretching.
 
 ### Pre-Filter Drive & Overdrive (Structures & Booster)
 While Roland TVF filters do not have an analog drive pot, the XV-5050 provides authentic pre-filter saturation through built-in engine structures:

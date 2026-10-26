@@ -216,7 +216,7 @@ Because the Roland XV-5050 uses a specialized USB driver, two Google Chrome sett
 │   ├── visuals.js         # Real-time SVG path generators for envelopes, filters, and LFOs
 │   ├── vst_transpiler.js  # Modern VST (Serum/Vital/Massive) to Roland SysEx patch transpiler
 │   └── waveforms.js       # Complete 1,083 internal PCM waveform catalog
-├── tests/                 # Automated test suite (156 unit tests + Playwright E2E verification)
+├── tests/                 # Automated test suite (159 unit tests + Playwright E2E verification)
 ├── index.html             # Application entry point
 ├── package.json           # Development scripts and test runner
 ├── MANUAL.md              # Complete Musician & Programmer Reference Manual
@@ -242,7 +242,7 @@ npm install
 # Build the client-side bundle
 npm run build
 
-# Run the 156 automated unit test suites
+# Run the 159 automated unit test suites
 npm test
 
 # Run interactive browser verification

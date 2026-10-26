@@ -142,6 +142,7 @@ import {
 // =============================================================================
 
 const midi = new MidiManager();
+if (typeof window !== 'undefined') window.midiManager = midi;
 const store = createStore();
 
 const $ = (id) => document.getElementById(id);
@@ -272,6 +273,10 @@ function getEffectivePatchPart() {
   const el = $('patchPartSelect');
   const val = el ? parseInt(el.value, 10) : 1;
   return (val >= 0 && val <= 16) ? val : 1;
+}
+
+export function currentPart() {
+  return getEffectivePatchPart();
 }
 
 function setSynthesizerMode(mode, sendToHardware = true) {
@@ -2647,6 +2652,8 @@ export function selectToneTarget(target) {
 
 export function dispatchToneParam(paramKey, val, throttled = true, throttleKey = null) {
   const targets = getActiveToneTargets();
+  const part = currentPart();
+  const devId = getDeviceId();
   for (const t of targets) {
     if (currentToneCache[t - 1]) {
       updateToneCacheProperty(currentToneCache[t - 1], paramKey, val);
@@ -2655,10 +2662,10 @@ export function dispatchToneParam(paramKey, val, throttled = true, throttleKey =
       if (throttled) {
         const key = throttleKey ? `${throttleKey}_${t}` : `tone_${t}_${paramKey}`;
         sendThrottled(key, () => {
-          sendPatchToneParam(midi, currentPart(), t, paramKey, val, getDeviceId());
+          sendPatchToneParam(midi, part, t, paramKey, val, devId);
         });
       } else {
-        sendPatchToneParam(midi, currentPart(), t, paramKey, val, getDeviceId());
+        sendPatchToneParam(midi, part, t, paramKey, val, devId);
       }
     }
   }
@@ -2666,6 +2673,8 @@ export function dispatchToneParam(paramKey, val, throttled = true, throttleKey =
 
 export function dispatchToneLFOParam(lfoNum, paramKey, val, throttled = true, throttleKey = null) {
   const targets = getActiveToneTargets();
+  const part = currentPart();
+  const devId = getDeviceId();
   for (const t of targets) {
     if (currentToneCache[t - 1]) {
       const propMap = {
@@ -2684,10 +2693,10 @@ export function dispatchToneLFOParam(lfoNum, paramKey, val, throttled = true, th
       if (throttled) {
         const key = throttleKey ? `${throttleKey}_${t}` : `tone_lfo_${t}_${lfoNum}_${paramKey}`;
         sendThrottled(key, () => {
-          sendToneLFOParam(midi, currentPart(), t, lfoNum, paramKey, val, getDeviceId());
+          sendToneLFOParam(midi, part, t, lfoNum, paramKey, val, devId);
         });
       } else {
-        sendToneLFOParam(midi, currentPart(), t, lfoNum, paramKey, val, getDeviceId());
+        sendToneLFOParam(midi, part, t, lfoNum, paramKey, val, devId);
       }
     }
   }
@@ -3091,7 +3100,6 @@ function populateWaveDropdowns(groupType = 0, srxSlot = 'A') {
 }
 
 function bindPatchControls() {
-  const currentPart = () => getEffectivePatchPart();
   populateMatrixDropdowns();
   populateWaveDropdowns();
 

@@ -1585,6 +1585,13 @@ input[type="range"]::-moz-range-thumb {
   overflow: hidden;
 }
 
+/* Ensure single-scope modules (TVA, Pitch, LFO) match TVF scope proportions (~310-320px) without stretching */
+.synth-module-card > .mini-scope-card {
+  max-width: 320px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .mini-scope-card::before {
   content: '';
   position: absolute;
